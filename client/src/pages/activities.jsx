@@ -409,7 +409,7 @@ export default function Activities() {
                                                 <div className="p-4 space-y-4">
                                                     <div>
                                                         <h3 className="text-lg text-[#0F2137] poppins-700 mb-1">{activity.title}</h3>
-                                                        <p className="text-[#666666] space-grotesk-400 text-[16px] leading-relaxed">{activity.description.slice(0,70)}...</p>
+                                                        <p className="text-[#666666] space-grotesk-400 text-[16px] leading-relaxed">{activity.description.slice(0,40)}...</p>
                                                     </div>
 
                                                     <div className="flex items-center inter-tight-400 justify-between text-sm mt-8 text-[#838383]">
