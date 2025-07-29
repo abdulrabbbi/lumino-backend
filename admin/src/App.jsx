@@ -45,7 +45,7 @@ function AppWrapper() {
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename='/admin'>
       <ScrollToTop />
       <AppWrapper />
     </BrowserRouter>
