@@ -15,7 +15,7 @@ import Managebadge from './pages/admin-dashboard-pages/manage-badge'
 import ScrollToTop from './components/ScrollToTop'
 import MarketingUsers from './pages/admin-dashboard-pages/marketing-users'
 
-// Wrapper layout that optionally shows Navbar
+// Layout wrapper to optionally hide Navbar
 function AppLayout() {
   const location = useLocation()
   const hideNavbar = location.pathname === '/signin' || location.pathname === '/admin'
@@ -28,21 +28,32 @@ function AppLayout() {
   )
 }
 
+function PrivateRoute({ children }) {
+  const token = localStorage.getItem('adminAuthToken')
+  return token ? children : <Navigate to="/signin" replace />
+}
+
 function App() {
   return (
     <BrowserRouter basename="/admin">
       <ScrollToTop />
       <Routes>
-        {/* Redirect from /admin to /admin/signin */}
+        {/* Redirect /admin to /admin/signin */}
         <Route path="/" element={<Navigate to="/signin" replace />} />
-        
-        {/* Signin Route */}
+
+        {/* Public Signin Route */}
         <Route path="/signin" element={<AdminSignin />} />
 
-        {/* Protected routes */}
+        {/* Protected Routes */}
         <Route element={<AppLayout />}>
-          {/* Admin Dashboard with nested routes */}
-          <Route path="admin-dashboard" element={<AdminDashboardLayout />}>
+          <Route
+            path="admin-dashboard"
+            element={
+              <PrivateRoute>
+                <AdminDashboardLayout />
+              </PrivateRoute>
+            }
+          >
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="activiteitenbeheer" element={<ActiviteitenBeheer />} />
@@ -55,8 +66,8 @@ function App() {
             <Route path="manage-badge" element={<Managebadge />} />
             <Route path="marketinggebruikers" element={<MarketingUsers />} />
           </Route>
-          
-          {/* Add a catch-all route for 404 */}
+
+          {/* 404 catch-all */}
           <Route path="*" element={<Navigate to="/signin" replace />} />
         </Route>
       </Routes>

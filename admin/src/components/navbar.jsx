@@ -34,7 +34,7 @@ export default function Navbar() {
   const handleLogout = () => {
     localStorage.removeItem("adminAuthToken");
     setIsLoggedIn(false);
-    window.location.href = "/";
+    window.location.href = "/admin/signin";
   };
 
   const toggleProfileDropdown = () => {

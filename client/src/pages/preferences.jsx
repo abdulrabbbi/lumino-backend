@@ -30,6 +30,7 @@ export default function Preferences() {
                 className="w-full bg-[#F7FAFC] border border-gray-300 rounded-md py-2 px-3 text-left outline-none text-sm text-[#575757]"
               >
                 <option value="Age 3 - 4">Age 3 - 4</option>
+                <option value="Age 3 - 6">Age 3 - 6</option>
                 <option value="Age 5 - 6">Age 5 - 6</option>
                 <option value="Age 7 - 8">Age 7 - 8</option>
               </select>

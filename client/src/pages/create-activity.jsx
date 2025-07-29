@@ -297,6 +297,7 @@ const CreateActivity = () => {
               >
                 <option value="">Selecteer een leeftijdsgroep</option>
                 <option value="Age 3 - 4">Leeftijd 3 - 4</option>
+                <option value="Age 3 - 6">Leeftijd 3 - 6</option>
                 <option value="Age 5 - 6">Leeftijd 5 - 6</option>
                 <option value="Age 7 - 8">Leeftijd 7 - 8</option>
               </select>
