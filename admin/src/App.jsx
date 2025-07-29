@@ -1,7 +1,6 @@
 import './App.css'
-import { BrowserRouter, Routes, Route, useLocation, Outlet } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, useLocation, Outlet, Navigate } from 'react-router-dom'
 import Navbar from './components/navbar'
-
 import AdminSignin from './pages/admin-dashboard-pages/admin-login'
 import AdminDashboardLayout from './layout/admin-dashboard'
 import Dashboard from './pages/admin-dashboard-pages/dashboard'
@@ -15,10 +14,11 @@ import EarlyAccess from './pages/admin-dashboard-pages/earlyaccess'
 import Managebadge from './pages/admin-dashboard-pages/manage-badge'
 import ScrollToTop from './components/ScrollToTop'
 import MarketingUsers from './pages/admin-dashboard-pages/marketing-users'
+
 // Wrapper layout that optionally shows Navbar
 function AppLayout() {
   const location = useLocation()
-  const hideNavbar = location.pathname === '/' || location.pathname === '/admin'
+  const hideNavbar = location.pathname === '/signin' || location.pathname === '/admin'
 
   return (
     <>
@@ -33,13 +33,17 @@ function App() {
     <BrowserRouter basename="/admin">
       <ScrollToTop />
       <Routes>
-        {/* Wrap all routes in AppLayout to conditionally show Navbar */}
-        <Route element={<AppLayout />}>
-          {/* Signin Route */}
-          <Route path="/" element={<AdminSignin />} />
+        {/* Redirect from /admin to /admin/signin */}
+        <Route path="/" element={<Navigate to="/signin" replace />} />
+        
+        {/* Signin Route */}
+        <Route path="/signin" element={<AdminSignin />} />
 
+        {/* Protected routes */}
+        <Route element={<AppLayout />}>
           {/* Admin Dashboard with nested routes */}
           <Route path="admin-dashboard" element={<AdminDashboardLayout />}>
+            <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="activiteitenbeheer" element={<ActiviteitenBeheer />} />
             <Route path="ingezondenactiviteiten" element={<IngezondenActiviteiten />} />
@@ -49,8 +53,11 @@ function App() {
             <Route path="kwaliteitsaudit" element={<Kwaliteitsaudit />} />
             <Route path="earlyaccess" element={<EarlyAccess />} />
             <Route path="manage-badge" element={<Managebadge />} />
-            <Route path='marketinggebruikers' element={<MarketingUsers/>}/>
+            <Route path="marketinggebruikers" element={<MarketingUsers />} />
           </Route>
+          
+          {/* Add a catch-all route for 404 */}
+          <Route path="*" element={<Navigate to="/signin" replace />} />
         </Route>
       </Routes>
     </BrowserRouter>
