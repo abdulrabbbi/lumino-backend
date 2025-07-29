@@ -50,7 +50,7 @@ app.use('/api', TesterRoutes);
 app.use('/api', AdminRoutes);
 app.use('/api', SubscriptionRoutes);
 
-const PORT = process.env.PORT || 4001;
+const PORT = process.env.PORT || 4008;
 app.listen(PORT, '0.0.0.0', () => {
     function getServerIp() {
         const networkInterf = networkInterfaces();
