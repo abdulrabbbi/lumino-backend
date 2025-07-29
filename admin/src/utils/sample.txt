@@ -1,0 +1,135 @@
+  <section
+          id="4rth-section"
+          className="relative h-auto max-w-7xl m-auto mt-16 rounded-3xl  bg-gradient-to-br from-[#ad1a75] via-[#435CDE] to-[#344bc0] py-16 px-4 sm:px-6 lg:px-8"
+        >
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl poppins-700  text-white mb-2">Hoe het werkt</h2>
+              <p className="text-white text-md">3 Simpele Stappen</p>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-6 items-stretch">
+              <div className=" md:h-[450px] h-full">
+                <div
+                  className="bg-[#C52E8A]/30 backdrop-blur-3xl rounded-3xl p-6 sm:p-8 h-full shadow-inner relative overflow-hidden"
+                  style={{
+                    boxShadow: "inset 0 8px 32px rgba(255, 255, 255, 0.6), inset 0 4px 16px rgba(255, 255, 255, 0.3)",
+                  }}
+                >
+                  <div className="flex items-start gap-4 mb-6">
+                    <div className="relative w-full">
+                      <h3 className="text-white text-center inter-tight-600 text-lg sm:text-[22px] mb-1">
+                        1 – Ontdek betekenisvolle activiteiten
+                      </h3>
+                      <img
+                        src={ArrowImage || "/placeholder.svg"}
+                        alt="Arrow"
+                        className="absolute right-34 top-12 h-[30vh] w-full hidden lg:block"
+                      />
+                      <p className="text-[#FFFFFF] inter-tight-400 lg:ml-14 text-[16px] leading-relaxed mt-4 lg:mt-0">
+                        Korte, speelse activiteiten die bouwen aan de fundering van je kind - thuis, met aandacht en intentie.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="lg:absolute lg:bottom-0 lg:left-40 mt-6 lg:mt-0 flex justify-center lg:justify-start">
+                    <div>
+                      <img src={Card1 || "/placeholder.svg"} alt="" className="w-auto h-auto max-w-full" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="  md:h-[450px] h-full">
+                <div
+                  className="bg-[#C52E8A]/30 backdrop-blur-3xl rounded-3xl p-6 sm:p-8 h-full shadow-inner relative overflow-hidden"
+                  style={{
+                    boxShadow: "inset 0 8px 32px rgba(255, 255, 255, 0.6), inset 0 4px 16px rgba(255, 255, 255, 0.3)",
+                  }}
+                >
+                  <div className="flex items-start gap-4 mb-6">
+                    <div className="relative w-full">
+                      <h3 className="text-white text-center inter-tight-600 text-lg sm:text-[22px] mb-1">
+                        2 – Versterk jullie band
+                      </h3>
+                      <img
+                        src={ArrowImage || "/placeholder.svg"}
+                        alt="Arrow"
+                        className="absolute right-34 top-12 h-[30vh] w-full hidden lg:block"
+                      />
+                      <p className="text-[#FFFFFF] lg:mt-10 lg:ml-7 inter-tight-400 text-[16px] leading-relaxed mt-4 ">
+                        Creëer momenten van verbinding, plezier en groei. Samen ontdekken, lachen en leren.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="lg:absolute lg:bottom-0 lg:left-30 mt-6 lg:mt-0  flex justify-center lg:justify-start">
+                    <div>
+                      <img src={Card2 || "/placeholder.svg"} alt="" className="w-auto  h-auto max-w-full" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className=" md:h-[450px] h-full">
+                <div
+                  className="bg-[#C52E8A]/30 backdrop-blur-3xl rounded-3xl p-6 sm:p-8 h-full shadow-inner relative overflow-hidden"
+                  style={{
+                    boxShadow: "inset 0 8px 32px rgba(255, 255, 255, 0.6), inset 0 4px 16px rgba(255, 255, 255, 0.3)",
+                  }}
+                >
+                  <div className="flex items-start gap-4 mb-6">
+                    <div className="relative w-full">
+                      <h3 className="text-white text-center inter-tight-600 text-lg sm:text-[22px] mb-1">
+                        3 – Stimuleer groei op 3 niveaus
+                      </h3>
+                      <img
+                        src={ArrowImage || "/placeholder.svg"}
+                        alt="Arrow"
+                        className="absolute right-34 top-12 h-[30vh] w-full hidden lg:block"
+                      />
+                      <p className="text-[#FFFFFF] inter-tight-400 lg:ml-14 text-[16px] leading-relaxed mt-4 lg:mt-0">
+                        Elke activiteit versterkt emotionele, praktische en sociale vaardigheden, volg jullie vooruitgang!
+                      </p>
+                    </div>
+                  </div>
+                  <div className="lg:absolute lg:bottom-0 lg:left-40 mt-6 lg:mt-0 flex justify-center lg:justify-start">
+                    <div>
+                      <img src={Card3 || "/placeholder.svg"} alt="" className="w-auto h-auto max-w-full" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+             {/* Fun call-to-action */}
+        <div className="text-center cursor-pointer mt-16">
+          <div className="inline-block bg-gradient-to-r from-yellow-400 via-pink-400 to-purple-500 p-1 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+            <div className="bg-white rounded-full px-8 py-4">
+              <p className="text-lg font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                Klaar om je eigen leeravontuur te beginnen? 🎉
+              </p>
+            </div>
+          </div>
+        </div>
+          </div>
+        </section>
+
+
+        These are the most recent explanations for the 7 learning area's:
+
+Emotionele Gezondheid
+Je kind leert stap voor stap woorden geven aan gevoelens zoals boos, blij, verdrietig of bang. Dat zorgt voor meer zelfvertrouwen en helpt bij het begrijpen van zichzelf én de ander. Dit is de basis voor gezonde relaties, nu en later.
+
+Veerkracht
+Soms gaat iets niet in één keer goed. In dit leergebied oefent je kind met doorzetten, omgaan met tegenslag en opnieuw proberen. Zo groeit het vertrouwen dat je iets kunt leren, ook als het spannend of moeilijk is.
+
+Dankbaarheid
+Kinderen die leren stilstaan bij wat fijn is, voelen zich vaak rustiger en blijer. In dit leergebied leert je kind kijken naar wat er wél is, waardering uitspreken en kleine dingen opmerken. Dat helpt bij een positieve kijk op het leven.
+
+Zelfzorg
+In dit leergebied ontdekt je kind hoe het goed voor zichzelf kan zorgen. Denk aan gezond eten, rust nemen, bewegen en je grenzen aangeven. Zelfzorg is de basis voor een gezond en stevig leven.
+
+Geldwijsheid
+Je kind leert spelenderwijs wat geld is, waar spullen vandaan komen, en waarom keuzes maken belangrijk is. Geldwijsheid betekent niet alleen rekenen, maar ook begrijpen wat iets waard is, en wat je echt nodig hebt.
+
+Ondernemerschap
+Je kind ontdekt hoe leuk het is om een idee te bedenken, iets te maken of zelf een oplossing te verzinnen. Het stimuleert creativiteit, eigen initiatief en denken in mogelijkheden, precies wat later zo belangrijk is.
+
+Anders Denken
+Soms is er niet één goed antwoord. In dit leergebied leert je kind nieuwe ideeën te bedenken, buiten de gebaande paden te denken en dingen vanuit een andere hoek te bekijken. Zo ontstaat ruimte voor verbeelding, flexibiliteit en eigenheid.
