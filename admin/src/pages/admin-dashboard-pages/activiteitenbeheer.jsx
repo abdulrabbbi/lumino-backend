@@ -1,5 +1,3 @@
-"use client"
-
 /* eslint-disable no-unused-vars */
 import { useState, useCallback } from "react"
 import {
@@ -27,7 +25,7 @@ export default function ActiviteitenBeheer() {
   const [activeTab, setActiveTab] = useState("list")
   const [currentPage, setCurrentPage] = useState(1)
   const [bulkMode, setBulkMode] = useState(false)
-  const [bulkActivities, setBulkActivities] = useState([{ title: "", description: "", instructions: "" }])
+  const [bulkActivities, setBulkActivities] = useState([{ title: "", description: "", instructions: "",  materials: ""  }])
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [activityToDelete, setActivityToDelete] = useState(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
@@ -122,7 +120,7 @@ export default function ActiviteitenBeheer() {
   }
 
   const addBulkActivityField = () => {
-    setBulkActivities([...bulkActivities, { title: "", description: "", instructions: "" }])
+    setBulkActivities([...bulkActivities, { title: "", description: "", instructions: "",  materials: ""  }])
   }
 
   const removeBulkActivityField = (index) => {
@@ -165,6 +163,7 @@ export default function ActiviteitenBeheer() {
                   .map((step) => step.trim())
                   .slice(0, 5)
               : [],
+              materials: activity.materials || undefined,
           })),
           creatorName: formData.creatorName,
           learningDomain: formData.learningDomain,
@@ -803,6 +802,18 @@ export default function ActiviteitenBeheer() {
                             tekens.
                           </p>
                         </div>
+
+                        <div className="mb-4">
+          <label className="block text-sm font-medium text-[#000000] mb-2">Benodigd materiaal</label>
+          <input
+            type="text"
+            value={activity.materials}
+            onChange={(e) => handleBulkInputChange(index, "materials", e.target.value)}
+            placeholder="Papier, kleurpotloden, etc."
+            className="w-full px-4 py-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-sm"
+          />
+          <p className="text-xs text-[#6B7280] mt-1">Kommagescheiden lijst van benodigdheden (optioneel)</p>
+        </div>
                       </div>
                     ))}
 

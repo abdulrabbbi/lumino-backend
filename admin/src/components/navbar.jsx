@@ -13,7 +13,7 @@ export default function Navbar() {
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem("authToken");
+    const token = localStorage.getItem("adminAuthToken");
     if (token) {
       try {
         jwtDecode(token);
@@ -32,7 +32,7 @@ export default function Navbar() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("authToken");
+    localStorage.removeItem("adminAuthToken");
     setIsLoggedIn(false);
     window.location.href = "/";
   };
@@ -61,11 +61,6 @@ export default function Navbar() {
                   <Link to={"/signin"}>
                     <button className="text-[#000000] hover:bg-[#000000] hover:text-white px-4 py-2 text-sm font-medium rounded-md transition-colors duration-500 border border-[#D9D9D9]">
                       Log In
-                    </button>
-                  </Link>
-                  <Link to={"/signup"}>
-                    <button className="bg-[#000000] text-white hover:bg-gray-900 px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200">
-                      Sign Up
                     </button>
                   </Link>
                 </>

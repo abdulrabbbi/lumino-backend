@@ -4,7 +4,7 @@ import { useCallback } from 'react';
 import { BASE_URL } from '../utils/api';
 
 export default function useActivityActions(setActivities) {
-    let token = localStorage.getItem('authToken');
+    let token = localStorage.getItem('adminAuthToken');
   const approveActivity = useCallback(async (id) => {
     try {
       const res = await axios.post(`${BASE_URL}/approve-activity/${id}`, {

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { toast } from 'react-toastify';
 
 export default function useAdminActivityActions() {
-  const token = localStorage.getItem('authToken');
+  const token = localStorage.getItem('adminAuthToken');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     
@@ -50,7 +50,7 @@ export default function useAdminActivityActions() {
       setLoading(true);
       const response = await axios.post(`${BASE_URL}/create-activity`, activityData, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          'Authorization': `Bearer ${localStorage.getItem('adminAuthToken')}`
         }
       });
       toast.success('Activity has been created');
@@ -69,7 +69,7 @@ export default function useAdminActivityActions() {
       setLoading(true);
       const response = await axios.post(`${BASE_URL}/create-bulk-activities`, bulkData, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          'Authorization': `Bearer ${localStorage.getItem('adminAuthToken')}`
         }
       });
       toast.success(`${response.data.activities.length} total activities has been created`);

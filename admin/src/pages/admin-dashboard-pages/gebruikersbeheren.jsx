@@ -27,7 +27,7 @@ export default function GebruikersBeheren() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const token = localStorage.getItem("authToken")
+        const token = localStorage.getItem("adminAuthToken")
         const data = await fetchData(`${BASE_URL}/get-all-users`, token)
         if (data.success) {
           setUsers(data.users)
@@ -41,7 +41,7 @@ export default function GebruikersBeheren() {
 
   const fetchUserDetails = async (userId) => {
     try {
-      const token = localStorage.getItem("authToken")
+      const token = localStorage.getItem("adminAuthToken")
       const data = await fetchData(`${BASE_URL}/get-all-users-activities/${userId}`, token)
       if (data.success) {
         setUserDetails(data.user)

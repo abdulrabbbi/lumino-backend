@@ -58,7 +58,7 @@ export default function MarketingUsers() {
     setDeleteError(null)
 
     try {
-      const token = localStorage.getItem("authToken")
+      const token = localStorage.getItem("adminAuthToken")
       const response = await axios.delete(`${BASE_URL}/delete-marketing-user/${userToDelete.id}`, {
         headers: {
           Authorization: `Bearer ${token}`,

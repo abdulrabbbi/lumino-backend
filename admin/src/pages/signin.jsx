@@ -30,7 +30,7 @@ export default function SignInPage() {
 
             const { token } = response.data;
             
-            localStorage.setItem("authToken", token);
+            localStorage.setItem("adminAuthToken", token);
             
             toast.success("Sign in successful!");
             setTimeout(() => {

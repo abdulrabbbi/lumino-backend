@@ -20,7 +20,7 @@ export default function TestgroepAanmeldingen() {
   useEffect(() => {
     const fetchTestUsers = async () => {
       try {
-        const token = localStorage.getItem("authToken")
+        const token = localStorage.getItem("adminAuthToken")
         const response = await axios.get(`${BASE_URL}/get-all-test-users`, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -76,7 +76,7 @@ export default function TestgroepAanmeldingen() {
     setDeleteError(null)
 
     try {
-      const token = localStorage.getItem("authToken")
+      const token = localStorage.getItem("adminAuthToken")
       const response = await axios.delete(`${BASE_URL}/delete-test-user/${userToDelete.id}`, {
         headers: {
           Authorization: `Bearer ${token}`,
