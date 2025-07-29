@@ -356,9 +356,13 @@ function ActivityDetail() {
                   </div>
                   Effect op het kind
                 </h2>
-                <p className="text-[#374151] inter-tight-400 text-md leading-relaxed">
+              {activity.effect ? (  <p className="text-[#374151] inter-tight-400 text-md leading-relaxed">
+                  {activity.effect}
+                </p>): (
+                  <p className="text-[#374151] inter-tight-400 text-md leading-relaxed">
                   This activity helps children develop various skills related to {activity.learningDomain}.
                 </p>
+                )}
               </div>
 
               <button

@@ -23,6 +23,7 @@ export default function IngezondenActiviteiten() {
     time: "", 
     ageGroup: "", 
     editingId: null,
+    effect: ""
   })
 
   const [titleCount, setTitleCount] = useState(0)
@@ -57,6 +58,7 @@ const totalPages = Math.ceil(pendingCount / activitiesPerPage)
       time: activity.time || "",
       ageGroup: activity.ageGroup || "", 
       editingId: activity._id,
+      effect: activity.effect
     })
     setTitleCount(activity.title.length)
     setDescriptionCount((activity.description || "").length)
@@ -112,6 +114,7 @@ const totalPages = Math.ceil(pendingCount / activitiesPerPage)
         materials: "",
         learningDomain: "",
         editingId: null,
+        effect: ""
       })
       setTitleCount(0)
       setDescriptionCount(0)
@@ -319,6 +322,19 @@ const totalPages = Math.ceil(pendingCount / activitiesPerPage)
                   />
                   <p className="text-xs text-[#6B7280] mt-1">Kommagescheiden lijst van benodigdheden (optioneel)</p>
                 </div>
+
+                <div>
+              <label className="block text-sm font-medium text-[#000000] mb-2">
+              Effect
+              </label>
+              <input
+                type="text"
+                value={editData.effect}
+                onChange={(e) => handleInputChange('effect', e.target.value)}
+                className="w-full px-4 py-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-sm"
+                maxLength={50}
+              />
+            </div>
 
                 <div className="">
                     <div>

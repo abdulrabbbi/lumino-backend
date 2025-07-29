@@ -25,7 +25,7 @@ export default function ActiviteitenBeheer() {
   const [activeTab, setActiveTab] = useState("list")
   const [currentPage, setCurrentPage] = useState(1)
   const [bulkMode, setBulkMode] = useState(false)
-  const [bulkActivities, setBulkActivities] = useState([{ title: "", description: "", instructions: "",  materials: ""  }])
+  const [bulkActivities, setBulkActivities] = useState([{ title: "", description: "", instructions: "", materials: "", effect: "" }])
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [activityToDelete, setActivityToDelete] = useState(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
@@ -61,6 +61,7 @@ export default function ActiviteitenBeheer() {
     ageGroup: "",
     creatorName: "",
     time: "",
+    effect: ""
   })
 
   const [titleCount, setTitleCount] = useState(0)
@@ -120,7 +121,7 @@ export default function ActiviteitenBeheer() {
   }
 
   const addBulkActivityField = () => {
-    setBulkActivities([...bulkActivities, { title: "", description: "", instructions: "",  materials: ""  }])
+    setBulkActivities([...bulkActivities, { title: "", description: "", instructions: "", materials: "", effect: "" }])
   }
 
   const removeBulkActivityField = (index) => {
@@ -158,12 +159,13 @@ export default function ActiviteitenBeheer() {
             description: activity.description,
             instructions: activity.instructions
               ? activity.instructions
-                  .split("\n")
-                  .filter((step) => step.trim() !== "")
-                  .map((step) => step.trim())
-                  .slice(0, 5)
+                .split("\n")
+                .filter((step) => step.trim() !== "")
+                .map((step) => step.trim())
+                .slice(0, 5)
               : [],
-              materials: activity.materials || undefined,
+            materials: activity.materials || undefined,
+            effect: activity.effect || undefined
           })),
           creatorName: formData.creatorName,
           learningDomain: formData.learningDomain,
@@ -177,7 +179,7 @@ export default function ActiviteitenBeheer() {
         await refreshActivities()
 
         setActiveTab("list")
-        setBulkActivities([{ title: "", description: "", instructions: "" }])
+        setBulkActivities([{ title: "", description: "", instructions: "", effect: "" }])
         setFormData({
           title: "",
           description: "",
@@ -188,6 +190,7 @@ export default function ActiviteitenBeheer() {
           ageGroup: "",
           creatorName: "",
           time: "",
+          effect: ""
         })
 
         toast.success(`${validActivities.length} activiteiten succesvol aangemaakt!`, {
@@ -252,6 +255,7 @@ export default function ActiviteitenBeheer() {
             creatorName: formData.creatorName,
             time: formData.time,
             status: "Actief",
+            effect: formData.effect
           }
 
           await editActivity(formData.editingId, updates)
@@ -274,6 +278,7 @@ export default function ActiviteitenBeheer() {
             creatorName: formData.creatorName,
             time: formData.time,
             status: "Actief",
+            effect: formData.effect
           }
 
           await createActivity(activityData)
@@ -298,6 +303,7 @@ export default function ActiviteitenBeheer() {
           ageGroup: "",
           creatorName: "",
           time: "",
+          effect: ""
         })
       } catch (err) {
         console.error(err)
@@ -320,6 +326,7 @@ export default function ActiviteitenBeheer() {
       creatorName: activity.creatorName,
       time: activity.time,
       editingId: activity._id,
+      effect: activity.effect
     })
     setBulkMode(false)
     setActiveTab("create")
@@ -461,6 +468,7 @@ export default function ActiviteitenBeheer() {
                         ageGroup: "",
                         creatorName: "",
                         time: "",
+                        effect: ""
                       })
                       setBulkMode(false)
                       setActiveTab("create")
@@ -484,6 +492,7 @@ export default function ActiviteitenBeheer() {
                         ageGroup: "",
                         creatorName: "",
                         time: "",
+                        effect: ""
                       })
                       setActiveTab("create")
                     }}
@@ -632,11 +641,10 @@ export default function ActiviteitenBeheer() {
                         <button
                           onClick={() => paginate(Math.max(1, currentPage - 1))}
                           disabled={currentPage === 1}
-                          className={`px-3 py-1 rounded-md ${
-                            currentPage === 1
+                          className={`px-3 py-1 rounded-md ${currentPage === 1
                               ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                               : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                          }`}
+                            }`}
                         >
                           <ChevronLeft className="w-5 h-5" />
                         </button>
@@ -657,11 +665,10 @@ export default function ActiviteitenBeheer() {
                             <button
                               key={pageNum}
                               onClick={() => paginate(pageNum)}
-                              className={`px-3 py-1 rounded-md ${
-                                currentPage === pageNum
+                              className={`px-3 py-1 rounded-md ${currentPage === pageNum
                                   ? "bg-indigo-600 text-white"
                                   : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                              }`}
+                                }`}
                             >
                               {pageNum}
                             </button>
@@ -673,11 +680,10 @@ export default function ActiviteitenBeheer() {
                         {totalPages > 5 && currentPage < totalPages - 2 && (
                           <button
                             onClick={() => paginate(totalPages)}
-                            className={`px-3 py-1 rounded-md ${
-                              currentPage === totalPages
+                            className={`px-3 py-1 rounded-md ${currentPage === totalPages
                                 ? "bg-indigo-600 text-white"
                                 : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                            }`}
+                              }`}
                           >
                             {totalPages}
                           </button>
@@ -686,11 +692,10 @@ export default function ActiviteitenBeheer() {
                         <button
                           onClick={() => paginate(Math.min(totalPages, currentPage + 1))}
                           disabled={currentPage === totalPages}
-                          className={`px-3 py-1 rounded-md ${
-                            currentPage === totalPages
+                          className={`px-3 py-1 rounded-md ${currentPage === totalPages
                               ? "bg-gray-100 text-gray-400 cursor-not-allowed"
                               : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                          }`}
+                            }`}
                         >
                           <ChevronRight className="w-5 h-5" />
                         </button>
@@ -803,17 +808,30 @@ export default function ActiviteitenBeheer() {
                           </p>
                         </div>
 
+                        <div>
+              <label className="block text-sm font-medium text-[#000000] mb-2">
+              Effect
+              </label>
+              <input
+                type="text"
+                value={formData.effect}
+                onChange={(e) => handleInputChange('effect', e.target.value)}
+                className="w-full px-4 py-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-sm"
+                maxLength={50}
+              />
+            </div>
+
                         <div className="mb-4">
-          <label className="block text-sm font-medium text-[#000000] mb-2">Benodigd materiaal</label>
-          <input
-            type="text"
-            value={activity.materials}
-            onChange={(e) => handleBulkInputChange(index, "materials", e.target.value)}
-            placeholder="Papier, kleurpotloden, etc."
-            className="w-full px-4 py-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-sm"
-          />
-          <p className="text-xs text-[#6B7280] mt-1">Kommagescheiden lijst van benodigdheden (optioneel)</p>
-        </div>
+                          <label className="block text-sm font-medium text-[#000000] mb-2">Benodigd materiaal</label>
+                          <input
+                            type="text"
+                            value={activity.materials}
+                            onChange={(e) => handleBulkInputChange(index, "materials", e.target.value)}
+                            placeholder="Papier, kleurpotloden, etc."
+                            className="w-full px-4 py-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-sm"
+                          />
+                          <p className="text-xs text-[#6B7280] mt-1">Kommagescheiden lijst van benodigdheden (optioneel)</p>
+                        </div>
                       </div>
                     ))}
 
@@ -1004,6 +1022,19 @@ export default function ActiviteitenBeheer() {
                         <option value="Anders denken">Anders denken</option>
                       </select>
                     </div>
+
+                    <div>
+              <label className="block text-sm font-medium text-[#000000] mb-2">
+              Effect
+              </label>
+              <input
+                type="text"
+                value={formData.effect}
+                onChange={(e) => handleInputChange('effect', e.target.value)}
+                className="w-full px-4 py-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-sm"
+                maxLength={50}
+              />
+            </div>
 
                     <div>
                       <label className="block text-sm font-medium text-[#000000] mb-2">Geschatte duur (minuten)</label>

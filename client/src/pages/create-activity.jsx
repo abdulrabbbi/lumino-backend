@@ -16,7 +16,8 @@ const CreateActivity = () => {
     learningDomain: '',
     nickname: '',
     time: '', 
-    ageGroup: ''
+    ageGroup: '',
+    effect: ''
   });
   
   const [titleCount, setTitleCount] = useState(0);
@@ -113,7 +114,8 @@ const CreateActivity = () => {
         learningDomain: formData.learningDomain,
         nickname: formData.nickname || '',
         ageGroup: formData.ageGroup,
-        time: formData.time // Storing exactly as entered (e.g. "10" or "10-15")
+        time: formData.time, // Storing exactly as entered (e.g. "10" or "10-15")
+        effect: formData.effect
       };
 
       const response = await createActivity(activityData);
@@ -323,6 +325,19 @@ const CreateActivity = () => {
                 <option value="Ondernemerschap">Ondernemerschap</option>
                 <option value="Anders denken">Anders denken</option>
               </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-[#000000] mb-2">
+              Effect
+              </label>
+              <input
+                type="text"
+                value={formData.effect}
+                onChange={(e) => handleInputChange('effect', e.target.value)}
+                className="w-full px-4 py-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-sm"
+                maxLength={50}
+              />
             </div>
 
             <div>

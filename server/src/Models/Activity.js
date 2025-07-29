@@ -18,6 +18,8 @@ const activitySchema = new mongoose.Schema({
   nickname: { type: String, maxlength: 50 },
   ageGroup: { type: String }, 
   time: { type: String},
+  effect: {type: String},
+  parentInstructions: {type: String}
 });
 
 export default mongoose.model("Activity", activitySchema);
