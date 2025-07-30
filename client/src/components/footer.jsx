@@ -14,36 +14,34 @@ const Footer = () => {
                         <div>
                             <h3 className="text-gray-900  inter-tight-700 mb-4">Leergebieden</h3>
                             <ul className="space-y-3">
-                                <li><a href="#" className="text-[#000000] cursor-pointer text-sm">Emotionele Gezondheid</a></li>
-                                <li><a href="#" className="text-[#000000] cursor-pointer text-sm">Veerkracht</a></li>
-                                <li><a href="#" className="text-[#000000] cursor-pointer text-sm">Dankbaarheid</a></li>
-                                <li><a href="#" className="text-[#000000] cursor-pointer text-sm">Zelfzorg</a></li>
-                                <li><a href="#" className="text-[#000000] cursor-pointer text-sm">Financiële Basis</a></li>
-                                <li><a href="#" className="text-[#000000] cursor-pointer text-sm">Ondernemerschap</a></li>
-                                <li><a href="#" className="text-[#000000] cursor-pointer text-sm">Anders Denken</a></li>
+                                <li><a href="/" className="text-[#000000] cursor-pointer text-sm">Emotionele Gezondheid</a></li>
+                                <li><a href="/" className="text-[#000000] cursor-pointer text-sm">Veerkracht</a></li>
+                                <li><a href="/" className="text-[#000000] cursor-pointer text-sm">Dankbaarheid</a></li>
+                                <li><a href="/" className="text-[#000000] cursor-pointer text-sm">Zelfzorg</a></li>
+                                <li><a href="/" className="text-[#000000] cursor-pointer text-sm">Financiële Basis</a></li>
+                                <li><a href="/" className="text-[#000000] cursor-pointer text-sm">Ondernemerschap</a></li>
+                                <li><a href="/" className="text-[#000000] cursor-pointer text-sm">Anders Denken</a></li>
                             </ul>
                         </div>
 
                         <div>
                             <h3 className="text-[#000000] inter-tight-700 mb-4">Bedrijf</h3>
                             <ul className="space-y-3">
-                            <li><a href="#" className="text-[#000000] cursor-pointer text-sm">Over Ons</a></li>
-                                <li><a href="#" className="text-[#000000] cursor-pointer text-sm">Onze Experts</a></li>
-                                <li><a href="#" className="text-[#000000] cursor-pointer text-sm">Vacatures</a></li>
-                                <li><a href="#" className="text-[#000000] cursor-pointer text-sm">Zelfzorg</a></li>
-                                <li><a href="#" className="text-[#000000] cursor-pointer text-sm">Blog</a></li>
-                                <li><a href="#" className="text-[#000000] cursor-pointer text-sm">Pers</a></li>
+                            <li><a href="/" className="text-[#000000] cursor-pointer text-sm">Over Ons</a></li>
+                                <li><a href="/" className="text-[#000000] cursor-pointer text-sm">Vacatures</a></li>
+                                <li><a href="/" className="text-[#000000] cursor-pointer text-sm">Zelfzorg</a></li>
+                                <li><a href="/" className="text-[#000000] cursor-pointer text-sm">Blog</a></li>
+                                <li><a href="/" className="text-[#000000] cursor-pointer text-sm">Pers</a></li>
                             </ul>
                         </div>
 
                         <div>
                             <h3 className="text-[#000000] inter-tight-700 mb-4">Ondersteuning</h3>
                             <ul className="space-y-3">
-                            <li><a href="#" className="text-[#000000] cursor-pointer text-sm">Helpcentrum</a></li>
-                                <li><a href="#" className="text-[#000000] cursor-pointer text-sm">Veelgestelde Vragen</a></li>
-                                <li><a href="#" className="text-[#000000] cursor-pointer text-sm">Privacybeleid</a></li>
-                                <li><a href="#" className="text-[#000000] cursor-pointer text-sm">Servicevoorwaarden</a></li>
-                                <li><a href="#" className="text-[#000000] cursor-pointer text-sm">Contact</a></li>
+                                <li><a href="/" className="text-[#000000] cursor-pointer text-sm">Veelgestelde Vragen</a></li>
+                                <li><a href="/" className="text-[#000000] cursor-pointer text-sm">Privacybeleid</a></li>
+                                <li><a href="/" className="text-[#000000] cursor-pointer text-sm">Servicevoorwaarden</a></li>
+                                <li><a href="/" className="text-[#000000] cursor-pointer text-sm">Contact</a></li>
                             </ul>
                         </div>
                     </div>

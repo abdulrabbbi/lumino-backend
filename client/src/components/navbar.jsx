@@ -75,22 +75,21 @@ export default function Navbar() {
 
   const navItems = [
     { label: "Home", icon: <Home className="h-4 w-4 mr-1" />, to: "/" },
-    { label: "Activities", icon: <Activity className="h-4 w-4 mr-1" />, to: "/activities" },
-    { label: "Progress", icon: <BarChart2 className="h-4 w-4 mr-1" />, to: "/progress" },
-    { label: "About Us", icon: <Info className="h-4 w-4 mr-1" />, to: "/about-us" },
-    ...(isTestFamily ? [] : [{ label: "Pricing", icon: <Newspaper className="h-4 w-4 mr-1" />, to: "/pricing" }]),
-    { label: "Badges", icon: <Badge className="h-4 w-4 mr-1" />, to: "/badge-journey" },
+    { label: "Activiteiten", icon: <Activity className="h-4 w-4 mr-1" />, to: "/activities" },
+    { label: "Vooruitgang", icon: <BarChart2 className="h-4 w-4 mr-1" />, to: "/progress" },
+    { label: "Over ons", icon: <Info className="h-4 w-4 mr-1" />, to: "/about-us" },
+    ...(isTestFamily ? [] : [{ label: "Abonnementen", icon: <Newspaper className="h-4 w-4 mr-1" />, to: "/pricing" }]),
+    { label: "Mijlpalen", icon: <Badge className="h-4 w-4 mr-1" />, to: "/badge-journey" },
   ]
   
   const bottomNavItems = [
     { label: "Home", icon: <Home className="h-5 w-5" />, to: "/" },
-    { label: "Activities", icon: <Activity className="h-5 w-5" />, to: "/activities" },
-    { label: "Progress", icon: <BarChart2 className="h-5 w-5" />, to: "/progress" },
-    { label: "About Us", icon: <Info className="h-5 w-5" />, to: "/about-us" },
-    ...(isTestFamily ? [] : [{ label: "Pricing", icon: <Newspaper className="h-5 w-5" />, to: "/pricing" }]),
-    { label: "Badges", icon: <Badge className="h-5 w-5" />, to: "/badge-journey" },
+    { label: "Activiteiten", icon: <Activity className="h-5 w-5" />, to: "/activities" },
+    { label: "Vooruitgang", icon: <BarChart2 className="h-5 w-5" />, to: "/progress" },
+    { label: "Over ons", icon: <Info className="h-5 w-5" />, to: "/about-us" },
+    ...(isTestFamily ? [] : [{ label: "Abonnementen", icon: <Newspaper className="h-5 w-5" />, to: "/pricing" }]),
+    { label: "Mijlpalen", icon: <Badge className="h-5 w-5" />, to: "/badge-journey" },
   ]
-
   return (
     <>
       <nav className="sticky top-0 z-[100000] p-2 bg-white">

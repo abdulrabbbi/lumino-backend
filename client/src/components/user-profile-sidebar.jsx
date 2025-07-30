@@ -7,15 +7,14 @@ import { Badge } from "lucide-react";
 
 const Sidebar = () => {
   const links = [
-    { to: "/user-profile/profile", label: "Profile", icon: <FiUser className="mr-2" /> },
-    { to: "/user-profile/subscription", label: "Subscription", icon: <MdSubscriptions className="mr-2" /> },
-    { to: "/user-profile/preferences", label: "Preferences", icon: <FiSettings className="mr-2" /> },
-    { to: "/user-profile/notifications", label: "Notifications", icon: <FiBell className="mr-2" /> },
-    { to: "/user-profile/refer-a-friend", label: "Refer a Friend", icon: <FiUserCheck className="mr-2" /> },
-    { to: "/user-profile/earn-a-badge", label: "Earned Badges", icon: <Badge className="mr-2" /> },
-
-
+    { to: "/user-profile/profile", label: "Profiel", icon: <FiUser className="mr-2" /> },
+    { to: "/user-profile/subscription", label: "Abonnement", icon: <MdSubscriptions className="mr-2" /> },
+    { to: "/user-profile/preferences", label: "Voorkeuren", icon: <FiSettings className="mr-2" /> },
+    { to: "/user-profile/notifications", label: "Meldingen", icon: <FiBell className="mr-2" /> },
+    { to: "/user-profile/refer-a-friend", label: "Vriend doorverwijzen", icon: <FiUserCheck className="mr-2" /> },
+    { to: "/user-profile/earn-a-badge", label: "Verdiende mijlpalen", icon: <Badge className="mr-2" /> },
   ];
+  
 
   return (
     <nav className="w-full md:w-64 flex-shrink-0 sticky top-4 bg-white z-10 shadow md:shadow-none">

@@ -178,7 +178,9 @@ const ProgressDashboard = () => {
   ] : defaultStatsData;
 
   // Use API data if available, otherwise use default categories
-  const categoriesToShow = stats?.categories && stats.categories.length > 0 ? stats.categories : defaultCategories;
+  // const categoriesToShow = stats?.categories && stats.categories.length > 0 ? stats.categories : defaultCategories;
+
+  const categoriesToShow = stats?.categories || [];
 
   // Prepare category cards based on API response or default data
   const categoryCards = categoriesToShow.map(category => ({

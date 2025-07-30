@@ -1,35 +1,35 @@
-import { useEffect, useState } from "react"
-import { ArrowLeft, Clock, Users, Star, CheckCircle, X } from "lucide-react"
-import { useParams, useNavigate } from "react-router-dom"
-import DetailImage from "../../public/images/SVG-detail.svg"
-import DetailImage1 from "../../public/images/SVG-detail-1.svg"
-import DetailImage2 from "../../public/images/Frame (1)-detail.svg"
-import { IoMdStar } from "react-icons/io"
-import Faqs from "../components/faqs"
-import BadgeModal from "../components/badge-modal"
-import { useSingleActivity } from "../hooks/useSingleActivity"
+import { useEffect, useState } from "react";
+import { ArrowLeft, Clock, Users, Star, CheckCircle, X } from "lucide-react";
+import { useParams, useNavigate } from "react-router-dom";
+import DetailImage from "../../public/images/SVG-detail.svg";
+import DetailImage1 from "../../public/images/SVG-detail-1.svg";
+import DetailImage2 from "../../public/images/Frame (1)-detail.svg";
+import { IoMdStar } from "react-icons/io";
+import Faqs from "../components/faqs";
+import BadgeModal from "../components/badge-modal";
+import { useSingleActivity } from "../hooks/useSingleActivity";
 import {
   learningDomainImages,
   learningDomainColors,
   LearningDomainDescription,
   newlearningDomainColors,
-} from "../utils/learningDomain"
-import LoaderOverlay from "../components/LoaderOverlay"
-import { toast, ToastContainer } from "react-toastify"
-import { useMarkActivityCompleted, useRateActivity } from "../hooks/useActivityAPI"
+} from "../utils/learningDomain";
+import LoaderOverlay from "../components/LoaderOverlay";
+import { toast, ToastContainer } from "react-toastify";
+import { useMarkActivityCompleted, useRateActivity } from "../hooks/useActivityAPI";
 
 const Sparkle = ({ style }) => (
   <div className="absolute pointer-events-none" style={style}>
     <div className="sparkle">✨</div>
   </div>
-)
+);
 
 const CelebrationSparkles = ({ isVisible, onComplete }) => {
-  const [sparkles, setSparkles] = useState([])
+  const [sparkles, setSparkles] = useState([]);
 
   useEffect(() => {
     if (isVisible) {
-      const newSparkles = []
+      const newSparkles = [];
       for (let i = 0; i < 10; i++) {
         newSparkles.push({
           id: i,
@@ -37,18 +37,18 @@ const CelebrationSparkles = ({ isVisible, onComplete }) => {
           top: Math.random() * 90 + 20 + "%",
           animationDelay: Math.random() * 2 + "s",
           animationDuration: Math.random() * 3 + 2 + "s",
-        })
+        });
       }
-      setSparkles(newSparkles)
+      setSparkles(newSparkles);
       const timer = setTimeout(() => {
-        setSparkles([])
-        onComplete()
-      }, 2000)
-      return () => clearTimeout(timer)
+        setSparkles([]);
+        onComplete();
+      }, 2000);
+      return () => clearTimeout(timer);
     }
-  }, [isVisible, onComplete])
+  }, [isVisible, onComplete]);
 
-  if (!isVisible) return null
+  if (!isVisible) return null;
 
   return (
     <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
@@ -92,134 +92,124 @@ const CelebrationSparkles = ({ isVisible, onComplete }) => {
         }
       `}</style>
     </div>
-  )
-}
+  );
+};
 
 function ActivityDetail() {
-  const { id } = useParams()
-  const navigate = useNavigate()
-  const [showRatingModal, setShowRatingModal] = useState(false)
-  const [selectedRating, setSelectedRating] = useState(0)
-  const [showCelebration, setShowCelebration] = useState(false)
-  const [showBadgeModal, setShowBadgeModal] = useState(false)
-  const [completed, setCompleted] = useState(false)
-  const [earnedBadges, setEarnedBadges] = useState([])
-  const [apiResponseReceived, setApiResponseReceived] = useState(false)
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [selectedRating, setSelectedRating] = useState(0);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [showBadgeModal, setShowBadgeModal] = useState(false);
+  const [completed, setCompleted] = useState(false);
+  const [earnedBadges, setEarnedBadges] = useState([]);
+  const [apiResponseReceived, setApiResponseReceived] = useState(false);
+  const [isMarkingComplete, setIsMarkingComplete] = useState(false);
 
-  const { markCompleted } = useMarkActivityCompleted()
-  const { rateActivity } = useRateActivity()
-  const { activity, loading, error } = useSingleActivity(id)
+  const { markCompleted } = useMarkActivityCompleted();
+  const { rateActivity } = useRateActivity();
+  const { activity, loading, error } = useSingleActivity(id);
 
   useEffect(() => {
-    window.scrollTo(0, 0)
+    window.scrollTo(0, 0);
     if (activity?.isCompleted) {
-      setCompleted(true)
+      setCompleted(true);
     }
-  }, [activity])
+  }, [activity]);
 
   const handleBack = () => {
-    navigate(-1)
-  }
+    navigate(-1);
+  };
 
   const handleMarkComplete = async () => {
+    if (completed || isMarkingComplete) return;
+
     try {
-      setShowCelebration(true)
-      setApiResponseReceived(false)
-      const response = await markCompleted(id)
-      setCompleted(true)
-      console.log("API Response:", response)
+      setIsMarkingComplete(true);
+      setShowCelebration(true);
+      setApiResponseReceived(false);
 
-      // Handle badges immediately after API response
-      let badgesToSet = []
-      // Check for badges in the response
+      const response = await markCompleted(id);
+      
+      setCompleted(true);
+      console.log("API Response:", response);
+
+      // Handle badges from the response
+      let badgesToSet = [];
       if (response.badges && Array.isArray(response.badges) && response.badges.length > 0) {
-        badgesToSet = response.badges
-        console.log("Setting badges from badges array:", badgesToSet)
+        badgesToSet = response.badges;
       } else if (response.badge && typeof response.badge === "object") {
-        badgesToSet = [response.badge]
-        console.log("Setting badges from single badge:", badgesToSet)
+        badgesToSet = [response.badge];
       }
 
-      // Set badges immediately
       if (badgesToSet.length > 0) {
-        console.log("Setting earnedBadges:", badgesToSet)
-        setEarnedBadges(badgesToSet)
+        setEarnedBadges(badgesToSet);
       }
 
-      // Mark that API response has been received
-      setApiResponseReceived(true)
+      setApiResponseReceived(true);
     } catch (error) {
-      setShowCelebration(false)
-      setApiResponseReceived(true)
-      toast.error(error.message)
+      setShowCelebration(false);
+      setApiResponseReceived(true);
+      toast.error(error.message);
+    } finally {
+      setIsMarkingComplete(false);
     }
-  }
+  };
 
   const handleCelebrationComplete = () => {
-    console.log("Celebration complete, earnedBadges length:", earnedBadges.length)
-    console.log("API response received:", apiResponseReceived)
-    setShowCelebration(false)
+    setShowCelebration(false);
 
-    // Only proceed if API response has been received
-    if (apiResponseReceived) {
-      // Show badge modal if we have badges
-      if (earnedBadges.length > 0) {
-        console.log("About to show badge modal with badges:", earnedBadges)
-        setTimeout(() => {
-          console.log("Actually showing badge modal now")
-          setShowBadgeModal(true)
-        }, 100)
-      }
+    if (apiResponseReceived && earnedBadges.length > 0) {
+      setTimeout(() => {
+        setShowBadgeModal(true);
+      }, 100);
     }
-  }
+  };
 
-  // Watch for changes in earnedBadges after celebration completes
   useEffect(() => {
     if (!showCelebration && apiResponseReceived && earnedBadges.length > 0 && !showBadgeModal) {
-      console.log("Effect triggered - showing badge modal with badges:", earnedBadges)
       setTimeout(() => {
-        setShowBadgeModal(true)
-      }, 100)
+        setShowBadgeModal(true);
+      }, 100);
     }
-  }, [showCelebration, apiResponseReceived, earnedBadges, showBadgeModal])
+  }, [showCelebration, apiResponseReceived, earnedBadges, showBadgeModal]);
 
   const handleBadgeModalClose = () => {
-    console.log("Closing badge modal")
-    setShowBadgeModal(false)
-    // Clear badges after modal closes
+    setShowBadgeModal(false);
     setTimeout(() => {
-      setEarnedBadges([])
-      setApiResponseReceived(false)
-    }, 300)
-  }
+      setEarnedBadges([]);
+      setApiResponseReceived(false);
+    }, 300);
+  };
 
   const handleRatingClick = () => {
-    setShowRatingModal(true)
-  }
+    setShowRatingModal(true);
+  };
 
   const handleStarClick = (rating) => {
-    setSelectedRating(rating * 2)
-  }
+    setSelectedRating(rating * 2);
+  };
 
   const handleSubmitRating = async () => {
     try {
       if (selectedRating < 1 || selectedRating > 10) {
-        toast.error("Rating must be between 1 and 10")
-        return
+        toast.error("Rating must be between 1 and 10");
+        return;
       }
-      await rateActivity(id, selectedRating)
-      setShowRatingModal(false)
-      setSelectedRating(0)
-      toast.success("Rating submitted successfully!")
+      await rateActivity(id, selectedRating);
+      setShowRatingModal(false);
+      setSelectedRating(0);
+      toast.success(" Beoordeling succesvol ingediend!");
     } catch (error) {
-      toast.error(error.message)
+      toast.error(error.message);
     }
-  }
+  };
 
   const handleRateLater = () => {
-    setShowRatingModal(false)
-    setSelectedRating(0)
-  }
+    setShowRatingModal(false);
+    setSelectedRating(0);
+  };
 
   const getRatingRange = (index) => {
     const ranges = [
@@ -238,40 +228,36 @@ function ActivityDetail() {
       <span key={4}>
         <span className="font-bold">9-10</span>
       </span>,
-    ]
-    return ranges[index]
-  }
-
-  // Debug log for badge modal state
-  useEffect(() => {
-    console.log("Badge modal state - showBadgeModal:", showBadgeModal, "earnedBadges:", earnedBadges)
-  }, [showBadgeModal, earnedBadges])
+    ];
+    return ranges[index];
+  };
 
   if (loading) {
-    return <LoaderOverlay />
+    return <LoaderOverlay />;
   }
 
   if (error) {
-    return <div className="min-h-screen flex items-center justify-center">Error: {error.message}</div>
+    return <div className="min-h-screen flex items-center justify-center">Error: {error.message}</div>;
   }
 
   if (!activity) {
-    return <div className="min-h-screen flex items-center justify-center">Activity not found</div>
+    return <div className="min-h-screen flex items-center justify-center">Activity not found</div>;
   }
 
-  const domainImage = learningDomainImages[activity.learningDomain]
-  const domainColor = learningDomainColors[activity.learningDomain]
-  const domainDescription = LearningDomainDescription[activity.learningDomain]
-  const newdomainColor = newlearningDomainColors[activity.learningDomain]
-  const averageRating = activity.averageRating || 0
+  const domainImage = learningDomainImages[activity.learningDomain];
+  const domainColor = learningDomainColors[activity.learningDomain];
+  const domainDescription = LearningDomainDescription[activity.learningDomain];
+  const newdomainColor = newlearningDomainColors[activity.learningDomain];
+  const averageRating = activity.averageRating || 0;
 
   return (
     <>
       <ToastContainer style={{ zIndex: 100000000 }} />
       <div className="min-h-screen bg-gray-50 pb-10">
         <CelebrationSparkles isVisible={showCelebration} onComplete={handleCelebrationComplete} />
-        {/* Badge Modal */}
         <BadgeModal isVisible={showBadgeModal} onClose={handleBadgeModalClose} badges={earnedBadges} />
+        
+        {isMarkingComplete && <LoaderOverlay />}
 
         <div className="md:w-[90%] w-full mx-auto p-4 lg:p-6">
           <div className="px-4 py-3">
@@ -296,12 +282,11 @@ function ActivityDetail() {
                   </span>
                 </div>
                 <div className="flex justify-center items-center">
-
-                {activity.nickname && (
-                  <p className={` ${newdomainColor} w-50  px-3 mt-2 py-1 rounded-full text-xs font-medium`}>
-                    Gemaakt door: {activity.nickname}
-                  </p>
-                )}
+                  {activity.nickname && (
+                    <p className={` ${newdomainColor} w-50  px-3 mt-2 py-1 rounded-full text-xs font-medium`}>
+                      Gemaakt door: {activity.nickname}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -365,7 +350,7 @@ function ActivityDetail() {
 
               <button
                 onClick={handleMarkComplete}
-                disabled={completed || showCelebration}
+                disabled={completed || isMarkingComplete}
                 className={`w-full ${
                   completed
                     ? "bg-gray-400 cursor-not-allowed"
@@ -375,7 +360,13 @@ function ActivityDetail() {
                 }`}
               >
                 <CheckCircle className="w-5 h-5" />
-                <span>{completed ? "Voltooid" : showCelebration ? "Vieren..." : "Markeer als voltooid"}</span>
+                <span>
+                  {completed 
+                    ? "Voltooid" 
+                    : isMarkingComplete 
+                      ? "Bezig..." 
+                      : "Markeer als voltooid"}
+                </span>
               </button>
             </div>
 
@@ -506,7 +497,7 @@ function ActivityDetail() {
         <Faqs />
       </div>
     </>
-  )
+  );
 }
 
-export default ActivityDetail
+export default ActivityDetail;

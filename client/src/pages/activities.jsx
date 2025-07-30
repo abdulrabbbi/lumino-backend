@@ -168,7 +168,7 @@ export default function Activities() {
   const handleStartActivityClick = () => {
     const authToken = localStorage.getItem("authToken")
     if (!authToken) {
-      toast.info("You have to login first to create an Activity")
+      toast.info("Je moet eerst inloggen om een activiteit aan te maken.")
       return
     }
     navigate("/create-activity")
@@ -176,7 +176,7 @@ export default function Activities() {
 
   const handleActivityClick = (activity) => {
     if (activity.isLocked) {
-      toast.info("This activity is locked. Please upgrade your account to access it.")
+      toast.info("Deze activiteit is vergrendeld. Upgrade je account om toegang te krijgen.")
       return
     }
     navigate(`/activity-detail/${activity.id}`)
@@ -456,7 +456,6 @@ export default function Activities() {
                 <option value="3-4">3-4 jaar</option>
                 <option value="3-6">3-6 jaar</option>
                 <option value="5-6">5-6 jaar</option>
-                <option value="7-8">7-8 jaar</option>
               </select>
               <select
                 value={selectedSort}

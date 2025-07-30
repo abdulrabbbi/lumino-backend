@@ -23,6 +23,7 @@ const CreateActivity = () => {
   const [titleCount, setTitleCount] = useState(0);
   const [descriptionCount, setDescriptionCount] = useState(0);
   const [creatorCount, setCreatorCount] = useState(0);
+  const [validationErrors, setValidationErrors] = useState({});
   
   // Badge modal state
   const [showBadgeModal, setShowBadgeModal] = useState(false);
@@ -40,6 +41,15 @@ const CreateActivity = () => {
       ...prev,
       [field]: value
     }));
+
+    // Clear validation error when user starts typing
+    if (validationErrors[field]) {
+      setValidationErrors(prev => {
+        const newErrors = {...prev};
+        delete newErrors[field];
+        return newErrors;
+      });
+    }
 
     switch (field) {
       case 'title':
@@ -74,38 +84,86 @@ const CreateActivity = () => {
     return { valid: false, error: 'Voer een getal in (bijv. "10") of bereik (bijv. "10-15")' };
   };
 
-  const handleSubmit = async () => {
-    if (!formData.title || !formData.description || !formData.learningDomain || !formData.instructions || !formData.ageGroup) {
-      toast.error('Vul alle verplichte velden in');
-      return;
+  const validateForm = () => {
+    const errors = {};
+    let isValid = true;
+
+    // Required fields validation
+    if (!formData.title.trim()) {
+      errors.title = 'Titel is verplicht';
+      isValid = false;
     }
 
-    // Validate time format
-    const timeValidation = validateTimeFormat(formData.time);
-    if (!timeValidation.valid) {
-      toast.error(timeValidation.error);
-      return;
+    if (!formData.description.trim()) {
+      errors.description = 'Beschrijving is verplicht';
+      isValid = false;
     }
 
-    const instructionsArray = formData.instructions
-      .split('\n')
-      .filter(step => step.trim() !== '')
-      .map(step => step.trim())
-      .slice(0, 5); 
+    if (!formData.instructions.trim()) {
+      errors.instructions = 'Instructies zijn verplicht';
+      isValid = false;
+    } else {
+      const instructionsArray = formData.instructions
+        .split('\n')
+        .filter(step => step.trim() !== '')
+        .map(step => step.trim())
+        .slice(0, 5);
 
-    if (instructionsArray.length === 0) {
-      toast.error('Voeg minimaal één instructie stap toe');
-      return;
-    }
-
-    for (const step of instructionsArray) {
-      if (step.length > 180) {
-        toast.error('Elke instructie stap mag maximaal 180 tekens bevatten');
-        return;
+      if (instructionsArray.length === 0) {
+        errors.instructions = 'Voeg minimaal één instructie stap toe';
+        isValid = false;
+      } else {
+        for (const step of instructionsArray) {
+          if (step.length > 180) {
+            errors.instructions = 'Elke instructie stap mag maximaal 180 tekens bevatten';
+            isValid = false;
+            break;
+          }
+        }
       }
     }
 
+    if (!formData.learningDomain) {
+      errors.learningDomain = 'Leergebied is verplicht';
+      isValid = false;
+    }
+
+    if (!formData.ageGroup) {
+      errors.ageGroup = 'Leeftijdsgroep is verplicht';
+      isValid = false;
+    }
+
+    // Time validation
+    const timeValidation = validateTimeFormat(formData.time);
+    if (!timeValidation.valid) {
+      errors.time = timeValidation.error;
+      isValid = false;
+    }
+
+    setValidationErrors(errors);
+    return isValid;
+  };
+
+  const handleSubmit = async () => {
+    if (!validateForm()) {
+      // Scroll to the first error
+      const firstErrorField = Object.keys(validationErrors)[0];
+      if (firstErrorField) {
+        document.getElementById(firstErrorField)?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center'
+        });
+      }
+      return;
+    }
+
     try {
+      const instructionsArray = formData.instructions
+        .split('\n')
+        .filter(step => step.trim() !== '')
+        .map(step => step.trim())
+        .slice(0, 5);
+
       const activityData = {
         title: formData.title,
         description: formData.description,
@@ -114,7 +172,7 @@ const CreateActivity = () => {
         learningDomain: formData.learningDomain,
         nickname: formData.nickname || '',
         ageGroup: formData.ageGroup,
-        time: formData.time, // Storing exactly as entered (e.g. "10" or "10-15")
+        time: formData.time,
         effect: formData.effect
       };
 
@@ -147,6 +205,11 @@ const CreateActivity = () => {
     setTimeout(() => {
       navigate('/activities');
     }, 500);
+  };
+
+  // Helper function to get input border color based on validation
+  const getInputBorderColor = (field) => {
+    return validationErrors[field] ? 'border-red-500' : 'border-[#E5E7EB]';
   };
 
   return (
@@ -197,7 +260,7 @@ const CreateActivity = () => {
 
           <div className="space-y-6">
             {/* Title */}
-            <div>
+            <div id="title">
               <label className="block text-sm font-medium text-[#000000] mb-2">
                 Titel <span className="text-red-500">*</span>
               </label>
@@ -206,16 +269,19 @@ const CreateActivity = () => {
                 value={formData.title}
                 onChange={(e) => handleInputChange('title', e.target.value)}
                 placeholder="Bijvoorbeeld: Kleurrijke Natuur Ontdekkingstocht"
-                className="w-full px-4 py-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-sm"
+                className={`w-full px-4 py-3 bg-[#F9FAFB] border ${getInputBorderColor('title')} rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-sm`}
                 maxLength={60}
               />
+              {validationErrors.title && (
+                <p className="text-xs text-red-500 mt-1">{validationErrors.title}</p>
+              )}
               <p className="text-xs text-[#6B7280] mt-1">
                 Maximaal 60 tekens ({titleCount}/60)
               </p>
             </div>
 
             {/* Description */}
-            <div>
+            <div id="description">
               <label className="block text-sm font-medium text-[#000000] mb-2">
                 Beschrijving <span className="text-red-500">*</span>
               </label>
@@ -223,17 +289,20 @@ const CreateActivity = () => {
                 value={formData.description}
                 onChange={(e) => handleInputChange('description', e.target.value)}
                 placeholder="Beschrijf in het kort waar deze activiteit over gaat..."
-                className="w-full px-4 py-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-sm resize-none"
+                className={`w-full px-4 py-3 bg-[#F9FAFB] border ${getInputBorderColor('description')} rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-sm resize-none`}
                 rows="4"
                 maxLength={250}
               />
+              {validationErrors.description && (
+                <p className="text-xs text-red-500 mt-1">{validationErrors.description}</p>
+              )}
               <p className="text-xs text-[#6B7280] mt-1">
                 Maximaal 250 tekens ({descriptionCount}/250)
               </p>
             </div>
 
             {/* Instructions */}
-            <div>
+            <div id="instructions">
               <label className="block text-sm font-medium text-[#000000] mb-2">
                 Instructies <span className="text-red-500">*</span>
               </label>
@@ -241,9 +310,12 @@ const CreateActivity = () => {
                 value={formData.instructions}
                 onChange={(e) => handleInputChange('instructions', e.target.value)}
                 placeholder={`1. Neem een vel papier\n2. Vouw het dubbel in de lengte\n3. Maak de neus door de bovenste hoeken naar beneden te vouwen\n4. Vouw de zijkanten naar binnen om vleugels te vormen\n5. Lanceer en kijk hoe ver het vliegt!`}
-                className="w-full px-4 py-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-sm resize-none"
+                className={`w-full px-4 py-3 bg-[#F9FAFB] border ${getInputBorderColor('instructions')} rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-sm resize-none`}
                 rows="6"
               />
+              {validationErrors.instructions && (
+                <p className="text-xs text-red-500 mt-1">{validationErrors.instructions}</p>
+              )}
               <p className="text-xs text-[#6B7280] mt-1">
                 Gebruik genummerde stappen (1., 2., etc.). Maximaal 5 stappen, elke stap maximaal 180 tekens.
               </p>
@@ -267,53 +339,58 @@ const CreateActivity = () => {
             </div>
 
             {/* Duration Fields */}
-            <div>
-            <label className="block text-sm font-medium text-[#000000] mb-2">
-              Geschatte duur (minuten)
-            </label>
-            <div className="relative flex items-center">
-              <input
-                type="text"
-                value={formData.time}
-                onChange={(e) => handleInputChange('time', e.target.value)}
-                placeholder="Bijvoorbeeld: 10 of 10-15"
-                className="w-full px-4 py-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-sm"
-              />
-              <Clock className="w-4 h-4 text-gray-400 absolute right-3" />
+            <div id="time">
+              <label className="block text-sm font-medium text-[#000000] mb-2">
+                Geschatte duur (minuten)
+              </label>
+              <div className="relative flex items-center">
+                <input
+                  type="text"
+                  value={formData.time}
+                  onChange={(e) => handleInputChange('time', e.target.value)}
+                  placeholder="Bijvoorbeeld: 10 of 10-15"
+                  className={`w-full px-4 py-3 bg-[#F9FAFB] border ${getInputBorderColor('time')} rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-sm`}
+                />
+                <Clock className="w-4 h-4 text-gray-400 absolute right-3" />
+              </div>
+              {validationErrors.time && (
+                <p className="text-xs text-red-500 mt-1">{validationErrors.time}</p>
+              )}
+              <p className="text-xs text-[#6B7280] mt-1">
+                Voer een getal in (bijv. "10") of bereik (bijv. "10-15")
+              </p>
             </div>
-            <p className="text-xs text-[#6B7280] mt-1">
-              Voer een getal in (bijv. "10") of bereik (bijv. "10-15")
-            </p>
-          </div>
 
             {/* Age Group */}
-            <div>
+            <div id="ageGroup">
               <label className="block text-sm font-medium text-[#000000] mb-2">
                 Leeftijdsgroep <span className="text-red-500">*</span>
               </label>
               <select
                 value={formData.ageGroup}
                 onChange={(e) => handleInputChange('ageGroup', e.target.value)}
-                className="w-full px-4 py-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-sm"
+                className={`w-full px-4 py-3 bg-[#F9FAFB] border ${getInputBorderColor('ageGroup')} rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-sm`}
                 required
               >
                 <option value="">Selecteer een leeftijdsgroep</option>
                 <option value="Age 3 - 4">Leeftijd 3 - 4</option>
                 <option value="Age 3 - 6">Leeftijd 3 - 6</option>
                 <option value="Age 5 - 6">Leeftijd 5 - 6</option>
-                <option value="Age 7 - 8">Leeftijd 7 - 8</option>
               </select>
+              {validationErrors.ageGroup && (
+                <p className="text-xs text-red-500 mt-1">{validationErrors.ageGroup}</p>
+              )}
             </div>
 
             {/* Learning Domain */}
-            <div>
-              <label className="block text-sm font-medium text-[#000000] mb -2">
+            <div id="learningDomain">
+              <label className="block text-sm font-medium text-[#000000] mb-2">
                 Leergebied <span className="text-red-500">*</span>
               </label>
               <select
                 value={formData.learningDomain}
                 onChange={(e) => handleInputChange('learningDomain', e.target.value)}
-                className="w-full px-4 py-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-sm appearance-none"
+                className={`w-full px-4 py-3 bg-[#F9FAFB] border ${getInputBorderColor('learningDomain')} rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-sm appearance-none`}
                 required
               >
                 <option value="">Selecteer een leergebied</option>
@@ -325,11 +402,14 @@ const CreateActivity = () => {
                 <option value="Ondernemerschap">Ondernemerschap</option>
                 <option value="Anders denken">Anders denken</option>
               </select>
+              {validationErrors.learningDomain && (
+                <p className="text-xs text-red-500 mt-1">{validationErrors.learningDomain}</p>
+              )}
             </div>
 
             <div>
               <label className="block text-sm font-medium text-[#000000] mb-2">
-              Effect
+                Effect
               </label>
               <input
                 type="text"

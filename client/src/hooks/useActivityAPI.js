@@ -18,7 +18,7 @@ export const useMarkActivityCompleted = () => {
         }
       );
 
-      toast.success('Activity marked as completed successfully!');
+      toast.success(' Activiteit succesvol als voltooid gemarkeerd!');
       return response.data;
     } catch (error) {
       const errorMessage = error.response?.data?.message || 'Failed to mark activity as completed';
@@ -46,7 +46,7 @@ export const useRateActivity = () => {
         }
       );
 
-      toast.success('Rating submitted successfully!');
+      toast.success(' Beoordeling succesvol ingediend!');
       return response.data;
     } catch (error) {
       const errorMessage = error.response?.data?.error || 'Failed to submit rating';

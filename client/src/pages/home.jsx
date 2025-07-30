@@ -19,7 +19,7 @@ import Faqs from "../components/faqs"
 import EducationalQuotes from '../components/educational-quotes'
 
 import StarImage from '../../public/profile-images/Frame (11)-star.svg'
-import { useNavigate } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 
 import HomePageImage from '../../public/images/getty-images-kr0G3nDBpzg-unsplash.jpg'
 
@@ -374,9 +374,11 @@ export default function HeroSection() {
             <div className="text-center cursor-pointer mt-16">
               <div className="inline-block bg-gradient-to-r from-pink-400 via-pink-500 to-purple-500 p-1 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
                 <div className="bg-white rounded-full px-8 py-4">
+                <Link to={"/activities"}>
                   <p className="md:text-lg text-sm font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
                     Klaar om je eigen leeravontuur te beginnen? 🎉
                   </p>
+                </Link>
                 </div>
               </div>
             </div>
