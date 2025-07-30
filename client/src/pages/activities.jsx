@@ -454,6 +454,7 @@ export default function Activities() {
               >
                 <option value="alle-leeftijden">Alle Leeftijden</option>
                 <option value="3-4">3-4 jaar</option>
+                <option value="3-6">3-6 jaar</option>
                 <option value="5-6">5-6 jaar</option>
                 <option value="7-8">7-8 jaar</option>
               </select>
