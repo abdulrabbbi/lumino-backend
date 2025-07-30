@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { Trash2, ChevronLeft, ChevronRight } from "lucide-react"
+import { Trash2, ChevronLeft, ChevronRight, Edit } from "lucide-react"
 import axios from "axios"
 import { BASE_URL } from "../../utils/api"
 import LoaderOverlay from "../../components/LoaderOverlay"
@@ -14,8 +14,16 @@ export default function TestgroepAanmeldingen() {
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [deleteError, setDeleteError] = useState(null)
   const [currentPage, setCurrentPage] = useState(1)
+  
+  // New state for password update modal
+  const [showPasswordModal, setShowPasswordModal] = useState(false)
+  const [userToUpdate, setUserToUpdate] = useState(null)
+  const [newPassword, setNewPassword] = useState("")
+  const [passwordUpdateLoading, setPasswordUpdateLoading] = useState(false)
+  const [passwordUpdateError, setPasswordUpdateError] = useState(null)
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
 
-  const recordsPerPage = 6
+  const recordsPerPage = 20
 
   useEffect(() => {
     const fetchTestUsers = async () => {
@@ -29,15 +37,10 @@ export default function TestgroepAanmeldingen() {
 
         if (response.data.success) {
           const transformedData = response.data.users.map((user) => ({
-            id: user._id, // Add user ID for deletion
+            id: user._id,
             naam: user.username,
             email: user.email,
             leeftijdKind: user.ageGroup || "Niet opgegeven",
-            // ervaring: {
-            //   onderwijs: false,
-            //   coaching: false,
-            //   opvoeding: false,
-            // },
             aangemeldOp: formatDate(user.createdAt),
           }))
           setRegistrations(transformedData)
@@ -67,6 +70,13 @@ export default function TestgroepAanmeldingen() {
   const handleDeleteClick = (user) => {
     setUserToDelete(user)
     setShowDeleteModal(true)
+  }
+
+  const handleUpdatePasswordClick = (user) => {
+    setUserToUpdate(user)
+    setShowPasswordModal(true)
+    setNewPassword("")
+    setPasswordUpdateError(null)
   }
 
   const confirmDelete = async () => {
@@ -107,6 +117,52 @@ export default function TestgroepAanmeldingen() {
     setShowDeleteModal(false)
     setUserToDelete(null)
     setDeleteError(null)
+  }
+
+  const handlePasswordUpdate = async () => {
+    if (!userToUpdate || !newPassword) {
+      setPasswordUpdateError("Please enter a new password")
+      return
+    }
+
+    setPasswordUpdateLoading(true)
+    setPasswordUpdateError(null)
+
+    try {
+      const token = localStorage.getItem("adminAuthToken")
+      const response = await axios.post(
+        `${BASE_URL}/change-test-users-password`,
+        {
+          userId: userToUpdate.email, // Using email as userId based on your backend
+          newPassword: newPassword,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
+
+      if (response.data.success) {
+        setShowPasswordModal(false)
+        setShowSuccessModal(true)
+      }
+    } catch (err) {
+      setPasswordUpdateError(err.response?.data?.message || "Failed to update password")
+    } finally {
+      setPasswordUpdateLoading(false)
+    }
+  }
+
+  const closePasswordModal = () => {
+    setShowPasswordModal(false)
+    setUserToUpdate(null)
+    setNewPassword("")
+    setPasswordUpdateError(null)
+  }
+
+  const closeSuccessModal = () => {
+    setShowSuccessModal(false)
   }
 
   // Pagination logic
@@ -180,6 +236,7 @@ export default function TestgroepAanmeldingen() {
     <>
       <ToastContainer style={{ zIndex: 10000000 }} />
       <div className="h-auto">
+        {/* Delete Confirmation Modal */}
         {showDeleteModal && (
           <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 max-w-md w-full">
@@ -209,6 +266,71 @@ export default function TestgroepAanmeldingen() {
           </div>
         )}
 
+        {/* Password Update Modal */}
+        {showPasswordModal && (
+          <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full">
+              <h2 className="text-xl font-semibold mb-4 inter-tight-600">Update Password</h2>
+              <p className="mb-4 inter-tight-400">
+                Updating password for <span className="font-semibold">{userToUpdate?.naam}</span> ({userToUpdate?.email})
+              </p>
+              
+              <div className="mb-4">
+                <label htmlFor="newPassword" className="block text-sm font-medium  text-gray-700 mb-2 inter-tight-400">
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  id="newPassword"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full px-3 py-2 border text-sm inter-tight-400 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#478DF5]"
+                  placeholder="Enter new password"
+                />
+              </div>
+              
+              {passwordUpdateError && <div className="text-red-500 inter-tight-400 mb-4">{passwordUpdateError}</div>}
+              
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={closePasswordModal}
+                  disabled={passwordUpdateLoading}
+                  className="px-4 py-2 border border-gray-300 inter-tight-400 text-sm cursor-pointer rounded-md text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handlePasswordUpdate}
+                  disabled={passwordUpdateLoading}
+                  className="px-4 py-2 bg-[#478DF5] text-white inter-tight-400 text-sm cursor-pointer rounded-md hover:bg-[#3a7bd5] disabled:opacity-50"
+                >
+                  {passwordUpdateLoading ? "Updating..." : "Update Password"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Success Modal */}
+        {showSuccessModal && (
+          <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full">
+              <h2 className="text-xl font-semibold mb-4 inter-tight-600">Success</h2>
+              <p className="mb-4 inter-tight-400">
+                Password has been successfully updated for <span className="font-semibold">{userToUpdate?.naam}</span> ({userToUpdate?.email})
+              </p>
+              <div className="flex justify-end">
+                <button
+                  onClick={closeSuccessModal}
+                  className="px-4 py-2 bg-[#478DF5] text-white inter-tight-400 text-sm cursor-pointer rounded-md hover:bg-[#3a7bd5]"
+                >
+                  OK
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="max-w-7xl mx-auto">
           <div className="bg-white rounded-lg shadow-sm border border-[#E2E4E9]">
             <div className="p-6 border-b border-gray-200">
@@ -216,14 +338,13 @@ export default function TestgroepAanmeldingen() {
               <p className="text-[#576175] inter-tight-400">Overzicht van alle testouder aanmeldingen en hun status</p>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="overflow-y-auto custom-scrollbar max-h-[60vh]">
               <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
                     <th className="px-6 py-3 text-left text-sm text-[#262F40] inter-tight-400">Naam</th>
                     <th className="px-6 py-3 text-left text-sm text-[#262F40] inter-tight-400">Email</th>
                     <th className="px-6 py-3 text-left text-sm text-[#262F40] inter-tight-400">Leeftijd Kind</th>
-                    {/* <th className="px-6 py-3 text-left text-sm text-[#262F40] inter-tight-400">Ervaring</th> */}
                     <th className="px-6 py-3 text-left text-sm text-[#262F40] inter-tight-400">Status</th>
                     <th className="px-6 py-3 text-left text-sm text-[#262F40] inter-tight-400">Aangemeld op</th>
                     <th className="px-6 py-3 text-left text-sm text-[#262F40] inter-tight-400">Acties</th>
@@ -235,22 +356,6 @@ export default function TestgroepAanmeldingen() {
                       <td className="px-6 py-4 text-sm text-[#262F40] inter-tight-400">{registration.naam}</td>
                       <td className="px-6 py-4 text-sm text-[#262F40] inter-tight-400">{registration.email}</td>
                       <td className="px-6 py-4 text-sm text-[#262F40] inter-tight-400">{registration.leeftijdKind}</td>
-                      {/* <td className="px-6 py-4 text-sm text-[#262F40] inter-tight-400">
-                        <div className="space-y-1">
-                          <div className="flex items-center">
-                            <span className="font-medium">Onderwijs:</span>
-                            <span className="ml-2">{registration.ervaring.onderwijs ? "Ja" : "Nee"}</span>
-                          </div>
-                          <div className="flex items-center">
-                            <span className="font-medium">Coaching:</span>
-                            <span className="ml-2">{registration.ervaring.coaching ? "Ja" : "Nee"}</span>
-                          </div>
-                          <div className="flex items-center">
-                            <span className="font-medium">Opvoeding:</span>
-                            <span className="ml-2">{registration.ervaring.opvoeding ? "Ja" : "Nee"}</span>
-                          </div>
-                        </div>
-                      </td> */}
                       <td className="px-6 py-4 text-sm text-[#262F40] inter-tight-400">
                         <span className="inline-flex px-3 py-1 text-xs font-medium rounded-full bg-[#478DF5] text-white">
                           Actief
@@ -258,12 +363,20 @@ export default function TestgroepAanmeldingen() {
                       </td>
                       <td className="px-6 py-4 text-sm text-[#262F40] inter-tight-400">{registration.aangemeldOp}</td>
                       <td className="px-6 py-4 text-sm text-[#262F40] inter-tight-400">
-                        <button
-                          onClick={() => handleDeleteClick(registration)}
-                          className="text-red-500 bg-slate-100 cursor-pointer p-2 rounded-lg hover:text-red-700 border border-[#E2E4E9]"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleDeleteClick(registration)}
+                            className="text-red-500 bg-slate-100 cursor-pointer p-2 rounded-lg hover:text-red-700 border border-[#E2E4E9]"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                          <button
+                            onClick={() => handleUpdatePasswordClick(registration)}
+                            className="text-blue-500 bg-slate-100 cursor-pointer p-2 rounded-lg hover:text-blue-700 border border-[#E2E4E9]"
+                          >
+                            <Edit size={16}/>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}

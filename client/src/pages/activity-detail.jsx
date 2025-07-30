@@ -1,5 +1,3 @@
-"use client"
-
 import { useEffect, useState } from "react"
 import { ArrowLeft, Clock, Users, Star, CheckCircle, X } from "lucide-react"
 import { useParams, useNavigate } from "react-router-dom"
@@ -42,12 +40,10 @@ const CelebrationSparkles = ({ isVisible, onComplete }) => {
         })
       }
       setSparkles(newSparkles)
-
       const timer = setTimeout(() => {
         setSparkles([])
         onComplete()
       }, 2000)
-
       return () => clearTimeout(timer)
     }
   }, [isVisible, onComplete])
@@ -129,15 +125,12 @@ function ActivityDetail() {
     try {
       setShowCelebration(true)
       setApiResponseReceived(false)
-
       const response = await markCompleted(id)
       setCompleted(true)
-
       console.log("API Response:", response)
 
       // Handle badges immediately after API response
       let badgesToSet = []
-
       // Check for badges in the response
       if (response.badges && Array.isArray(response.badges) && response.badges.length > 0) {
         badgesToSet = response.badges
@@ -165,7 +158,6 @@ function ActivityDetail() {
   const handleCelebrationComplete = () => {
     console.log("Celebration complete, earnedBadges length:", earnedBadges.length)
     console.log("API response received:", apiResponseReceived)
-
     setShowCelebration(false)
 
     // Only proceed if API response has been received
@@ -271,7 +263,6 @@ function ActivityDetail() {
   const domainColor = learningDomainColors[activity.learningDomain]
   const domainDescription = LearningDomainDescription[activity.learningDomain]
   const newdomainColor = newlearningDomainColors[activity.learningDomain]
-
   const averageRating = activity.averageRating || 0
 
   return (
@@ -279,7 +270,6 @@ function ActivityDetail() {
       <ToastContainer style={{ zIndex: 100000000 }} />
       <div className="min-h-screen bg-gray-50 pb-10">
         <CelebrationSparkles isVisible={showCelebration} onComplete={handleCelebrationComplete} />
-
         {/* Badge Modal */}
         <BadgeModal isVisible={showBadgeModal} onClose={handleBadgeModalClose} badges={earnedBadges} />
 
@@ -304,6 +294,14 @@ function ActivityDetail() {
                   <span className={`${newdomainColor} px-3 py-1 rounded-full text-xs font-medium`}>
                     {activity.learningDomain}
                   </span>
+                </div>
+                <div className="flex justify-center items-center">
+
+                {activity.nickname && (
+                  <p className={` ${newdomainColor} w-50  px-3 mt-2 py-1 rounded-full text-xs font-medium`}>
+                    Gemaakt door: {activity.nickname}
+                  </p>
+                )}
                 </div>
               </div>
 
@@ -356,12 +354,12 @@ function ActivityDetail() {
                   </div>
                   Effect op het kind
                 </h2>
-              {activity.effect ? (  <p className="text-[#374151] inter-tight-400 text-md leading-relaxed">
-                  {activity.effect}
-                </p>): (
+                {activity.effect ? (
+                  <p className="text-[#374151] inter-tight-400 text-md leading-relaxed">{activity.effect}</p>
+                ) : (
                   <p className="text-[#374151] inter-tight-400 text-md leading-relaxed">
-                  This activity helps children develop various skills related to {activity.learningDomain}.
-                </p>
+                    This activity helps children develop various skills related to {activity.learningDomain}.
+                  </p>
                 )}
               </div>
 
@@ -458,12 +456,10 @@ function ActivityDetail() {
               >
                 <X className="w-4 h-4 text-gray-600" />
               </button>
-
               <div className="text-center">
                 <h2 className="text-lg font-semibold inter-tight-400 text-gray-800 mb-8">
                   Beoordeling Selecteer Een Aantal Sterren:
                 </h2>
-
                 <div className="flex justify-center space-x-4 mb-6">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
@@ -477,7 +473,6 @@ function ActivityDetail() {
                     </button>
                   ))}
                 </div>
-
                 <div className="flex justify-center space-x-8 mb-8 text-sm text-gray-500">
                   {[1, 2, 3, 4, 5].map((index) => (
                     <span key={index} className={selectedRating === index * 2 ? "text-green-600 font-medium" : ""}>
@@ -485,7 +480,6 @@ function ActivityDetail() {
                     </span>
                   ))}
                 </div>
-
                 <div className="flex md:flex-row gap-2 flex-col w-full space-x-4">
                   <button
                     onClick={handleRateLater}
@@ -509,7 +503,6 @@ function ActivityDetail() {
             </div>
           </div>
         )}
-
         <Faqs />
       </div>
     </>

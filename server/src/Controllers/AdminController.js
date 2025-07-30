@@ -54,6 +54,37 @@ export const adminLogin = async (req, res) => {
     res.status(500).json({ success: false, message: "Server Error" });
   }
 };
+export const changeTestUserPassword = async (req, res) => {
+  try {
+    const admin = await User.findById(req.user?.userId);
+    if (!admin || admin.role !== "admin") {
+      return res.status(403).json({ success: false, message: "Only admin can change passwords" });
+    }
+
+    const { userId, newPassword } = req.body;
+
+    if (!userId || !newPassword) {
+      return res.status(400).json({ success: false, message: "Email and new password are required" });
+    }
+
+    const user = await User.findOne({ email: userId }); // 🔁 Changed from findById to findOne({ email })
+
+    if (!user || !user.isTestFamily) {
+      return res.status(404).json({ success: false, message: "Test user not found" });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    await user.save();
+
+    res.status(200).json({ success: true, message: "Password updated successfully for test user" });
+  } catch (error) {
+    console.error("Error changing test user password:", error);
+    res.status(500).json({ success: false, message: "Server error" });
+  }
+};
+
+
 export const approveActivity = async (req, res) => {
   try {
     const admin = await User.findById(req.user?.userId);

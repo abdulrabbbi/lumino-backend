@@ -1,4 +1,4 @@
-import { approveActivity, getParentApprovalActivity, getAllBadges, getAllMarketingUsers, deleteUser, getTestFamilyUsers, getUserDetailsWithActivities, getAllUsersWithSubscription, deleteParentsActivity, createBulkActivities, adminLogin,  createActivity , editParentsActivity, getAllActivities, getActivityCounts, getPlatformStats } from "../Controllers/AdminController.js";
+import { approveActivity, getParentApprovalActivity, changeTestUserPassword, getAllBadges, getAllMarketingUsers, deleteUser, getTestFamilyUsers, getUserDetailsWithActivities, getAllUsersWithSubscription, deleteParentsActivity, createBulkActivities, adminLogin,  createActivity , editParentsActivity, getAllActivities, getActivityCounts, getPlatformStats } from "../Controllers/AdminController.js";
 import express from 'express'
 import {authenticate} from '../Middleware/Authenticate.js'
 
@@ -25,6 +25,10 @@ router.get('/get-all-test-users', authenticate, getTestFamilyUsers);
 
 router.delete('/delete-test-user/:id', authenticate, deleteUser);
 router.get('/get-all-guest-user', getAllMarketingUsers);
+
+
+router.post('/change-test-users-password', authenticate, changeTestUserPassword);
+
 
 
 

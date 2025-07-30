@@ -25,12 +25,13 @@ export default function ActiviteitenBeheer() {
   const [activeTab, setActiveTab] = useState("list")
   const [currentPage, setCurrentPage] = useState(1)
   const [bulkMode, setBulkMode] = useState(false)
-  const [bulkActivities, setBulkActivities] = useState([{ title: "", description: "", instructions: "", materials: "", effect: "" }])
+  const [bulkActivities, setBulkActivities] = useState([
+    { title: "", description: "", instructions: "", materials: "", effect: "" },
+  ])
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [activityToDelete, setActivityToDelete] = useState(null)
   const [deleteLoading, setDeleteLoading] = useState(false)
-
-  const activitiesPerPage = 10
+  const activitiesPerPage = 30
 
   // Convert filter to API-friendly format
   const apiFilter =
@@ -41,7 +42,6 @@ export default function ActiviteitenBeheer() {
         : selectedFilter === "Voltooide Activiteiten"
           ? "Voltooid"
           : "Concept"
-
   const { activities, loading, error, counts, refetch } = useGetAllActivities(apiFilter)
   const {
     deleteActivity,
@@ -50,7 +50,6 @@ export default function ActiviteitenBeheer() {
     createActivity,
     createBulkActivities,
   } = useAdminActivityActions()
-
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -61,7 +60,7 @@ export default function ActiviteitenBeheer() {
     ageGroup: "",
     creatorName: "",
     time: "",
-    effect: ""
+    effect: "",
   })
 
   const [titleCount, setTitleCount] = useState(0)
@@ -97,7 +96,6 @@ export default function ActiviteitenBeheer() {
       ...prev,
       [field]: value,
     }))
-
     switch (field) {
       case "title":
         setTitleCount(value.length)
@@ -135,7 +133,6 @@ export default function ActiviteitenBeheer() {
     if (bulkMode) {
       // Handle bulk submission
       const validActivities = bulkActivities.filter((activity) => activity.title.trim() && activity.description.trim())
-
       if (validActivities.length === 0) {
         toast.error("Voer minimaal één geldige activiteit in", {
           position: "top-right",
@@ -143,7 +140,6 @@ export default function ActiviteitenBeheer() {
         })
         return
       }
-
       if (!formData.creatorName || !formData.learningDomain) {
         toast.error("Maker naam en leergebied zijn verplicht voor bulk activiteiten", {
           position: "top-right",
@@ -151,7 +147,6 @@ export default function ActiviteitenBeheer() {
         })
         return
       }
-
       try {
         const bulkData = {
           activities: validActivities.map((activity) => ({
@@ -159,25 +154,22 @@ export default function ActiviteitenBeheer() {
             description: activity.description,
             instructions: activity.instructions
               ? activity.instructions
-                .split("\n")
-                .filter((step) => step.trim() !== "")
-                .map((step) => step.trim())
-                .slice(0, 5)
+                  .split("\n")
+                  .filter((step) => step.trim() !== "")
+                  .map((step) => step.trim())
+                  .slice(0, 5)
               : [],
             materials: activity.materials || undefined,
-            effect: activity.effect || undefined
+            effect: activity.effect || undefined,
           })),
           creatorName: formData.creatorName,
           learningDomain: formData.learningDomain,
           ageGroup: formData.ageGroup || undefined,
           time: formData.time || undefined,
         }
-
         await createBulkActivities(bulkData)
-
         // Refresh activities list
         await refreshActivities()
-
         setActiveTab("list")
         setBulkActivities([{ title: "", description: "", instructions: "", effect: "" }])
         setFormData({
@@ -190,9 +182,8 @@ export default function ActiviteitenBeheer() {
           ageGroup: "",
           creatorName: "",
           time: "",
-          effect: ""
+          effect: "",
         })
-
         toast.success(`${validActivities.length} activiteiten succesvol aangemaakt!`, {
           position: "top-right",
           autoClose: 3000,
@@ -218,13 +209,11 @@ export default function ActiviteitenBeheer() {
         })
         return
       }
-
       const instructionsArray = formData.instructions
         .split("\n")
         .filter((step) => step.trim() !== "")
         .map((step) => step.trim())
         .slice(0, 5)
-
       if (instructionsArray.length === 0) {
         toast.error("Voeg minimaal één instructie stap toe", {
           position: "top-right",
@@ -232,7 +221,6 @@ export default function ActiviteitenBeheer() {
         })
         return
       }
-
       for (const step of instructionsArray) {
         if (step.length > 180) {
           toast.error("Elke instructie stap mag maximaal 180 tekens bevatten", {
@@ -242,7 +230,6 @@ export default function ActiviteitenBeheer() {
           return
         }
       }
-
       try {
         if (formData.editingId) {
           const updates = {
@@ -255,14 +242,11 @@ export default function ActiviteitenBeheer() {
             creatorName: formData.creatorName,
             time: formData.time,
             status: "Actief",
-            effect: formData.effect
+            effect: formData.effect,
           }
-
           await editActivity(formData.editingId, updates)
-
           // Refresh activities list
           await refreshActivities()
-
           toast.success("Activiteit succesvol bijgewerkt!", {
             position: "top-right",
             autoClose: 3000,
@@ -278,20 +262,16 @@ export default function ActiviteitenBeheer() {
             creatorName: formData.creatorName,
             time: formData.time,
             status: "Actief",
-            effect: formData.effect
+            effect: formData.effect,
           }
-
           await createActivity(activityData)
-
           // Refresh activities list
           await refreshActivities()
-
           toast.success("Activiteit succesvol aangemaakt!", {
             position: "top-right",
             autoClose: 3000,
           })
         }
-
         setActiveTab("list")
         setFormData({
           title: "",
@@ -303,7 +283,7 @@ export default function ActiviteitenBeheer() {
           ageGroup: "",
           creatorName: "",
           time: "",
-          effect: ""
+          effect: "",
         })
       } catch (err) {
         console.error(err)
@@ -326,7 +306,7 @@ export default function ActiviteitenBeheer() {
       creatorName: activity.creatorName,
       time: activity.time,
       editingId: activity._id,
-      effect: activity.effect
+      effect: activity.effect,
     })
     setBulkMode(false)
     setActiveTab("create")
@@ -339,23 +319,17 @@ export default function ActiviteitenBeheer() {
 
   const confirmDelete = async () => {
     if (!activityToDelete) return
-
     setDeleteLoading(true)
-
     try {
       await deleteActivity(activityToDelete._id)
-
       // Refresh activities list
       await refreshActivities()
-
       toast.success("Activiteit is succesvol verwijderd", {
         position: "top-right",
         autoClose: 3000,
       })
-
       setShowDeleteModal(false)
       setActivityToDelete(null)
-
       if (currentActivities.length === 1 && currentPage > 1) {
         setCurrentPage(currentPage - 1)
       }
@@ -375,7 +349,6 @@ export default function ActiviteitenBeheer() {
   }
 
   // if (loading) return <LoaderOverlay />;
-
   return (
     <>
       <ToastContainer
@@ -390,52 +363,53 @@ export default function ActiviteitenBeheer() {
         pauseOnHover
         style={{ zIndex: 10000000000 }}
       />
-
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-xl w-full mx-4 shadow-2xl">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-gray-900 inter-tight-600">Activiteit Verwijderen</h2>
-              <button onClick={cancelDelete} className="text-gray-400 hover:text-gray-600 transition-colors">
-                <X className="w-5 h-5" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50">
+          <div className="mx-4 w-full max-w-xl rounded-xl bg-white p-6 shadow-2xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="inter-tight-600 text-xl font-semibold text-gray-900">Activiteit Verwijderen</h2>
+              <button onClick={cancelDelete} className="text-gray-400 transition-colors hover:text-gray-600">
+                <X className="h-5 w-5" />
               </button>
             </div>
-
             <div className="mb-2">
-              <p className="text-gray-600 mb-2 inter-tight-400">Weet u zeker dat u de volgende activiteit wilt verwijderen?</p>
-              <div className="bg-gray-50 rounded-lg p-4 border-l-4 border-red-500">
-                <h3 className="font-semibold text-gray-900 inter-tight-600">{activityToDelete?.title}</h3>
-                <p className="text-sm text-gray-600 mt-1 inter-tight-400">{activityToDelete?.description}</p>
-                <p className="text-xs text-gray-500 mt-2 inter-tight-400">
+              <p className="inter-tight-400 mb-2 text-gray-600">
+                Weet u zeker dat u de volgende activiteit wilt verwijderen?
+              </p>
+              <div className="rounded-lg border-l-4 border-red-500 bg-gray-50 p-4">
+                <h3 className="inter-tight-600 font-semibold text-gray-900">{activityToDelete?.title}</h3>
+                <p className="inter-tight-400 mt-1 text-sm text-gray-600">{activityToDelete?.description}</p>
+                <p className="inter-tight-400 mt-2 text-xs text-gray-500">
+                  {" "}
                   Leergebied: {activityToDelete?.learningDomain} • Maker: {activityToDelete?.creatorName}
                 </p>
               </div>
-              <p className="text-red-600 text-sm mt-3 font-medium inter-tight-400">⚠️ Deze actie kan niet ongedaan worden gemaakt.</p>
+              <p className="inter-tight-400 mt-3 text-sm font-medium text-red-600">
+                ⚠️ Deze actie kan niet ongedaan worden gemaakt.
+              </p>
             </div>
-
             <div className="flex justify-end space-x-3">
               <button
                 onClick={cancelDelete}
                 disabled={deleteLoading}
-                className="px-4 py-2 border border-gray-300 inter-tight-400 text-sm text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inter-tight-400 rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Annuleren
               </button>
               <button
                 onClick={confirmDelete}
                 disabled={deleteLoading}
-                className="px-4 py-2 bg-red-500 text-white text-sm inter-tight-400 rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="inter-tight-400 flex items-center gap-2 rounded-lg bg-red-500 px-4 py-2 text-sm text-white transition-colors hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {deleteLoading ? (
                   <>
-                    <div className="w-4 h-4 border-2 inter-tight-400 text-sm border-white border-t-transparent rounded-full animate-spin"></div>
+                    <div className="inter-tight-400 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent text-sm"></div>{" "}
                     Verwijderen...
                   </>
                 ) : (
                   <>
-                    <Trash className="w-4 h-4" />
-                    Verwijderen
+                    <Trash className="h-4 w-4" /> Verwijderen
                   </>
                 )}
               </button>
@@ -443,15 +417,14 @@ export default function ActiviteitenBeheer() {
           </div>
         </div>
       )}
-
       <div className="min-h-screen py-8">
-        <div className="max-w-7xl mx-auto">
+        <div className="mx-auto max-w-7xl">
           {activeTab === "list" ? (
-            <div className="border border-[#E2E4E9] p-6 rounded-xl bg-white">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between mb-8">
+            <div className="rounded-xl border border-[#E2E4E9] bg-white p-6">
+              <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
                 <div className="">
-                  <h1 className="text-2xl text-[#000000] inter-tight-700 font-semibold mb-2">Activiteiten Beheer</h1>
-                  <p className="text-[#838383] text-[16px] inter-tight-400">
+                  <h1 className="inter-tight-700 mb-2 text-2xl font-semibold text-[#000000]">Activiteiten Beheer</h1>
+                  <p className="inter-tight-400 text-[16px] text-[#838383]">
                     Beheer alle activiteiten: status wijzigen, verbergen of permanent verwijderen
                   </p>
                 </div>
@@ -468,15 +441,14 @@ export default function ActiviteitenBeheer() {
                         ageGroup: "",
                         creatorName: "",
                         time: "",
-                        effect: ""
+                        effect: "",
                       })
                       setBulkMode(false)
                       setActiveTab("create")
                     }}
-                    className="bg-[#000000] cursor-pointer inter-tight-400 justify-center text-sm text-white px-4 py-3 rounded-lg flex items-center gap-2 hover:bg-gray-800 transition-colors whitespace-nowrap"
+                    className="inter-tight-400 flex cursor-pointer items-center justify-center whitespace-nowrap rounded-lg bg-[#000000] px-4 py-3 text-sm text-white transition-colors hover:bg-gray-800"
                   >
-                    <Plus className="w-4 h-4" />
-                    Nieuwe Activiteit
+                    <Plus className="h-4 w-4" /> Nieuwe Activiteit
                   </button>
                   <button
                     onClick={() => {
@@ -492,32 +464,30 @@ export default function ActiviteitenBeheer() {
                         ageGroup: "",
                         creatorName: "",
                         time: "",
-                        effect: ""
+                        effect: "",
                       })
                       setActiveTab("create")
                     }}
-                    className="bg-[#6366F1] cursor-pointer inter-tight-400 justify-center text-sm text-white px-4 py-3 rounded-lg flex items-center gap-2 hover:bg-[#4F46E5] transition-colors whitespace-nowrap"
+                    className="inter-tight-400 flex cursor-pointer items-center justify-center whitespace-nowrap rounded-lg bg-[#6366F1] px-4 py-3 text-sm text-white transition-colors hover:bg-[#4F46E5]"
                   >
-                    <Plus className="w-4 h-4" />
-                    Bulk Activiteiten
+                    <Plus className="h-4 w-4" /> Bulk Activiteiten
                   </button>
                 </div>
               </div>
-
-              <div className="rounded-lg mb-6">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-start gap-4">
+              <div className="mb-6 rounded-lg">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-start">
                   <div className="relative">
                     <button
                       onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                      className="bg-white border border-gray-300 text-[#707070] rounded-lg px-4 py-2.5 flex justify-between items-center gap-2 hover:bg-gray-50 transition-colors min-w-64"
+                      className="min-w-64 flex justify-between gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-[#707070] transition-colors hover:bg-gray-50"
                     >
                       <span className="text-gray-700">{selectedFilter}</span>
                       <ChevronDown
-                        className={`w-4 h-4 text-gray-500 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`}
+                        className={`h-4 w-4 text-gray-500 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`}
                       />
                     </button>
                     {isDropdownOpen && (
-                      <div className="absolute top-full text-sm text-[#707070] left-0 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg z-10">
+                      <div className="absolute left-0 top-full z-10 mt-1 w-full rounded-lg border border-gray-300 bg-white shadow-lg text-sm text-[#707070]">
                         {filterOptions.map((option) => (
                           <button
                             key={option.label}
@@ -526,7 +496,7 @@ export default function ActiviteitenBeheer() {
                               setIsDropdownOpen(false)
                               setCurrentPage(1)
                             }}
-                            className="w-full text-left px-4 py-2 hover:bg-gray-50 first:rounded-t-lg last:rounded-b-lg transition-colors flex justify-between items-center"
+                            className="flex w-full items-center justify-between px-4 py-2 text-left transition-colors first:rounded-t-lg last:rounded-b-lg hover:bg-gray-50"
                           >
                             <span>{option.label}</span>
                           </button>
@@ -534,8 +504,8 @@ export default function ActiviteitenBeheer() {
                       </div>
                     )}
                   </div>
-                  <div className="text-[#707070] inter-tight-400">
-                    <span className="font-medium text-black inter-tight-400">
+                  <div className="inter-tight-400 text-[#707070]">
+                    <span className="inter-tight-400 font-medium text-black">
                       {selectedFilter === "Alle Activiteiten"
                         ? counts.all
                         : selectedFilter === "Actieve Activiteiten"
@@ -548,77 +518,76 @@ export default function ActiviteitenBeheer() {
                   </div>
                 </div>
               </div>
-
               {error ? (
-                <div className="text-red-500 text-center py-4">{error}</div>
+                <div className="py-4 text-center text-red-500">{error}</div>
               ) : (
                 <>
                   <div className="overflow-x-auto">
-                    <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
+                    <div className="custom-scrollbar max-h-[400px] overflow-y-auto">
                       <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                           <tr>
                             <th
                               scope="col"
-                              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                              className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
                             >
                               Titel
                             </th>
                             <th
                               scope="col"
-                              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                              className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
                             >
                               Leergebied
                             </th>
                             <th
                               scope="col"
-                              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                              className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
                             >
                               Aangemaakt
                             </th>
                             <th
                               scope="col"
-                              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                              className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
                             >
                               Maker
                             </th>
                             <th
                               scope="col"
-                              className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
+                              className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500"
                             >
                               Acties
                             </th>
                           </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
+                        <tbody className="divide-y divide-gray-200 bg-white">
                           {currentActivities.length > 0 ? (
                             currentActivities.map((activity) => (
                               <tr key={activity._id} className="hover:bg-gray-50">
-                                <td className="px-6 py-4 whitespace-nowrap">
+                                <td className="whitespace-nowrap px-6 py-4">
                                   <div className="font-medium text-gray-900">{activity.title}</div>
-                                  <div className="text-sm text-gray-500 line-clamp-1">{activity.description}</div>
+                                  <div className="line-clamp-1 text-sm text-gray-500">{activity.description}</div>
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                                   {activity.learningDomain}
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                                   {new Date(activity.createdAt).toLocaleDateString("nl-NL")}
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                                   {activity.creatorName}
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
                                   <button
                                     onClick={() => handleEdit(activity)}
-                                    className="text-indigo-600 hover:text-indigo-900 mr-4"
+                                    className="mr-4 text-indigo-600 hover:text-indigo-900"
                                   >
-                                    <Edit className="w-5 h-5" />
+                                    <Edit className="h-5 w-5" />
                                   </button>
                                   <button
                                     onClick={() => handleDeleteClick(activity)}
                                     className="text-red-600 hover:text-red-900"
                                   >
-                                    <Trash className="w-5 h-5" />
+                                    <Trash className="h-5 w-5" />
                                   </button>
                                 </td>
                               </tr>
@@ -626,6 +595,7 @@ export default function ActiviteitenBeheer() {
                           ) : (
                             <tr>
                               <td colSpan="5" className="px-6 py-4 text-center text-sm text-gray-500">
+                                {" "}
                                 Geen activiteiten gevonden voor {selectedFilter}
                               </td>
                             </tr>
@@ -634,70 +604,99 @@ export default function ActiviteitenBeheer() {
                       </table>
                     </div>
                   </div>
-
                   {activities.length > activitiesPerPage && (
-                    <div className="flex items-center inter-tight-400 text-sm cursor-pointer justify-between mt-6">
+                    <div className="inter-tight-400 mt-6 flex cursor-pointer items-center justify-between text-sm">
                       <div className="flex space-x-2">
                         <button
                           onClick={() => paginate(Math.max(1, currentPage - 1))}
                           disabled={currentPage === 1}
-                          className={`px-3 py-1 rounded-md ${currentPage === 1
-                              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                          className={`px-3 py-1 rounded-md ${
+                            currentPage === 1
+                              ? "cursor-not-allowed bg-gray-100 text-gray-400"
                               : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                            }`}
+                          }`}
                         >
-                          <ChevronLeft className="w-5 h-5" />
+                          <ChevronLeft className="h-5 w-5" />
                         </button>
 
-                        {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                          let pageNum
-                          if (totalPages <= 5) {
-                            pageNum = i + 1
-                          } else if (currentPage <= 3) {
-                            pageNum = i + 1
-                          } else if (currentPage >= totalPages - 2) {
-                            pageNum = totalPages - 4 + i
-                          } else {
-                            pageNum = currentPage - 2 + i
+                        {(() => {
+                          const pagesToRender = []
+                          const maxVisiblePages = 5 // Number of page buttons to show in the main block
+
+                          let startPageNum = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2))
+                          let endPageNum = Math.min(totalPages, currentPage + Math.floor(maxVisiblePages / 2))
+
+                          // Adjust start/end to ensure maxVisiblePages are shown if possible
+                          if (endPageNum - startPageNum + 1 < maxVisiblePages) {
+                            if (startPageNum === 1) {
+                              endPageNum = Math.min(totalPages, maxVisiblePages)
+                            } else if (endPageNum === totalPages) {
+                              startPageNum = Math.max(1, totalPages - maxVisiblePages + 1)
+                            }
                           }
 
-                          return (
-                            <button
-                              key={pageNum}
-                              onClick={() => paginate(pageNum)}
-                              className={`px-3 py-1 rounded-md ${currentPage === pageNum
-                                  ? "bg-indigo-600 text-white"
-                                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                          // Ensure startPageNum is at least 1
+                          startPageNum = Math.max(1, startPageNum)
+                          // Ensure endPageNum does not exceed totalPages
+                          endPageNum = Math.min(totalPages, endPageNum)
+
+                          // Add page 1 and ellipsis if needed
+                          if (startPageNum > 1) {
+                            pagesToRender.push(1)
+                            if (startPageNum > 2) {
+                              // Only show ellipsis if there's more than just page 1 before the block
+                              pagesToRender.push("ellipsis-start")
+                            }
+                          }
+
+                          // Add pages in the calculated range
+                          for (let i = startPageNum; i <= endPageNum; i++) {
+                            pagesToRender.push(i)
+                          }
+
+                          // Add ellipsis and last page if needed
+                          if (endPageNum < totalPages) {
+                            if (endPageNum < totalPages - 1) {
+                              // Only show ellipsis if there's more than just the last page after the block
+                              pagesToRender.push("ellipsis-end")
+                            }
+                            pagesToRender.push(totalPages)
+                          }
+
+                          return pagesToRender.map((page) => {
+                            if (typeof page === "string" && page.startsWith("ellipsis")) {
+                              return (
+                                <span key={page} className="px-3 py-1">
+                                  ...
+                                </span>
+                              )
+                            }
+                            return (
+                              <button
+                                key={page}
+                                onClick={() => paginate(page)}
+                                className={`px-3 py-1 rounded-md ${
+                                  currentPage === page
+                                    ? "bg-indigo-600 text-white"
+                                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                                 }`}
-                            >
-                              {pageNum}
-                            </button>
-                          )
-                        })}
-
-                        {totalPages > 5 && currentPage < totalPages - 2 && <span className="px-3 py-1">...</span>}
-
-                        {totalPages > 5 && currentPage < totalPages - 2 && (
-                          <button
-                            onClick={() => paginate(totalPages)}
-                            className={`px-3 py-1 rounded-md ${currentPage === totalPages
-                                ? "bg-indigo-600 text-white"
-                                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                              }`}
-                          >
-                            {totalPages}
-                          </button>
-                        )}
+                              >
+                                {page}
+                              </button>
+                            )
+                          })
+                        })()}
 
                         <button
                           onClick={() => paginate(Math.min(totalPages, currentPage + 1))}
                           disabled={currentPage === totalPages}
-                          className={`px-3 py-1 rounded-md ${currentPage === totalPages
-                              ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                          className={`px-3 py-1 rounded-md ${
+                            currentPage === totalPages
+                              ? "cursor-not-allowed bg-gray-100 text-gray-400"
                               : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                            }`}
+                          }`}
                         >
-                          <ChevronRight className="w-5 h-5" />
+                          <ChevronRight className="h-5 w-5" />
                         </button>
                       </div>
                     </div>
@@ -706,31 +705,30 @@ export default function ActiviteitenBeheer() {
               )}
             </div>
           ) : (
-            <div className="border border-[#E2E4E9] p-6 rounded-xl bg-white">
+            <div className="rounded-xl border border-[#E2E4E9] bg-white p-6">
               <div className="mb-8">
                 <button
                   onClick={() => setActiveTab("list")}
-                  className="flex cursor-pointer items-center gap-2 text-[#4B5563] hover:bg-yellow-400 hover:text-black py-2 px-6 duration-500 ease-in-out rounded-md transition-colors mb-6"
+                  className="mb-6 flex cursor-pointer items-center gap-2 rounded-md px-6 py-2 text-[#4B5563] transition-colors duration-500 ease-in-out hover:bg-yellow-400 hover:text-black"
                 >
-                  <ArrowLeft className="w-5 h-5" />
+                  <ArrowLeft className="h-5 w-5" />
                   <span className="text-sm font-medium">Terug naar activiteiten</span>
                 </button>
-
-                <div className="text-center space-y-4">
+                <div className="space-y-4 text-center">
                   <div className="flex justify-center">
-                    <div className="w-16 h-16 bg-[#6366F1] rounded-full flex items-center justify-center">
-                      <Users className="w-8 h-8 text-white" />
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#6366F1]">
+                      <Users className="h-8 w-8 text-white" />
                     </div>
                   </div>
                   <div>
-                    <h1 className="text-3xl md:text-4xl font-bold text-[#1F2937] mb-3">
+                    <h1 className="mb-3 text-3xl font-bold text-[#1F2937] md:text-4xl">
                       {formData.editingId
                         ? "Activiteit Bewerken"
                         : bulkMode
                           ? "Bulk Activiteiten Toevoegen"
                           : "Nieuwe Activiteit Toevoegen"}
                     </h1>
-                    <p className="text-[#6B7280] text-[16px] max-w-md mx-auto">
+                    <p className="mx-auto max-w-md text-[16px] text-[#6B7280]">
                       {formData.editingId
                         ? "Bewerk de details van deze activiteit"
                         : bulkMode
@@ -740,33 +738,30 @@ export default function ActiviteitenBeheer() {
                   </div>
                 </div>
               </div>
-
-              <div className="bg-white rounded-2xl shadow-sm p-6 md:p-8">
+              <div className="rounded-2xl bg-white p-6 shadow-sm md:p-8">
                 <div className="mb-6">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Lightbulb className="w-5 h-5 text-[#F59E0B]" />
+                  <div className="mb-4 flex items-center gap-2">
+                    <Lightbulb className="h-5 w-5 text-[#F59E0B]" />
                     <h2 className="text-2xl font-semibold text-[#000000]">Activiteit Details</h2>
                   </div>
                 </div>
-
                 {bulkMode ? (
                   <div className="space-y-6">
                     {bulkActivities.map((activity, index) => (
-                      <div key={index} className="border border-gray-200 rounded-lg p-4 relative">
-                        <div className="flex justify-between items-center mb-3">
+                      <div key={index} className="relative rounded-lg border border-gray-200 p-4">
+                        <div className="mb-3 flex items-center justify-between">
                           <h3 className="font-medium">Activiteit #{index + 1}</h3>
                           {bulkActivities.length > 1 && (
                             <button
                               onClick={() => removeBulkActivityField(index)}
                               className="text-red-500 hover:text-red-700"
                             >
-                              <Trash className="w-4 h-4" />
+                              <Trash className="h-4 w-4" />
                             </button>
                           )}
                         </div>
-
                         <div className="mb-4">
-                          <label className="block text-sm font-medium text-[#000000] mb-2">
+                          <label className="mb-2 block text-sm font-medium text-[#000000]">
                             Titel <span className="text-red-500">*</span>
                           </label>
                           <input
@@ -774,79 +769,72 @@ export default function ActiviteitenBeheer() {
                             value={activity.title}
                             onChange={(e) => handleBulkInputChange(index, "title", e.target.value)}
                             placeholder="Bijvoorbeeld: Kleurrijke Natuur Ontdekkingstocht"
-                            className="w-full px-4 py-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-sm"
+                            className="w-full rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent"
                             maxLength={60}
                           />
                         </div>
-
                         <div className="mb-4">
-                          <label className="block text-sm font-medium text-[#000000] mb-2">
+                          <label className="mb-2 block text-sm font-medium text-[#000000]">
                             Beschrijving <span className="text-red-500">*</span>
                           </label>
                           <textarea
                             value={activity.description}
                             onChange={(e) => handleBulkInputChange(index, "description", e.target.value)}
                             placeholder="Beschrijf in het kort waar deze activiteit over gaat..."
-                            className="w-full px-4 py-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-sm resize-none"
+                            className="w-full resize-none rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent"
                             rows="3"
                             maxLength={250}
                           />
                         </div>
-
                         <div>
-                          <label className="block text-sm font-medium text-[#000000] mb-2">Instructies</label>
+                          <label className="mb-2 block text-sm font-medium text-[#000000]">Instructies</label>
                           <textarea
                             value={activity.instructions}
                             onChange={(e) => handleBulkInputChange(index, "instructions", e.target.value)}
                             placeholder={`1. Stap 1\n2. Stap 2\n3. Stap 3`}
-                            className="w-full px-4 py-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-sm resize-none"
+                            className="w-full resize-none rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent"
                             rows="4"
                           />
-                          <p className="text-xs text-[#6B7280] mt-1">
+                          <p className="mt-1 text-xs text-[#6B7280]">
                             Gebruik genummerde stappen (1., 2., etc.). Maximaal 5 stappen, elke stap maximaal 180
                             tekens.
                           </p>
                         </div>
-
                         <div>
-              <label className="block text-sm font-medium text-[#000000] mb-2">
-              Effect
-              </label>
-              <input
-                type="text"
-                value={formData.effect}
-                onChange={(e) => handleInputChange('effect', e.target.value)}
-                className="w-full px-4 py-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-sm"
-                maxLength={50}
-              />
-            </div>
-
+                          <label className="mb-2 block text-sm font-medium text-[#000000]">Effect</label>
+                          <input
+                            type="text"
+                            value={formData.effect}
+                            onChange={(e) => handleInputChange("effect", e.target.value)}
+                            className="w-full rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent"
+                            maxLength={50}
+                          />
+                        </div>
                         <div className="mb-4">
-                          <label className="block text-sm font-medium text-[#000000] mb-2">Benodigd materiaal</label>
+                          <label className="mb-2 block text-sm font-medium text-[#000000]">Benodigd materiaal</label>
                           <input
                             type="text"
                             value={activity.materials}
                             onChange={(e) => handleBulkInputChange(index, "materials", e.target.value)}
                             placeholder="Papier, kleurpotloden, etc."
-                            className="w-full px-4 py-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-sm"
+                            className="w-full rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent"
                           />
-                          <p className="text-xs text-[#6B7280] mt-1">Kommagescheiden lijst van benodigdheden (optioneel)</p>
+                          <p className="mt-1 text-xs text-[#6B7280]">
+                            Kommagescheiden lijst van benodigdheden (optioneel)
+                          </p>
                         </div>
                       </div>
                     ))}
-
                     <button
                       type="button"
                       onClick={addBulkActivityField}
                       className="flex items-center gap-2 text-[#6366F1] hover:text-[#4F46E5]"
                     >
-                      <Plus className="w-4 h-4" />
-                      Nog een activiteit toevoegen
+                      <Plus className="h-4 w-4" /> Nog een activiteit toevoegen
                     </button>
-
                     <div className="mt-6 space-y-6">
                       <div>
-                        <label className="block text-sm font-medium text-[#000000] mb-2">
+                        <label className="mb-2 block text-sm font-medium text-[#000000]">
                           Maker Naam <span className="text-red-500">*</span>
                         </label>
                         <input
@@ -854,20 +842,19 @@ export default function ActiviteitenBeheer() {
                           value={formData.creatorName}
                           onChange={(e) => handleInputChange("creatorName", e.target.value)}
                           placeholder="Naam van de maker"
-                          className="w-full px-4 py-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-sm"
+                          className="w-full rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent"
                           maxLength={60}
                         />
-                        <p className="text-xs text-[#6B7280] mt-1">Maximaal 60 tekens ({creatorCount}/60)</p>
+                        <p className="mt-1 text-xs text-[#6B7280]">Maximaal 60 tekens ({creatorCount}/60)</p>
                       </div>
-
                       <div>
-                        <label className="block text-sm font-medium text-[#000000] mb-2">
+                        <label className="mb-2 block text-sm font-medium text-[#000000]">
                           Leergebied voor alle activiteiten <span className="text-red-500">*</span>
                         </label>
                         <select
                           value={formData.learningDomain}
                           onChange={(e) => handleInputChange("learningDomain", e.target.value)}
-                          className="w-full px-4 py-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-sm appearance-none"
+                          className="w-full appearance-none rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent"
                           required
                         >
                           <option value="">Selecteer een leergebied</option>
@@ -880,13 +867,12 @@ export default function ActiviteitenBeheer() {
                           <option value="Anders denken">Anders denken</option>
                         </select>
                       </div>
-
                       <div>
-                        <label className="block text-sm font-medium text-[#000000] mb-2">Leeftijdsgroep</label>
+                        <label className="mb-2 block text-sm font-medium text-[#000000]">Leeftijdsgroep</label>
                         <select
                           value={formData.ageGroup}
                           onChange={(e) => handleInputChange("ageGroup", e.target.value)}
-                          className="w-full px-4 py-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-sm appearance-none"
+                          className="w-full appearance-none rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent"
                         >
                           <option value="">Selecteer een leeftijdsgroep</option>
                           <option value="3 - 4">Age 3 - 4</option>
@@ -895,9 +881,8 @@ export default function ActiviteitenBeheer() {
                           <option value="7 - 8">Age 7 - 8</option>
                         </select>
                       </div>
-
                       <div>
-                        <label className="block text-sm font-medium text-[#000000] mb-2">
+                        <label className="mb-2 block text-sm font-medium text-[#000000]">
                           Geschatte duur (minuten)
                         </label>
                         <div className="relative flex items-center">
@@ -906,22 +891,21 @@ export default function ActiviteitenBeheer() {
                             value={formData.time}
                             onChange={(e) => handleInputChange("time", e.target.value)}
                             placeholder="Bijvoorbeeld: 10 of 10-15"
-                            className="w-full px-4 py-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-sm"
+                            className="w-full rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent"
                           />
-                          <Clock className="w-4 h-4 text-gray-400 absolute right-3" />
+                          <Clock className="absolute right-3 h-4 w-4 text-gray-400" />
                         </div>
-                        <p className="text-xs text-[#6B7280] mt-1">
+                        <p className="mt-1 text-xs text-[#6B7280]">
                           Voer een getal in (bijv. "10") of bereik (bijv. "10-15")
                         </p>
                       </div>
                     </div>
-
                     <button
                       type="button"
                       onClick={handleSubmit}
-                      className="w-full bg-gradient-to-r cursor-pointer from-[#6366F1] to-[#8B5CF6] hover:from-[#5B21B6] hover:to-[#7C3AED] text-white py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-500 transform hover:scale-105 flex items-center justify-center gap-2 mt-6"
+                      className="mt-6 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#6366F1] to-[#8B5CF6] px-6 py-3 text-white shadow-lg transition-all duration-500 hover:scale-105 hover:from-[#5B21B6] hover:to-[#7C3AED] hover:shadow-xl"
                     >
-                      <Send className="w-5 h-5" />
+                      <Send className="h-5 w-5" />
                       {bulkActivities.length > 1
                         ? `${bulkActivities.length} Activiteiten Aanmaken`
                         : "Activiteit Aanmaken"}
@@ -930,7 +914,7 @@ export default function ActiviteitenBeheer() {
                 ) : (
                   <div className="space-y-6">
                     <div>
-                      <label className="block text-sm font-medium text-[#000000] mb-2">
+                      <label className="mb-2 block text-sm font-medium text-[#000000]">
                         Titel <span className="text-red-500">*</span>
                       </label>
                       <input
@@ -938,29 +922,27 @@ export default function ActiviteitenBeheer() {
                         value={formData.title}
                         onChange={(e) => handleInputChange("title", e.target.value)}
                         placeholder="Bijvoorbeeld: Kleurrijke Natuur Ontdekkingstocht"
-                        className="w-full px-4 py-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-sm"
+                        className="w-full rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent"
                         maxLength={60}
                       />
-                      <p className="text-xs text-[#6B7280] mt-1">Maximaal 60 tekens ({titleCount}/60)</p>
+                      <p className="mt-1 text-xs text-[#6B7280]">Maximaal 60 tekens ({titleCount}/60)</p>
                     </div>
-
                     <div>
-                      <label className="block text-sm font-medium text-[#000000] mb-2">
+                      <label className="mb-2 block text-sm font-medium text-[#000000]">
                         Beschrijving <span className="text-red-500">*</span>
                       </label>
                       <textarea
                         value={formData.description}
                         onChange={(e) => handleInputChange("description", e.target.value)}
                         placeholder="Beschrijf in het kort waar deze activiteit over gaat..."
-                        className="w-full px-4 py-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-sm resize-none"
+                        className="w-full resize-none rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent"
                         rows="4"
                         maxLength={250}
                       />
-                      <p className="text-xs text-[#6B7280] mt-1">Maximaal 250 tekens ({descriptionCount}/250)</p>
+                      <p className="mt-1 text-xs text-[#6B7280]">Maximaal 250 tekens ({descriptionCount}/250)</p>
                     </div>
-
                     <div>
-                      <label className="block text-sm font-medium text-[#000000] mb-2">
+                      <label className="mb-2 block text-sm font-medium text-[#000000]">
                         Maker Naam <span className="text-red-500">*</span>
                       </label>
                       <input
@@ -968,48 +950,45 @@ export default function ActiviteitenBeheer() {
                         value={formData.creatorName}
                         onChange={(e) => handleInputChange("creatorName", e.target.value)}
                         placeholder="Naam van de maker"
-                        className="w-full px-4 py-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-sm"
+                        className="w-full rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent"
                         maxLength={60}
                       />
-                      <p className="text-xs text-[#6B7280] mt-1">Maximaal 60 tekens ({creatorCount}/60)</p>
+                      <p className="mt-1 text-xs text-[#6B7280]">Maximaal 60 tekens ({creatorCount}/60)</p>
                     </div>
-
                     <div>
-                      <label className="block text-sm font-medium text-[#000000] mb-2">
+                      <label className="mb-2 block text-sm font-medium text-[#000000]">
                         Instructies <span className="text-red-500">*</span>
                       </label>
                       <textarea
                         value={formData.instructions}
                         onChange={(e) => handleInputChange("instructions", e.target.value)}
                         placeholder={`1. Neem een vel papier\n2. Vouw het dubbel in de lengte\n3. Maak de neus door de bovenste hoeken naar beneden te vouwen\n4. Vouw de zijkanten naar binnen om vleugels te vormen\n5. Lanceer en kijk hoe ver het vliegt!`}
-                        className="w-full px-4 py-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-sm resize-none"
+                        className="w-full resize-none rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent"
                         rows="6"
                       />
-                      <p className="text-xs text-[#6B7280] mt-1">
+                      <p className="mt-1 text-xs text-[#6B7280]">
                         Gebruik genummerde stappen (1., 2., etc.). Maximaal 5 stappen, elke stap maximaal 180 tekens.
                       </p>
                     </div>
-
                     <div>
-                      <label className="block text-sm font-medium text-[#000000] mb-2">Benodigd materiaal</label>
+                      <label className="mb-2 block text-sm font-medium text-[#000000]">Benodigd materiaal</label>
                       <input
                         type="text"
                         value={formData.materials}
                         onChange={(e) => handleInputChange("materials", e.target.value)}
                         placeholder="Papier, kleurpotloden, telefoon voor foto's"
-                        className="w-full px-4 py-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-sm"
+                        className="w-full rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent"
                       />
-                      <p className="text-xs text-[#6B7280] mt-1">Kommagescheiden lijst van benodigdheden (optioneel)</p>
+                      <p className="mt-1 text-xs text-[#6B7280]">Kommagescheiden lijst van benodigdheden (optioneel)</p>
                     </div>
-
                     <div>
-                      <label className="block text-sm font-medium text-[#000000] mb-2">
+                      <label className="mb-2 block text-sm font-medium text-[#000000]">
                         Leergebied <span className="text-red-500">*</span>
                       </label>
                       <select
                         value={formData.learningDomain}
                         onChange={(e) => handleInputChange("learningDomain", e.target.value)}
-                        className="w-full px-4 py-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-sm appearance-none"
+                        className="w-full appearance-none rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent"
                         required
                       >
                         <option value="">Selecteer een leergebied</option>
@@ -1022,43 +1001,38 @@ export default function ActiviteitenBeheer() {
                         <option value="Anders denken">Anders denken</option>
                       </select>
                     </div>
-
                     <div>
-              <label className="block text-sm font-medium text-[#000000] mb-2">
-              Effect
-              </label>
-              <input
-                type="text"
-                value={formData.effect}
-                onChange={(e) => handleInputChange('effect', e.target.value)}
-                className="w-full px-4 py-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-sm"
-                maxLength={50}
-              />
-            </div>
-
+                      <label className="mb-2 block text-sm font-medium text-[#000000]">Effect</label>
+                      <input
+                        type="text"
+                        value={formData.effect}
+                        onChange={(e) => handleInputChange("effect", e.target.value)}
+                        className="w-full rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent"
+                        maxLength={50}
+                      />
+                    </div>
                     <div>
-                      <label className="block text-sm font-medium text-[#000000] mb-2">Geschatte duur (minuten)</label>
+                      <label className="mb-2 block text-sm font-medium text-[#000000]">Geschatte duur (minuten)</label>
                       <div className="relative flex items-center">
                         <input
                           type="text"
                           value={formData.time}
                           onChange={(e) => handleInputChange("time", e.target.value)}
                           placeholder="Bijvoorbeeld: 10 of 10-15"
-                          className="w-full px-4 py-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-sm"
+                          className="w-full rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent"
                         />
-                        <Clock className="w-4 h-4 text-gray-400 absolute right-3" />
+                        <Clock className="absolute right-3 h-4 w-4 text-gray-400" />
                       </div>
-                      <p className="text-xs text-[#6B7280] mt-1">
+                      <p className="mt-1 text-xs text-[#6B7280]">
                         Voer een getal in (bijv. "10") of bereik (bijv. "10-15")
                       </p>
                     </div>
-
                     <div>
-                      <label className="block text-sm font-medium text-[#000000] mb-2">Leeftijdsgroep</label>
+                      <label className="mb-2 block text-sm font-medium text-[#000000]">Leeftijdsgroep</label>
                       <select
                         value={formData.ageGroup}
                         onChange={(e) => handleInputChange("ageGroup", e.target.value)}
-                        className="w-full px-4 py-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-sm appearance-none"
+                        className="w-full appearance-none rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent"
                       >
                         <option value="">Selecteer een leeftijdsgroep</option>
                         <option value="3 - 4">Age 3 - 4</option>
@@ -1067,13 +1041,12 @@ export default function ActiviteitenBeheer() {
                         <option value="7 - 8">Age 7 - 8</option>
                       </select>
                     </div>
-
                     <button
                       type="button"
                       onClick={handleSubmit}
-                      className="w-full bg-gradient-to-r cursor-pointer from-[#6366F1] to-[#8B5CF6] hover:from-[#5B21B6] hover:to-[#7C3AED] text-white py-3 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-500 transform hover:scale-105 flex items-center justify-center gap-2"
+                      className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#6366F1] to-[#8B5CF6] px-6 py-3 text-white shadow-lg transition-all duration-500 hover:scale-105 hover:from-[#5B21B6] hover:to-[#7C3AED] hover:shadow-xl"
                     >
-                      <Send className="w-5 h-5" />
+                      <Send className="h-5 w-5" />
                       {formData.editingId ? "Activiteit Bijwerken" : "Activiteit Aanmaken"}
                     </button>
                   </div>

@@ -1,488 +1,632 @@
+"use client"
+
 /* eslint-disable no-unused-vars */
-import { BookOpen, Circle, Plus } from "lucide-react"
+import { Plus } from "lucide-react"
 import Specs from "../components/specs"
 import Faqs from "../components/faqs"
-import { Clock, User, Star, Play } from "lucide-react"
-import { IoPlayCircleOutline } from "react-icons/io5";
-import { FiUsers } from "react-icons/fi";
-import { useEffect, useState } from "react";
-import EducationalQuotes from '../components/educational-quotes'
-import StarImage from '../../public/profile-images/Frame (11)-star.svg'
-import { ToastContainer, toast } from "react-toastify";
-import { useActivitiesFilter } from "../hooks/useActivityFilter";
-import { useActivityLibrary } from "../hooks/useActivityLibrary";
-import { usePlayweekActivities } from "../hooks/usePlayweekActivities";
-import { learningDomainImages, learningDomainColors } from "../utils/learningDomain";
-
-import EmailCollectionPopup from "../components/EmailCollectionPopup";
-
-import BackgroundPicture1 from "../../public/activities-images/Frame (6).svg"
-import { Link, useNavigate } from "react-router-dom";
-import LoaderOverlay from "../components/LoaderOverlay";
-import { BASE_URL } from "../utils/api";
+import { Clock, Star } from "lucide-react"
+import { IoPlayCircleOutline } from "react-icons/io5"
+import { FiUsers } from "react-icons/fi"
+import { useEffect, useState, useRef } from "react"
+import EducationalQuotes from "../components/educational-quotes"
+import StarImage from "../../public/profile-images/Frame (11)-star.svg"
+import { ToastContainer, toast } from "react-toastify"
+import { useActivitiesFilter } from "../hooks/useActivityFilter"
+import { usePlayweekActivities } from "../hooks/usePlayweekActivities"
+import { learningDomainImages, learningDomainColors } from "../utils/learningDomain"
+import EmailCollectionPopup from "../components/EmailCollectionPopup"
+import { useNavigate } from "react-router-dom"
+import LoaderOverlay from "../components/LoaderOverlay"
+import { BASE_URL } from "../utils/api"
+import axios from "axios"
 
 export default function Activities() {
-    const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState('speelweek');
-    const { activities: libraryActivities, loading: libraryLoading, error: libraryError } = useActivityLibrary();
-    const { 
-        playweekActivities, 
-        weekInfo, 
-        loading: playweekLoading, 
-        error: playweekError 
-    } = usePlayweekActivities();
+  const navigate = useNavigate()
+  const [activeTab, setActiveTab] = useState("speelweek")
+  const [totalCountActivities, settotalCountActivities] = useState(0)
 
-    console.log(weekInfo);
-    
-    const {
-        activities: filteredActivities,
-        loading: filterLoading,
-        error: filterError,
-        searchTerm,
-        selectedCategory,
-        selectedAge,
-        selectedSort,
-        setSearchTerm,
-        setSelectedCategory,
-        setSelectedAge,
-        setSelectedSort,
-        resetFilters
-    } = useActivitiesFilter(libraryActivities);
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const activitiesPerPage = 30
 
-    const [showEmailPopup, setShowEmailPopup] = useState(false);
-    const [isGuest, setIsGuest] = useState(false);
-  
-    useEffect(() => {
-      const authToken = localStorage.getItem('authToken');
-      if (!authToken) {
-        setIsGuest(true);
-        
-        const timer = setTimeout(() => {
-          const hasClosedPopup = localStorage.getItem('closedEmailPopup');
-          if (!hasClosedPopup) {
-            setShowEmailPopup(true);
-          }
-        }, 3000);
-        
-        return () => clearTimeout(timer);
-      }
-    }, []);
-  
-    const handleSubmitEmail = async (email) => {
+  // Ref for scrolling to the top of the activity list
+  const activityListRef = useRef(null)
+
+  // usePlayweekActivities is still used for 'speelweek' tab
+  const { playweekActivities, weekInfo, loading: playweekLoading, error: playweekError } = usePlayweekActivities()
+
+  // useActivitiesFilter now fetches its own data
+  const {
+    activities: filteredActivities,
+    loading: filterLoading,
+    error: filterError,
+    searchTerm,
+    selectedCategory,
+    selectedAge,
+    selectedSort,
+    setSearchTerm,
+    setSelectedCategory,
+    setSelectedAge,
+    setSelectedSort,
+    resetFilters,
+    triggerSearch, // Destructure the new triggerSearch function
+  } = useActivitiesFilter()
+
+  const [showEmailPopup, setShowEmailPopup] = useState(false)
+  const [isGuest, setIsGuest] = useState(false)
+
+  useEffect(() => {
+    const authToken = localStorage.getItem("authToken")
+    if (!authToken) {
+      setIsGuest(true)
+      const timer = setTimeout(() => {
+        const hasClosedPopup = localStorage.getItem("closedEmailPopup")
+        if (!hasClosedPopup) {
+          setShowEmailPopup(true)
+        }
+      }, 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [])
+
+  useEffect(() => {
+    const fetchTotalCountActivites = async () => {
       try {
-        const response = await fetch(`${BASE_URL}/collect-email-for-guest`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ email }),
-        });
-        
-        if (!response.ok) {
-          throw new Error('Failed to submit email');
-        }
-        
-        localStorage.setItem('submittedGuestEmail', email);
+        const res = await axios.get(`${BASE_URL}/get-total-activities-count`)
+        settotalCountActivities(res.data)
       } catch (error) {
-        console.error('Error submitting email:', error);
-        throw error;
+        console.log(error)
       }
-    };
-  
-    const handleClosePopup = () => {
-      setShowEmailPopup(false);
-      localStorage.setItem('closedEmailPopup', 'true');
-    };
+    }
+    fetchTotalCountActivites()
+  }, [])
 
-    const getCurrentActivities = () => {
-        if (activeTab === 'speelweek') {
-          return playweekActivities.map(activity => {
-            const domain = (activity.learningDomain || '').trim();
-            
-            return {
-              id: activity._id,
-              title: activity.title,
-              description: activity.description,
-              image: learningDomainImages[domain] || BackgroundPicture1, // Fallback image
-              progress: `${activity.time} min`,
-              ageRange: activity.ageGroup,
-              rating: activity.averageRating?.toFixed(1) || '0.0',
-              reviews: `${activity.ratings?.length || 0} reviews`,
-              tag: domain,
-              tagColor: learningDomainColors[domain] || 'bg-gray-500 text-white',
-              isLocked: activity.isLocked,
-              isCompleted: activity.isCompleted,
-              isCompletedInCurrentWeek: activity.isCompletedInCurrentWeek,
-              learningDomain: domain
-            };
-          });
-        }
-        return filteredActivities.map(activity => {
-          const domain = (activity.learningDomain || '').trim();
-          
-          return {
-            id: activity._id,
-            title: activity.title,
-            description: activity.description,
-            image: learningDomainImages[domain],
-            progress: `${activity.time} min`,
-            ageRange: activity.ageGroup,
-            rating: activity.averageRating?.toFixed(1),
-            reviews: `${activity.ratings?.length || 0} reviews`,
-            tag: domain,
-            tagColor: learningDomainColors[domain],
-            isLocked: activity.isLocked,
-            isCompleted: activity.isCompleted,
-            learningDomain: domain
-          };
-        });
-      };
-      
+  // Effect to adjust currentPage if filters change and current page becomes invalid
+  useEffect(() => {
+    if (activeTab === "library") {
+      const newTotalPages = Math.ceil(filteredActivities.length / activitiesPerPage)
+      if (currentPage > newTotalPages && newTotalPages > 0) {
+        setCurrentPage(newTotalPages)
+      } else if (newTotalPages === 0 && currentPage !== 1) {
+        setCurrentPage(1)
+      }
+    }
+  }, [filteredActivities.length, activeTab, activitiesPerPage, currentPage])
 
-    const handleStartActivityClick = () => {
-        const authToken = localStorage.getItem('authToken');
-        if (!authToken) {
-            toast.info("You have to login first to create an Activity");
-            return;
-        }
-        navigate('/create-activity')
-    };
+  const handleSubmitEmail = async (email) => {
+    try {
+      const response = await fetch(`${BASE_URL}/collect-email-for-guest`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
+      })
+      if (!response.ok) {
+        throw new Error("Failed to submit email")
+      }
+      localStorage.setItem("submittedGuestEmail", email)
+    } catch (error) {
+      console.error("Error submitting email:", error)
+      throw error
+    }
+  }
 
-    const handleActivityClick = (activity) => {
-        if (activity.isLocked) {
-            toast.info("This activity is locked. Please upgrade your account to access it.");
-            return;
-        }
-        navigate(`/activity-detail/${activity.id}`);
-    };
+  const handleClosePopup = () => {
+    setShowEmailPopup(false)
+    localStorage.setItem("closedEmailPopup", "true")
+  }
 
-    const handleTabChange = (tab) => {
-        setActiveTab(tab);
-        if (tab === 'library') {
-            resetFilters();
+  const getCurrentActivities = () => {
+    if (activeTab === "speelweek") {
+      return playweekActivities.map((activity) => {
+        const domain = (activity.learningDomain || "").trim()
+        return {
+          id: activity._id,
+          title: activity.title,
+          description: activity.description,
+          image: learningDomainImages[domain] || "/placeholder.svg", // Fallback image
+          progress: `${activity.time} min`,
+          ageRange: activity.ageGroup,
+          rating: activity.averageRating?.toFixed(1) || "0.0",
+          reviews: `${activity.ratings?.length || 0} reviews`,
+          tag: domain,
+          tagColor: learningDomainColors[domain] || "bg-gray-500 text-white",
+          isLocked: activity.isLocked,
+          isCompleted: activity.isCompleted,
+          isCompletedInCurrentWeek: activity.isCompletedInCurrentWeek,
+          learningDomain: domain,
         }
-    };
+      })
+    }
 
-    // Helper function to get week status message
-    const getWeekStatusMessage = () => {
-        if (!weekInfo) return null;
-        
-        if (weekInfo.isWeekCompleted) {
-            return "🎉 Week voltooid! Nieuwe activiteiten ontgrendeld!";
-        } else if (weekInfo.completedActivities > 0) {
-            return `${weekInfo.completedActivities} van ${weekInfo.totalActivities} activiteiten voltooid`;
+    // Pagination logic for 'library' tab
+    const indexOfLastActivity = currentPage * activitiesPerPage
+    const indexOfFirstActivity = indexOfLastActivity - activitiesPerPage
+    const currentActivities = filteredActivities.slice(indexOfFirstActivity, indexOfLastActivity)
+
+    return currentActivities.map((activity) => {
+      const domain = (activity.learningDomain || "").trim()
+      return {
+        id: activity._id,
+        title: activity.title,
+        description: activity.description,
+        image: learningDomainImages[domain] || "/placeholder.svg",
+        progress: `${activity.time} min`,
+        ageRange: activity.ageGroup,
+        rating: activity.averageRating?.toFixed(1),
+        reviews: `${activity.ratings?.length || 0} reviews`,
+        tag: domain,
+        tagColor: learningDomainColors[domain],
+        isLocked: activity.isLocked,
+        isCompleted: activity.isCompleted, // This flag is now correctly set by the backend
+        learningDomain: domain,
+      }
+    })
+  }
+
+  const handleStartActivityClick = () => {
+    const authToken = localStorage.getItem("authToken")
+    if (!authToken) {
+      toast.info("You have to login first to create an Activity")
+      return
+    }
+    navigate("/create-activity")
+  }
+
+  const handleActivityClick = (activity) => {
+    if (activity.isLocked) {
+      toast.info("This activity is locked. Please upgrade your account to access it.")
+      return
+    }
+    navigate(`/activity-detail/${activity.id}`)
+  }
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab)
+    if (tab === "library") {
+      resetFilters()
+      setCurrentPage(1) // Reset page when switching to library
+      if (activityListRef.current) {
+        activityListRef.current.scrollIntoView({ behavior: "smooth" })
+      }
+    }
+  }
+
+  // Helper function to get week status message
+  const getWeekStatusMessage = () => {
+    if (!weekInfo) return null
+    if (weekInfo.isWeekCompleted) {
+      return "🎉 Week voltooid! Nieuwe activiteiten ontgrendeld!"
+    } else if (weekInfo.completedActivities > 0) {
+      return `${weekInfo.completedActivities} van ${weekInfo.totalActivities} activiteiten voltooid`
+    }
+    return "Begin je week met deze geweldige activiteiten!"
+  }
+
+  // Calculate total pages for library tab
+  const totalPages = Math.ceil(filteredActivities.length / activitiesPerPage)
+
+  // Helper function to generate pagination range
+  const getPaginationRange = (currentPage, totalPages) => {
+    const pageNumbers = []
+    const maxPagesToShow = 5 // e.g., 1, 2, 3, ..., 10
+
+    if (totalPages <= maxPagesToShow) {
+      for (let i = 1; i <= totalPages; i++) {
+        pageNumbers.push(i)
+      }
+    } else {
+      if (currentPage <= 3) {
+        for (let i = 1; i <= 4; i++) {
+          pageNumbers.push(i)
         }
-        return "Begin je week met deze geweldige activiteiten!";
-    };
+        pageNumbers.push("...")
+        pageNumbers.push(totalPages)
+      } else if (currentPage >= totalPages - 2) {
+        pageNumbers.push(1)
+        pageNumbers.push("...")
+        for (let i = totalPages - 3; i <= totalPages; i++) {
+          pageNumbers.push(i)
+        }
+      } else {
+        pageNumbers.push(1)
+        pageNumbers.push("...")
+        pageNumbers.push(currentPage - 1)
+        pageNumbers.push(currentPage)
+        pageNumbers.push(currentPage + 1)
+        pageNumbers.push("...")
+        pageNumbers.push(totalPages)
+      }
+    }
+    return pageNumbers
+  }
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page)
+    if (activityListRef.current) {
+      activityListRef.current.scrollIntoView({ behavior: "smooth" })
+    }
+  }
+
+  const renderPagination = () => {
+    if (activeTab !== "library") {
+      return null // Only render pagination for the 'library' tab
+    }
+
+    // Render pagination even if there's only one page, but disable next/previous if not applicable
+    const pageNumbers = getPaginationRange(currentPage, totalPages)
 
     return (
-        <>
-            <ToastContainer style={{ zIndex: 1000000000 }} />
-
-            {isGuest && showEmailPopup && (
-        <EmailCollectionPopup
-          onClose={handleClosePopup}
-          onSubmit={handleSubmitEmail}
-        />
-      )}
-
-            <div className="h-full flex flex-col items-center justify-center px-4 py-8">
-                <div className="md:w-[90%] mx-auto w-full  text-center space-y-8">
-                    <div className="flex justify-center items-center space-x-4 mb-8">
-                        <div className="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-book-open w-8 h-8 text-white animate-pulse"><path d="M12 7v14"></path><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"></path></svg>
-                        </div>
-                    </div>
-
-                    <div className="space-y-4">
-                        <h1 className="text-4xl md:text-5xl lg:text-6xl inter-tight-700  bg-clip-text text-transparent  bg-gradient-to-b to-[#9333EA] from-[#DB2777]">
-                            Samen groeien met elke activiteit
-                        </h1>
-
-                        <p className="text-sm text-[#4B5563] inter-tight-400 font-medium">Bouw mee aan het onderwijs van de toekomst</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-12 max-w-2xl mx-auto">
-                        <div className="bg-[#F8F8FF] rounded-2xl py-2 border border-[#CDCDCD]">
-                            <div className="flex items-center inter-tight-400 justify-center space-x-2">
-                                <div className="w-2 h-2 rounded-full bg-[#2563EB] mr-2"></div>
-                                <span className="text-md font-medium text-[#5D5D5D]">35+ Activiteiten Beschikbaar</span>
-                            </div>
-                        </div>
-
-                        <div className="bg-[#F8F8FF] rounded-2xl py-2 border border-[#CDCDCD]">
-                            <div className="flex items-center inter-tight-400 justify-center space-x-2">
-                                <div className="w-2 h-2 rounded-full bg-[#3FDBB1] mr-2"></div>
-                                <span className="text-md font-medium text-[#5D5D5D]">5-15 Minuten Per Dag</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div>
-                    <div className="text-center mb-8 ">
-                        <div className="flex flex-col  mt-10 sm:flex-row  gap-2 justify-center items-center">
-                            <div className="flex  gap-2 justify-center items-center bg-gradient-to-tr from-[#F3F4F6] to-[#E5E7EB] p-1 rounded-lg">
-                                <button
-                                    onClick={() => handleTabChange('speelweek')}
-                                    className={`md:w-[575px] w-[160px] py-2 flex justify-center items-center gap-2 cursor-pointer rounded-lg text-sm transition-colors ${activeTab === 'speelweek'
-                                        ? 'bg-[#8F34EA] text-white rounded-lg'
-                                        : 'text-[#616161]  rounded-lg'
-                                        }`}
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-gamepad2 h-4 w-4"><line x1="6" x2="10" y1="11" y2="11"></line><line x1="8" x2="8" y1="9" y2="13"></line><line x1="15" x2="15.01" y1="12" y2="12"></line><line x1="18" x2="18.01" y1="10" y2="10"></line><path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z"></path></svg>
-                                    <span className="inline">Speelweek</span>
-                                </button>
-                                <button
-                                    onClick={() => handleTabChange('library')}
-                                    className={`md:w-[575px] w-[160px] py-2 flex justify-center items-center gap-2 cursor-pointer rounded-lg text-sm transition-colors ${activeTab === 'library'
-                                        ? 'bg-[#8F34EA] text-white rounded-lg'
-                                        : 'text-[#616161] rounded-lg'
-                                        }`}
-                                >
-                                   <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        className="hidden md:inline h-4 w-4"
-                                        width="24"
-                                        height="24"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        strokeWidth="2"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                    >
-                                        <path d="M12 7v14"></path>
-                                        <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"></path>
-                                    </svg>
-                                    <span className="inline">Activiteitenbibliotheek</span>
-                                </button>
-                            </div>
-
-                            <button onClick={handleStartActivityClick} className="justify-center md:w-auto w-full cursor-pointer text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary hover:bg-primary/90 h-11 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-semibold py-5 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 flex items-center gap-2 whitespace-nowrap ">
-                                <Plus size={16} />
-                                Activiteit Toevoegen
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                {activeTab === 'library' && (
-                    <div className="bg-gradient-to-br md:w-[90%] mx-auto w-full rounded-xl from-[#EFF6FF] via-[#FAF5FF] to-[#FDF2F8] p-6 mb-8 shadow-sm">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                            <div className="relative">
-                                <input
-                                    type="text"
-                                    placeholder="Zoek Activiteiten"
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2 border-none outline-none text-sm bg-[#FFFFFF] rounded-xl inter-tight-400 "
-                                />
-                                <div className="absolute inset-y-0 left-0 bottom-0 pl-3 flex items-center pointer-events-none">
-                                    <svg className="h-5 w-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth={2}
-                                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                                        />
-                                    </svg>
-                                </div>
-                            </div>
-
-                            <select
-                                value={selectedCategory}
-                                onChange={(e) => setSelectedCategory(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2 border-none outline-none text-[#707070] text-sm bg-[#FFFFFF] rounded-xl inter-tight-400"
-                            >
-                                <option value="Alle Leergebieden">Alle Leergebieden</option>
-                                <option value="Emotionele Gezondheid">Emotionele Gezondheid</option>
-                                <option value="Veerkracht">Veerkracht</option>
-                                <option value="Dankbaarheid">Dankbaarheid</option>
-                                <option value="Zelfzorg">Zelfzorg</option>
-                                <option value="Geldwijsheid">Geldwijsheid</option>
-                                <option value="Ondernemerschap">Ondernemerschap</option>
-                                <option value="Anders denken">Anders denken</option>
-                            </select>
-
-                            <select
-                                value={selectedAge}
-                                onChange={(e) => setSelectedAge(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2 border-none outline-none text-[#707070] text-sm bg-[#FFFFFF] rounded-xl inter-tight-400"
-                            >
-                                <option value="alle-leeftijden">Alle Leeftijden</option>
-                                <option value="3-4">3-4 jaar</option>
-                                <option value="5-6">5-6 jaar</option>
-                                <option value="7-8">7-8 jaar</option>
-                            </select>
-
-                            <select
-                                value={selectedSort}
-                                onChange={(e) => setSelectedSort(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2 border-none outline-none text-[#707070] text-sm bg-[#FFFFFF] rounded-xl inter-tight-400"
-                            >
-                                <option value="hoogstgewaardeerde">Hoogst gewaardeerde</option>
-                                <option value="meestgewaardeerde">Meest gewaardeerde</option>
-                                <option value="voltooid">Voltooid</option>
-                            </select>
-                        </div>
-                    </div>
-                )}
-
-                <div className="md:w-[90%] mx-auto">
-                    <div className="h-auto relative bg-gradient-to-br rounded-3xl from-[#EFF6FF] via-[#FAF5FF] to-[#FDF2F8] mt-5 p-4 md:p-8">
-                        <img
-                            src={StarImage}
-                            alt="Top left decoration"
-                            className="absolute top-2 left-2 sm:top-4 sm:left-4 lg:top-6 lg:left-6 w-16 sm:w-20 lg:w-24 h-auto z-10"
-                        />
-                        <div className=" w-full m-auto">
-                            {activeTab === 'speelweek' && (
-                                <div className="flex justify-center items-center flex-col">
-                                    <h1 className="text-2xl md:text-3xl text-[#000000] poppins-700 py-5">
-                                        Deze Week: Week {weekInfo?.weekNumber}
-                                    </h1>
-                                    <p className="text-[#4B5563] text-center text-sm mb-6">5 zorgvuldig geselecteerde activiteiten om samen te ontdekken</p>
-                                </div>
-                            )}
-
-                            {(playweekLoading || libraryLoading || filterLoading) && (
-                                <LoaderOverlay/>
-                            )}
-
-                            {(playweekError || libraryError || filterError) && (
-                                <div className="flex justify-center items-center py-8">
-                                    <div className="text-red-500 text-center">
-                                        <p>Fout bij het laden van activiteiten:</p>
-                                        <p className="text-sm">{playweekError || libraryError || filterError}</p>
-                                    </div>
-                                </div>
-                            )}
-
-                            {!playweekLoading && !playweekError && activeTab === 'speelweek' && getCurrentActivities().length === 0 && (
-                                <div className="flex justify-center items-center py-8">
-                                    <div className="text-[#666666] inter-tight-400 text-[16px] text-center">
-                                        <p>Geen speelweek activiteiten gevonden.</p>
-                                    </div>
-                                </div>
-                            )}
-
-                            {!libraryLoading && !libraryError && activeTab === 'library' && filteredActivities.length === 0 && (
-                                <div className="flex justify-center items-center py-8">
-                                    <div className="text-[#666666] inter-tight-400 text-[16px] text-center">
-                                        <p>Geen activiteiten gevonden met de huidige filters.</p>
-                                    </div>
-                                </div>
-                            )}
-
-                            {!playweekLoading && !libraryLoading && !filterLoading && (
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    {getCurrentActivities().map((activity, index) => (
-                                        <div
-                                            onClick={() => handleActivityClick(activity)}
-                                            key={activity.id}
-                                            className="relative group pt-5 pb-2 p-[1px] cursor-pointer"
-                                        >
-                                            <div className="absolute top-10 right-6 z-20">
-                                                <span
-                                                    className={`px-4 py-1 text-xs font-bold rounded-md shadow-md ${
-                                                        activity.isLocked
-                                                            ? 'bg-red-600 text-white'
-                                                            : 'bg-yellow-500 text-white'
-                                                    }`}
-                                                >
-                                                    {activity.isLocked ? 'LOCKED' : 'FREE'}
-                                                </span>
-                                            </div>
-
-                                            <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-[#DB297A] to-[#7940EA] z-0 opacity-0 group-hover:opacity-100 transition duration-500"></div>
-
-                                            <div className={`relative z-10 md:h-[550px] h-auto  bg-white rounded-2xl overflow-hidden transition-shadow duration-300 ease-in-out group-hover:shadow-lg ${activity.isLocked ? 'opacity-80' : ''}`}>
-                                                <div className="p-3">
-                                                    <div className="bg-[#F3F4F6] rounded-2xl h-48 flex items-center justify-center">
-                                                        <div className="h-18 w-18 shadow-3xl bg-[#f1e7e7] rounded-full flex items-center justify-center mx-auto mb-4">
-                                                            <img src={activity.image || "/placeholder.svg"} className="h-10 w-10" alt="" />
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <div className="p-4 space-y-4">
-                                                    <div>
-                                                        <h3 className="text-lg text-[#0F2137] poppins-700 mb-1">{activity.title}</h3>
-                                                        <p className="text-[#666666] space-grotesk-400 text-[16px] leading-relaxed">{activity.description.slice(0,40)}...</p>
-                                                    </div>
-
-                                                    <div className="flex items-center inter-tight-400 justify-between text-sm mt-8 text-[#838383]">
-                                                        <div className="flex items-center gap-1 sora-400">
-                                                            <Clock className="w-4 h-4" />
-                                                            <span>{activity.progress}</span>
-                                                        </div>
-                                                        <div className="flex items-center gap-1 sora-400">
-                                                            <FiUsers className="w-4 h-4" />
-                                                            <span>{activity.ageRange}</span>
-                                                        </div>
-                                                    </div>
-
-                                                    {!activity.isCompleted && (
-                                                      <>
-                                                        <div className="rounded-lg bg-[#FFFCE6] border border-yellow-200 p-3 flex items-center justify-center gap-2">
-                                                          <Star className="w-4 h-4 text-[#FACC15] fill-current" />
-                                                          <span className="text-sm inter-tight-400 font-medium text-gray-700">
-                                                            <span className="font-bold text-black inter-tight-700">{activity.rating}</span> ({activity.reviews})
-                                                          </span>
-                                                        </div>
-
-                                                        <div className="flex justify-center mt-2">
-                                                          <span className={`${activity.tagColor} px-3 py-1 rounded-full text-xs font-medium`}>
-                                                            {activity.tag}
-                                                          </span>
-                                                        </div>
-                                                      </>
-                                                    )}
-  
-
-                                                    {!activity.isCompleted ? (
-                                                        <button
-                                                            className={`w-full bg-gradient-to-br from-[#C42E8B] to-[#6650C7] text-white inter-tight-700 cursor-pointer py-2.5 px-4 rounded-2xl hover:opacity-90 transition-opacity text-sm flex items-center justify-center gap-2 ${activity.isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                            disabled={activity.isLocked}
-                                                        >
-                                                            <IoPlayCircleOutline className="w-6 h-6" />
-                                                            Start Activiteit
-                                                        </button>
-                                                    ) : (
-                                                        <div className="bg-[#FEFCE8] flex-col flex justify-center items-center p-10 rounded-3xl">
-
-                                                        <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium text-orange-600">
-                                                            <svg className="w-4 h-4 mr-1 bg-orange-600 text-white rounded-full" fill="currentColor" viewBox="0 0 20 20">
-                                                                <path
-                                                                    fillRule="evenodd"
-                                                                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                                                    clipRule="evenodd"
-                                                                />
-                                                            </svg>
-                                                            Voltooid
-                                                        </div>
-                                                        <span className="text-[#F59E0B] inter-tight-400 mt-2 text-sm">Fantastisch gedaan!</span>
-                                                    </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-
-                            <div className="lg:grid lg:grid-cols-3 lg:gap-6 lg:mt-6">
-                                <div className="lg:col-start-1 lg:col-end-3"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <EducationalQuotes />
-            <Specs />
-            <Faqs />
-        </>
+      <div className="flex justify-center items-center space-x-2 mt-8">
+        <button
+          onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+          disabled={currentPage === 1}
+          className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 inter-tight-400 text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Previous
+        </button>
+        {pageNumbers.map((page, index) =>
+          page === "..." ? (
+            <span key={index} className="px-4 py-2">
+              ...
+            </span>
+          ) : (
+            <button
+              key={index}
+              onClick={() => handlePageChange(page)}
+              className={`px-4 py-2 rounded-lg text-sm inter-tight-400  cursor-pointer ${currentPage === page ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-700"}`}
+            >
+              {page}
+            </button>
+          ),
+        )}
+        <button
+          onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+          disabled={currentPage === totalPages || totalPages === 0}
+          className="px-4 py-2 rounded-lg bg-gray-200 inter-tight-400 text-sm cursor-pointer text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Next
+        </button>
+      </div>
     )
+  }
+
+  return (
+    <>
+      <ToastContainer style={{ zIndex: 1000000000 }} />
+      {isGuest && showEmailPopup && <EmailCollectionPopup onClose={handleClosePopup} onSubmit={handleSubmitEmail} />}
+      <div className="h-full flex flex-col items-center justify-center px-4 py-8">
+        <div className="md:w-[90%] mx-auto w-full  text-center space-y-8">
+          <div className="flex justify-center items-center space-x-4 mb-8">
+            <div className="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="lucide lucide-book-open w-8 h-8 text-white animate-pulse"
+              >
+                <path d="M12 7v14"></path>
+                <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"></path>
+              </svg>
+            </div>
+          </div>
+          <div className="space-y-4">
+            <h1 className="lg:leading-tighter text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl xl:text-[3.4rem] 2xl:text-[3.75rem] inter-tight-700  bg-clip-text text-transparent  bg-gradient-to-b to-[#9333EA] from-[#DB2777]">
+              Samen groeien met elke activiteit
+            </h1>
+            <p className="text-sm text-[#4B5563] inter-tight-400 font-medium">
+              Bouw mee aan het onderwijs van de toekomst
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-12 max-w-2xl mx-auto">
+            <div className="bg-[#F8F8FF] rounded-2xl py-2 border border-[#CDCDCD]">
+              <div className="flex items-center inter-tight-400 justify-center space-x-2">
+                <div className="w-2 h-2 rounded-full bg-[#2563EB] mr-2"></div>
+                <span className="text-md font-medium text-[#5D5D5D]">
+                  {totalCountActivities}+ Activiteiten Beschikbaar
+                </span>
+              </div>
+            </div>
+            <div className="bg-[#F8F8FF] rounded-2xl py-2 border border-[#CDCDCD]">
+              <div className="flex items-center inter-tight-400 justify-center space-x-2">
+                <div className="w-2 h-2 rounded-full bg-[#3FDBB1] mr-2"></div>
+                <span className="text-md font-medium text-[#5D5D5D]">5-15 Minuten Per Dag</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div className="text-center mb-8 ">
+            <div className="flex flex-col  mt-10 sm:flex-row  gap-2 justify-center items-center">
+              <div className="flex  gap-2 justify-center items-center bg-gradient-to-tr from-[#F3F4F6] to-[#E5E7EB] p-1 rounded-lg">
+                <button
+                  onClick={() => handleTabChange("speelweek")}
+                  className={`md:w-[575px] w-[160px] py-2 flex justify-center items-center gap-2 cursor-pointer rounded-lg text-sm transition-colors ${activeTab === "speelweek" ? "bg-[#8F34EA] text-white rounded-lg" : "text-[#616161]  rounded-lg"}`}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="lucide lucide-gamepad2 h-4 w-4"
+                  >
+                    <line x1="6" x2="10" y1="11" y2="11"></line>
+                    <line x1="8" x2="8" y1="9" y2="13"></line>
+                    <line x1="15" x2="15.01" y1="12" y2="12"></line>
+                    <line x1="18" x2="18.01" y1="10" y2="10"></line>
+                    <path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z"></path>
+                  </svg>
+                  <span className="inline">Speelweek</span>
+                </button>
+                <button
+                  onClick={() => handleTabChange("library")}
+                  className={`md:w-[575px] w-[160px] py-2 flex justify-center items-center gap-2 cursor-pointer rounded-lg text-sm transition-colors ${activeTab === "library" ? "bg-[#8F34EA] text-white rounded-lg" : "text-[#616161] rounded-lg"}`}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="hidden md:inline h-4 w-4"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M12 7v14"></path>
+                    <path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"></path>
+                  </svg>
+                  <span className="inline">Activiteitenbibliotheek</span>
+                </button>
+              </div>
+              <button
+                onClick={handleStartActivityClick}
+                className="justify-center md:w-auto w-full cursor-pointer text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 bg-primary hover:bg-primary/90 h-11 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-semibold py-5 px-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 flex items-center gap-2 whitespace-nowrap "
+              >
+                <Plus size={16} />
+                Activiteit Toevoegen
+              </button>
+            </div>
+          </div>
+        </div>
+        {activeTab === "library" && (
+          <div className="bg-gradient-to-br md:w-[90%] mx-auto w-full rounded-xl from-[#EFF6FF] via-[#FAF5FF] to-[#FDF2F8] p-6 mb-8 shadow-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Zoek Activiteiten"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      triggerSearch()
+                    }
+                  }}
+                  className="w-full pl-10 pr-4 py-2 border-none outline-none text-sm bg-[#FFFFFF] rounded-xl inter-tight-400 "
+                />
+                <button
+                  onClick={triggerSearch} // Call triggerSearch on button click
+                  className="absolute inset-y-0 left-0 bottom-0 pl-3 flex items-center cursor-pointer"
+                  aria-label="Search activities"
+                >
+                  <svg className="h-5 w-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    />
+                  </svg>
+                </button>
+              </div>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border-none outline-none text-[#707070] text-sm bg-[#FFFFFF] rounded-xl inter-tight-400"
+              >
+                <option value="Alle Leergebieden">Alle Leergebieden</option>
+                <option value="Emotionele Gezondheid">Emotionele Gezondheid</option>
+                <option value="Veerkracht">Veerkracht</option>
+                <option value="Dankbaarheid">Dankbaarheid</option>
+                <option value="Zelfzorg">Zelfzorg</option>
+                <option value="Geldwijsheid">Geldwijsheid</option>
+                <option value="Ondernemerschap">Ondernemerschap</option>
+                <option value="Anders denken">Anders denken</option>
+              </select>
+              <select
+                value={selectedAge}
+                onChange={(e) => setSelectedAge(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border-none outline-none text-[#707070] text-sm bg-[#FFFFFF] rounded-xl inter-tight-400"
+              >
+                <option value="alle-leeftijden">Alle Leeftijden</option>
+                <option value="3-4">3-4 jaar</option>
+                <option value="5-6">5-6 jaar</option>
+                <option value="7-8">7-8 jaar</option>
+              </select>
+              <select
+                value={selectedSort}
+                onChange={(e) => setSelectedSort(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border-none outline-none text-[#707070] text-sm bg-[#FFFFFF] rounded-xl inter-tight-400"
+              >
+                <option value="hoogstgewaardeerde">Hoogst gewaardeerde</option>
+                <option value="meestgewaardeerde">Meest gewaardeerde</option>
+                <option value="voltooid">Voltooid</option>
+              </select>
+            </div>
+          </div>
+        )}
+        <div className="md:w-[90%] mx-auto" ref={activityListRef}>
+          {" "}
+          {/* Add ref here */}
+          <div className="h-auto relative bg-gradient-to-br rounded-3xl from-[#EFF6FF] via-[#FAF5FF] to-[#FDF2F8] mt-5 p-4 md:p-8">
+            <img
+              src={StarImage || "/placeholder.svg"}
+              alt="Top left decoration"
+              className="absolute top-2 left-2 sm:top-4 sm:left-4 lg:top-6 lg:left-6 w-16 sm:w-20 lg:w-24 h-auto z-10"
+            />
+            <div className=" w-full m-auto">
+              {activeTab === "speelweek" && (
+                <div className="flex justify-center items-center flex-col">
+                  <h1 className="text-2xl md:text-3xl text-[#000000] poppins-700 py-5">
+                    Deze Week: Week {weekInfo?.weekNumber}
+                  </h1>
+                  <p className="text-[#4B5563] text-center text-sm mb-6">
+                    5 zorgvuldig geselecteerde activiteiten om samen te ontdekken
+                  </p>
+                </div>
+              )}
+              {(playweekLoading || filterLoading) && <LoaderOverlay />}
+              {/* Conditional rendering for errors */}
+              {activeTab === "library" && filterError === "Login required to view completed activities." ? (
+                <div className="flex justify-center items-center py-8">
+                  <div className="text-[#666666] inter-tight-400 text-[16px] text-center">
+                    <p>Geen activiteiten gevonden met de huidige filters.</p>
+                  </div>
+                </div>
+              ) : (
+                (playweekError || filterError) && (
+                  <div className="flex justify-center items-center py-8">
+                    <div className="text-red-500 text-center">
+                      <p>Fout bij het laden van activiteiten:</p>
+                      <p className="text-sm">{playweekError || filterError}</p>
+                    </div>
+                  </div>
+                )
+              )}
+              {!playweekLoading &&
+                !playweekError &&
+                activeTab === "speelweek" &&
+                getCurrentActivities().length === 0 && (
+                  <div className="flex justify-center items-center py-8">
+                    <div className="text-[#666666] inter-tight-400 text-[16px] text-center">
+                      <p>Geen speelweek activiteiten gevonden.</p>
+                    </div>
+                  </div>
+                )}
+              {!filterLoading && !filterError && activeTab === "library" && filteredActivities.length === 0 && (
+                <div className="flex justify-center items-center py-8">
+                  <div className="text-[#666666] inter-tight-400 text-[16px] text-center">
+                    <p>Geen activiteiten gevonden met the current filters.</p>
+                  </div>
+                </div>
+              )}
+              {!playweekLoading && !filterLoading && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {getCurrentActivities().map((activity, index) => (
+                    <div
+                      onClick={() => handleActivityClick(activity)}
+                      key={activity.id}
+                      className="relative group pt-5 pb-2 p-[1px] cursor-pointer"
+                    >
+                      <div className="absolute top-10 right-6 z-20">
+                        <span
+                          className={`px-4 py-1 text-xs font-bold rounded-md shadow-md ${activity.isLocked ? "bg-red-600 text-white" : "bg-yellow-500 text-white"}`}
+                        >
+                          {activity.isLocked ? "LOCKED" : "FREE"}
+                        </span>
+                      </div>
+                      <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-[#DB297A] to-[#7940EA] z-0 opacity-0 group-hover:opacity-100 transition duration-500"></div>
+                      <div
+                        className={`relative z-10 md:h-[550px] h-auto  bg-white rounded-2xl overflow-hidden transition-shadow duration-300 ease-in-out group-hover:shadow-lg ${activity.isLocked ? "opacity-80" : ""}`}
+                      >
+                        <div className="p-3">
+                          <div className="bg-[#F3F4F6] rounded-2xl h-48 flex items-center justify-center">
+                            <div className="h-18 w-18 shadow-3xl bg-[#f1e7e7] rounded-full flex items-center justify-center mx-auto mb-4">
+                              <img src={activity.image || "/placeholder.svg"} className="h-10 w-10" alt="" />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="p-4 space-y-4">
+                          <div>
+                            <h3 className="text-lg text-[#0F2137] poppins-700 mb-1">{activity.title}</h3>
+                            <p className="text-[#666666] space-grotesk-400 text-[16px] leading-relaxed">
+                              {activity.description.slice(0, 40)}...
+                            </p>
+                          </div>
+                          <div className="flex items-center inter-tight-400 justify-between text-sm mt-8 text-[#838383]">
+                            <div className="flex items-center gap-1 sora-400">
+                              <Clock className="w-4 h-4" />
+                              <span>{activity.progress}</span>
+                            </div>
+                            <div className="flex items-center gap-1 sora-400">
+                              <FiUsers className="w-4 h-4" />
+                              <span>{activity.ageRange}</span>
+                            </div>
+                          </div>
+                          {!activity.isCompleted && (
+                            <>
+                              <div className="rounded-lg bg-[#FFFCE6] border border-yellow-200 p-3 flex items-center justify-center gap-2">
+                                <Star className="w-4 h-4 text-[#FACC15] fill-current" />
+                                <span className="text-sm inter-tight-400 font-medium text-gray-700">
+                                  <span className="font-bold text-black inter-tight-700">{activity.rating}</span> (
+                                  {activity.reviews})
+                                </span>
+                              </div>
+                              <div className="flex justify-center mt-2">
+                                <span className={`${activity.tagColor} px-3 py-1 rounded-full text-xs font-medium`}>
+                                  {activity.tag}
+                                </span>
+                              </div>
+                            </>
+                          )}
+                          {!activity.isCompleted ? (
+                            <button
+                              className={`w-full bg-gradient-to-br from-[#C42E8B] to-[#6650C7] text-white inter-tight-700 cursor-pointer py-2.5 px-4 rounded-2xl hover:opacity-90 transition-opacity text-sm flex items-center justify-center gap-2 ${activity.isLocked ? "opacity-50 cursor-not-allowed" : ""}`}
+                              disabled={activity.isLocked}
+                            >
+                              <IoPlayCircleOutline className="w-6 h-6" />
+                              Start Activiteit
+                            </button>
+                          ) : (
+                            <div className="bg-[#FEFCE8] flex-col flex justify-center items-center p-10 rounded-3xl">
+                              <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium text-orange-600">
+                                <svg
+                                  className="w-4 h-4 mr-1 bg-orange-600 text-white rounded-full"
+                                  fill="currentColor"
+                                  viewBox="0 0 20 20"
+                                >
+                                  <path
+                                    fillRule="evenodd"
+                                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                    clipRule="evenodd"
+                                  />
+                                </svg>
+                                Voltooid
+                              </div>
+                              <span className="text-[#F59E0B] inter-tight-400 mt-2 text-sm">Fantastisch gedaan!</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {renderPagination()} {/* Render pagination here */}
+              <div className="lg:grid lg:grid-cols-3 lg:gap-6 lg:mt-6">
+                <div className="lg:col-start-1 lg:col-end-3"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <EducationalQuotes />
+      <Specs />
+      <Faqs />
+    </>
+  )
 }

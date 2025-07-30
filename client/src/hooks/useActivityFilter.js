@@ -1,111 +1,80 @@
-/* eslint-disable react-hooks/exhaustive-deps */
-import { useState, useEffect } from 'react';
-import { BASE_URL } from '../utils/api';
+import { useState, useEffect, useCallback } from "react"
+import axios from "axios"
+import { BASE_URL } from "../utils/api"
+import { toast } from "react-toastify"
 
-export const useActivitiesFilter = (initialActivities = []) => {
-  const [filteredActivities, setFilteredActivities] = useState(initialActivities);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+export const useActivitiesFilter = () => {
+  const [activities, setActivities] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+  const [searchTerm, setSearchTerm] = useState("") // This updates on every keystroke
+  const [effectiveSearchTerm, setEffectiveSearchTerm] = useState("") // This triggers the API call
+  const [selectedCategory, setSelectedCategory] = useState("Alle Leergebieden")
+  const [selectedAge, setSelectedAge] = useState("alle-leeftijden")
+  const [selectedSort, setSelectedSort] = useState("hoogstgewaardeerde")
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("Alle Leergebieden");
-  const [selectedAge, setSelectedAge] = useState("alle-leeftijden");
-  const [selectedSort, setSelectedSort] = useState("hoogstgewaardeerde");
-
-  const filterActivities = () => {
-    setLoading(true);
-    setError(null);
-    
+  const fetchFilteredActivities = useCallback(async () => {
+    setLoading(true)
+    setError(null)
     try {
-      let results = [...initialActivities];
+      const authToken = localStorage.getItem("authToken")
+      const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {}
 
-      // Apply search term filter
-      if (searchTerm.trim()) {
-        const term = searchTerm.toLowerCase().trim();
-        results = results.filter(activity => 
-          activity.title.toLowerCase().includes(term) || 
-          activity.description.toLowerCase().includes(term)
-      )}
-
-      // Apply category filter
-      if (selectedCategory && selectedCategory !== 'Alle Leergebieden') {
-        results = results.filter(activity => 
-          activity.learningDomain === selectedCategory
-        )
-      }
-
-      // Apply age filter
-      if (selectedAge && selectedAge !== 'alle-leeftijden') {
-        const [minAge, maxAge] = selectedAge.split('-').map(Number);
-        results = results.filter(activity => {
-          const [activityMin, activityMax] = activity.ageGroup.split('-').map(Number);
-          return activityMin >= minAge && activityMax <= maxAge;
-        })
-      }
-
-      // Apply sort
-      if (selectedSort === 'hoogstgewaardeerde') {
-        results.sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0));
-      } else if (selectedSort === 'meestgewaardeerde') {
-        results.sort((a, b) => (b.ratings?.length || 0) - (a.ratings?.length || 0));
-      } else if (selectedSort === 'voltooid') {
-        // You might need to add completion status to your activity model
-        // This is just a placeholder
-        results.sort((a, b) => (b.completedCount || 0) - (a.completedCount || 0));
-      }
-
-      setFilteredActivities(results);
-      
+      const response = await axios.get(`${BASE_URL}/filter-activities`, {
+        params: {
+          searchTerm: effectiveSearchTerm, // Use effectiveSearchTerm for API call
+          category: selectedCategory,
+          age: selectedAge,
+          sort: selectedSort,
+        },
+        headers,
+      })
+      setActivities(response.data.activities)
     } catch (err) {
-      console.error('Error filtering activities:', err);
-      setError(err.message || 'Failed to filter activities');
-      setFilteredActivities([]);
+      console.error("Error fetching filtered activities:", err)
+      const errorMessage = err.response?.data?.message || "Failed to fetch activities."
+      setError(errorMessage)
+      setActivities([])
+      if (errorMessage === "Login required to view completed activities.") {
+        toast.info(errorMessage)
+      }
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }, [effectiveSearchTerm, selectedCategory, selectedAge, selectedSort]) // Dependencies for useCallback
 
-  // Update filtered activities when initial activities change
+  // Effect to trigger API call whenever filter parameters (excluding searchTerm) change
   useEffect(() => {
-    setFilteredActivities(initialActivities);
-  }, [initialActivities]);
+    // This useEffect will trigger for category, age, sort, and effectiveSearchTerm
+    fetchFilteredActivities()
+  }, [fetchFilteredActivities])
 
-  // Auto-filter when any filter value changes
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      filterActivities();
-    }, 300); // Debounce for 300ms
+  // Function to explicitly trigger the search API call
+  const triggerSearch = useCallback(() => {
+    setEffectiveSearchTerm(searchTerm) // Update effectiveSearchTerm to trigger fetch
+  }, [searchTerm])
 
-    return () => clearTimeout(timeoutId);
-  }, [searchTerm, selectedCategory, selectedAge, selectedSort, initialActivities]);
-
-  const resetFilters = () => {
-    setSearchTerm("");
-    setSelectedCategory("Alle Leergebieden");
-    setSelectedAge("alle-leeftijden");
-    setSelectedSort("hoogstgewaardeerde");
-    setFilteredActivities(initialActivities);
-  };
+  const resetFilters = useCallback(() => {
+    setSearchTerm("")
+    setEffectiveSearchTerm("") // Reset effective search term too
+    setSelectedCategory("Alle Leergebieden")
+    setSelectedAge("alle-leeftijden")
+    setSelectedSort("hoogstgewaardeerde")
+  }, [])
 
   return {
-    // Data
-    activities: filteredActivities,
+    activities,
     loading,
     error,
-    
-    // Filter states
-    searchTerm,
+    searchTerm, // Return searchTerm for input value
     selectedCategory,
     selectedAge,
     selectedSort,
-    
-    // Filter setters
     setSearchTerm,
     setSelectedCategory,
     setSelectedAge,
     setSelectedSort,
-    
-    // Functions
-    resetFilters
-  };
-};
+    resetFilters,
+    triggerSearch, // Expose the triggerSearch function
+  }
+}

@@ -20,7 +20,7 @@ export default function GebruikersBeheren() {
   const [activeTab, setActiveTab] = useState("list")
   const { fetchData, loading, error } = useApi()
 
-  const usersPerPage = 6
+  const usersPerPage = 30
   const sortOptions = ["Nieuwste eerst", "Oudste eerst", "Naam A-Z", "Naam Z-A"]
   const statusOptions = ["Alle statussen", "Active", "Trial", "Inactief"]
 
@@ -297,7 +297,7 @@ export default function GebruikersBeheren() {
                 <div className="p-6 text-center text-red-500">{error}</div>
               ) : (
                 <>
-                  <div className="overflow-x-auto">
+                  <div className="overflow-y-auto custom-scrollbar max-h-[60vh]">
                     <table className="w-full">
                       <thead className="bg-[#F9FAFB] inter-tight-400">
                         <tr>

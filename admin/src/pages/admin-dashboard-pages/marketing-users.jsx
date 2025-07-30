@@ -206,7 +206,7 @@ export default function MarketingUsers() {
               </p>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="overflow-y-auto custom-scrollbar max-h-[60vh]">
               <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>

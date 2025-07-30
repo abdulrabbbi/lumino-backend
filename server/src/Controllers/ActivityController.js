@@ -5,6 +5,7 @@ import User from "../Models/User.js";
 import WeekPlaySet from "../Models/WeekPlaySet.js";
 import Badge from "../Models/Badge.js";
 import { parseWeekKey, areConsecutiveWeeks, getTop5Activities, getWeekOfYear, isMoreThanAWeekOld } from "../Helper/ActivityHelper.js";
+import mongoose from "mongoose";
 
 export const createActivity = async (req, res) => {
   try {
@@ -251,68 +252,101 @@ export const getSingleActivity = async (req, res) => {
 };
 export const filterActivities = async (req, res) => {
   try {
-    const { searchTerm, category, age, sort } = req.query;
-
-    let query = {};
+    const { searchTerm, category, age, sort } = req.query
+    const query = {}
 
     // Keyword search
-    if (searchTerm && typeof searchTerm === 'string') {
-      query.title = { $regex: searchTerm, $options: 'i' }; // Case-insensitive search
+    if (searchTerm && typeof searchTerm === "string") {
+      query.title = { $regex: searchTerm, $options: "i" }
     }
 
-    // Category filter
-    if (category && category !== 'Alle Leergebieden') {
-      query.category = category;
+    // Category filter: Corrected to use 'learningDomain' from the schema
+    if (category && category !== "Alle Leergebieden") {
+      query.learningDomain = category
     }
 
-    // Age filter
-    if (age && age !== 'alle-leeftijden') {
-      query.age = age;
+    // Age filter: Corrected to match ageGroup string with spaces
+    if (age && age !== "alle-leeftijden") {
+      const formattedAge = age.replace("-", " - ")
+      query.ageGroup = formattedAge
     }
 
-    let activitiesQuery = Activity.find();
-
-    if (sort === 'hoogstgewaardeerde') {
-      activitiesQuery = activitiesQuery.sort({ averageRating: -1 });
-    } else if (sort === 'meestgewaardeerde') {
-      activitiesQuery = activitiesQuery.sort({ likes: -1 });
-    } else if (sort === 'voltooid') {
-      activitiesQuery = activitiesQuery.find({ com: true });
-    }
-
-    const activities = await activitiesQuery.exec();
-
-    // Add isLocked flag like in getActivityLibrary
-    const userId = req.user?.userId;
-    let isTestFamily = false;
-    let isLoggedIn = false;
+    const userId = req.user?.userId
+    let isTestFamily = false
+    let isLoggedIn = false
+    let completedActivityIds = new Set() // To store IDs of activities completed by the user
 
     if (userId) {
-      const user = await User.findById(userId);
+      const user = await User.findById(userId)
       if (user) {
-        isLoggedIn = true;
-        isTestFamily = user.isTestFamily;
+        isLoggedIn = true
+        isTestFamily = user.isTestFamily
+        // Fetch all completed activities for the logged-in user
+        const completedActivities = await CompletedActivity.find({ userId }).select("activityId")
+        completedActivityIds = new Set(completedActivities.map((c) => c.activityId.toString()))
       }
     }
 
-    activities = activities.map(activity => {
-      let isLocked = true;
-      if (isLoggedIn && isTestFamily) {
-        isLocked = false;
+    // --- Handle 'voltooid' filter (strict filtering) ---
+    if (sort === "voltooid") {
+      if (!isLoggedIn) {
+        // If a guest user tries to sort by 'voltooid', return an empty array
+        return res.status(200).json({
+          success: true,
+          activities: [],
+          message: "Login required to view completed activities.",
+        })
       }
-      return {
-        ...activity.toObject(),
-        isLocked
-      };
-    });
+      // If logged in, add a filter to the query to only include completed activities
+      query._id = { $in: Array.from(completedActivityIds).map((id) => new mongoose.Types.ObjectId(id)) }
+    }
 
-    res.status(200).json({ success: true, activities });
+    // Fetch activities based on the constructed query
+    const activities = await Activity.find(query).exec()
 
+    // Add isLocked and isCompleted flags to all activities before sending
+    const finalActivities = activities.map((activity) => {
+      const activityObject = activity.toObject()
+      let isLocked = true
+      if (isLoggedIn && isTestFamily) {
+        isLocked = false
+      }
+      // Check if the current activity's ID is in the set of completed activities for the user
+      const isCompleted = completedActivityIds.has(activityObject._id.toString())
+
+      return { ...activityObject, isLocked, isCompleted }
+    })
+
+    // --- Apply sorting logic ---
+    if (sort === "hoogstgewaardeerde") {
+      finalActivities.sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0))
+    } else if (sort === "meestgewaardeerde") {
+      // Assuming 'likes' is a field in your Activity model for 'meestgewaardeerde'
+      finalActivities.sort((a, b) => (b.likes || 0) - (a.likes || 0))
+    }
+
+    // Default sorting: uncompleted activities first, then completed activities
+    // This applies if 'sort' is not 'voltooid' (which is handled as a strict filter above)
+    // and also as a primary sort for 'hoogstgewaardeerde'/'meestgewaardeerde'
+    if (sort !== "voltooid") {
+      finalActivities.sort((a, b) => {
+        // If 'a' is completed and 'b' is not, 'b' comes first (-1)
+        if (a.isCompleted && !b.isCompleted) return 1
+        // If 'a' is not completed and 'b' is, 'a' comes first (1)
+        if (!a.isCompleted && b.isCompleted) return -1
+        // If both have the same completion status, maintain existing order or apply secondary sort
+        return 0 // Keep original order if completion status is same, secondary sorts already applied
+      })
+    }
+
+    res.status(200).json({ success: true, activities: finalActivities })
   } catch (error) {
-    console.error('Error filtering activities:', error);
-    res.status(500).json({ message: 'Server error' });
+    console.error("Error filtering activities:", error)
+    res.status(500).json({ message: "Server error" })
   }
-};
+}
+
+
 const checkAndAwardAreaBadges = async (userId) => {
   try {
     const user = await User.findById(userId);
@@ -1992,6 +2026,21 @@ const checkAndAwardSurpriseStreak = async (userId) => {
     return [];
   }
 };
+
+
+export const getTotalActivitiesCount = async (req,res) =>{
+  try{
+
+    const getActivties = await Activity.countDocuments();
+    return res.status(200).json(getActivties)
+
+  } 
+  catch(error){
+    console.log(error);
+    return res.status(500).json({error: 'Internal Server Error'})
+    
+  }
+}
 
 
 

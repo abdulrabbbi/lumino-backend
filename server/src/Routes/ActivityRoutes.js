@@ -1,4 +1,4 @@
-import { createActivity, rateActivity, getActivityLibrary, getPlayWeekActivities, getProgressStats, getSingleActivity, filterActivities, markActivityCompleted} from "../Controllers/ActivityController.js";
+import { createActivity, rateActivity, getTotalActivitiesCount, getActivityLibrary, getPlayWeekActivities, getProgressStats, getSingleActivity, filterActivities, markActivityCompleted} from "../Controllers/ActivityController.js";
 import { authenticate } from "../Middleware/Authenticate.js";
 import { optionalAuth } from "../Middleware/OptionalAuth.js";
 import express from 'express'
@@ -14,6 +14,9 @@ router.get("/get-playweek-activities", optionalAuth, getPlayWeekActivities);
 router.get("/get-single-activity/:id", optionalAuth, getSingleActivity);
 router.get("/filter-activities", optionalAuth, filterActivities);
 router.post("/mark-activity-as-completed/:id", optionalAuth, markActivityCompleted);
+
+router.get("/get-total-activities-count", getTotalActivitiesCount);
+
 
 router.get("/get-progress", optionalAuth, getProgressStats);
 

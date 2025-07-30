@@ -5,7 +5,7 @@ import { toast } from "react-toastify"
 const EmailCollectionPopup = ({ onClose, onSubmit }) => {
   const [email, setEmail] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isOpen, setIsOpen] = useState(false) // State to control animation
+  const [isOpen, setIsOpen] = useState(false) // Status om animatie te regelen
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -14,28 +14,27 @@ const EmailCollectionPopup = ({ onClose, onSubmit }) => {
     return () => clearTimeout(timer)
   }, [])
 
-  // Handler for animated closing
+  // Handler voor geanimeerd sluiten
   const handleClose = () => {
-    setIsOpen(false) // Trigger exit animation
-    // Wait for the animation to complete before unmounting the component
+    setIsOpen(false) // Start exit-animatie
     setTimeout(() => {
-      onClose() // Call the parent's onClose prop
-    }, 300) // This duration should match the CSS transition duration
+      onClose() // Roep onClose-prop van oudercomponent aan
+    }, 300) // Deze duur moet overeenkomen met de CSS-transitie
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!email) {
-      toast.error("Please enter your email")
+      toast.error("Vul je e-mailadres in")
       return
     }
     setIsSubmitting(true)
     try {
       await onSubmit(email)
-      toast.success("Thank you for subscribing!")
-      handleClose() // Use the animated close handler
+      toast.success("Bedankt voor je inschrijving!")
+      handleClose()
     } catch (error) {
-      toast.error("Error submitting email. Please try again.")
+      toast.error("Er is een fout opgetreden. Probeer het opnieuw.")
     } finally {
       setIsSubmitting(false)
     }
@@ -59,13 +58,12 @@ const EmailCollectionPopup = ({ onClose, onSubmit }) => {
         <div className="absolute inset-0 bg-[url('/placeholder.svg?height=200&width=200')] bg-cover bg-center opacity-5 pointer-events-none"></div>
 
         <div className="relative z-10">
-          {" "}
           <div className="flex justify-between items-center mb-6">
-            <h3 className="text-2xl poppins-700 text-gray-900">Stay Updated!</h3>
+            <h3 className="text-2xl poppins-700 text-gray-900">Blijf op de hoogte!</h3>
             <button
               onClick={handleClose}
               className="text-gray-500 hover:text-gray-700 cursor-pointer transition-colors duration-200 p-2 rounded-md bg-gray-50"
-              aria-label="Close popup"
+              aria-label="Sluit popup"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -80,8 +78,7 @@ const EmailCollectionPopup = ({ onClose, onSubmit }) => {
             </button>
           </div>
           <p className="text-gray-700 mb-6 inter-tight-400 leading-relaxed">
-            Get access to exclusive activities and educational resources by subscribing to our newsletter. Don't miss
-            out on valuable insights!
+            Krijg toegang tot exclusieve activiteiten en educatieve bronnen door je in te schrijven voor onze nieuwsbrief. Mis geen waardevolle inzichten!
           </p>
           <form onSubmit={handleSubmit}>
             <div className="mb-5">
@@ -89,26 +86,26 @@ const EmailCollectionPopup = ({ onClose, onSubmit }) => {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email address"
+                placeholder="Vul je e-mailadres in"
                 className="w-full px-5 py-3 border border-gray-300 inter-tight-400 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none text-gray-800 text-base"
                 required
-                aria-label="Email address"
+                aria-label="E-mailadres"
               />
             </div>
             <div className="flex justify-end space-x-4">
               <button
                 type="button"
-                onClick={handleClose} // Use animated close handler
+                onClick={handleClose}
                 className="px-6 py-2 text-gray-600 inter-tight-400 text-sm cursor-pointer hover:text-gray-900 font-medium rounded-lg transition-colors duration-200"
               >
-                Maybe Later
+                Misschien later
               </button>
               <button
                 type="submit"
                 disabled={isSubmitting}
                 className="px-6 py-2 bg-gradient-to-r inter-tight-400 text-sm cursor-pointer from-purple-600 to-indigo-600 text-white font-semibold rounded-lg shadow-md hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
               >
-                {isSubmitting ? "Submitting..." : "Subscribe Now"}
+                {isSubmitting ? "Bezig met verzenden..." : "Nu abonneren"}
               </button>
             </div>
           </form>
