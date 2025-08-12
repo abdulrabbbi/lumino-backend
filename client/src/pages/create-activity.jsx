@@ -416,7 +416,6 @@ const CreateActivity = () => {
                 value={formData.effect}
                 onChange={(e) => handleInputChange('effect', e.target.value)}
                 className="w-full px-4 py-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-sm"
-                maxLength={50}
               />
             </div>
 

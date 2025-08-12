@@ -1251,91 +1251,6 @@ export const checkActivityStatus = async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
-// export const getPlayWeekActivities = async (req, res) => {
-//   try {
-//     const userId = req.user?.userId;
-//     const isGuest = !userId;
-//     let isTestFamily = false;
-
-//     if (userId) {
-//       const user = await User.findById(userId);
-//       if (user) {
-//         isTestFamily = user.isTestFamily;
-//       }
-//     }
-
-//     // Get or generate weekly activity set
-//     let activitySet;
-
-//     if (userId) {
-//       // Logged-in user
-//       activitySet = await WeekPlaySet.findOne({ userId });
-
-//       if (!activitySet || isMoreThanAWeekOld(activitySet.generatedAt)) {
-//         const freshActivities = await getTop5Activities();
-//         activitySet = await WeekPlaySet.findOneAndUpdate(
-//           { userId },
-//           { activities: freshActivities.map(a => a._id), generatedAt: new Date() },
-//           { upsert: true, new: true }
-//         );
-//       }
-//     } else {
-//       // Guest (use IP or session ID)
-//       const guestId = req.session?.guestId || req.ip;
-//       activitySet = req.session?.weeklyActivities;
-
-//       if (!activitySet || isMoreThanAWeekOld(activitySet.generatedAt)) {
-//         const freshActivities = await getTop5Activities();
-//         activitySet = {
-//           activities: freshActivities.map(a => a._id),
-//           generatedAt: new Date(),
-//         };
-//         req.session.weeklyActivities = activitySet;
-//       }
-//     }
-
-//     // Fetch full activity data
-//     const activityDocs = await Activity.find({
-//       _id: { $in: activitySet.activities },
-//       isApproved: true,
-//     });
-
-//     // Get completed activity IDs
-//     let completedIds = [];
-//     if (userId) {
-//       const completed = await CompletedActivity.find({ userId });
-//       completedIds = completed.map(a => a.activityId.toString());
-//     }
-
-//     // Apply lock and complete status
-//     const activities = activityDocs.map((activity, index) => {
-//       const idStr = activity._id.toString();
-//       const isCompleted = completedIds.includes(idStr);
-
-//       let isLocked = true;
-//       if (isTestFamily) {
-//         isLocked = false;
-//       } else if (isGuest) {
-//         isLocked = index !== 0;
-//       } else {
-//         // Normal user
-//         isLocked = index >= 3;
-//       }
-
-//       return {
-//         ...activity.toObject(),
-//         isCompleted,
-//         isLocked: isCompleted ? false : isLocked, // ✅ If completed, don't lock
-//       };
-//     });
-
-//     res.status(200).json({ success: true, activities });
-
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ error: "Server Error" });
-//   }
-// };
 
 export const getProgressStats = async (req, res) => {
   try {
@@ -1469,11 +1384,13 @@ export const getPlayWeekActivities = async (req, res) => {
     let weekNumber = 1;
 
     if (userId) {
+      // FIXED: Find the current active week set
       activitySet = await WeekPlaySet.findOne({ userId }).sort({ weekNumber: -1 });
 
       if (!activitySet) {
         console.log(`🎯 Creating Week 1 for new user`);
-        const freshActivities = await getTop5ActivitiesExcluding([], userAgeGroup);
+        // Pass weekNumber to ensure consistent selection
+        const freshActivities = await getTop5ActivitiesExcluding([], userAgeGroup, 1);
 
         activitySet = new WeekPlaySet({
           userId,
@@ -1485,37 +1402,30 @@ export const getPlayWeekActivities = async (req, res) => {
         });
 
         await activitySet.save();
-        console.log(`✅ Week 1 created with ${freshActivities.length} activities`);
+        console.log(`✅ Week 1 created with ${freshActivities.length} CONSISTENT activities`);
       } else {
+        // FIXED: Only regenerate activities when actually progressing weeks
         const weekStartDate = new Date(activitySet.generatedAt);
         const currentDate = new Date();
         const daysElapsed = Math.floor((currentDate - weekStartDate) / (1000 * 60 * 60 * 24));
 
         console.log(`📅 Current Week: ${activitySet.weekNumber}`);
         console.log(`⏰ Days elapsed: ${daysElapsed}/7`);
+        console.log(`🏠 Activities in current week: ${activitySet.activities.length}`);
 
+        // FIXED: Only call checkAndProgressWeek when time has actually elapsed
         if (daysElapsed >= 7) {
-          console.log(`🚨 7+ days passed - FORCING week progression`);
-          const currentWeekCompleted = await CompletedActivity.find({
-            userId,
-            activityId: { $in: activitySet.activities },
-            completedAt: { $gte: activitySet.generatedAt }
-          });
-
-          console.log(`📊 Week ${activitySet.weekNumber} final status: ${currentWeekCompleted.length}/5 completed`);
+          console.log(`🚨 7+ days passed - Processing week progression`);
+          activitySet = await checkAndProgressWeek(userId, activitySet, userAgeGroup);
+        } else {
+          console.log(`⏳ Week ${activitySet.weekNumber} still active - using EXISTING activities`);
+          // Don't regenerate activities, use existing ones
         }
-
-        const updatedWeekSet = await checkAndProgressWeek(userId, activitySet, userAgeGroup);
-
-        if (updatedWeekSet.weekNumber > activitySet.weekNumber) {
-          console.log(`🎉 PROGRESSED to Week ${updatedWeekSet.weekNumber}`);
-        }
-
-        activitySet = updatedWeekSet;
       }
 
       weekNumber = activitySet.weekNumber;
     } else {
+      // GUEST LOGIC - FIXED
       console.log(`👤 Guest user session`);
 
       activitySet = req.session?.weeklyActivities;
@@ -1524,14 +1434,15 @@ export const getPlayWeekActivities = async (req, res) => {
       const shouldCreateNewWeek = !activitySet || isMoreThanAWeekOld(activitySet?.generatedAt);
 
       if (shouldCreateNewWeek) {
-        const newWeekNumber = isMoreThanAWeekOld(activitySet?.generatedAt)
-          ? weekNumber + 1
-          : weekNumber;
+        const newWeekNumber = isMoreThanAWeekOld(activitySet?.generatedAt) 
+          ? (activitySet?.weekNumber || 0) + 1 
+          : 1;
 
-        console.log(`🔄 Guest progressing to Week ${newWeekNumber}`);
+        console.log(`🔄 Guest creating Week ${newWeekNumber}`);
 
         const previouslyUsedActivities = activitySet?.activities || [];
-        const freshActivities = await getTop5ActivitiesExcluding(previouslyUsedActivities, null);
+        // FIXED: Pass weekNumber for consistent selection
+        const freshActivities = await getTop5ActivitiesExcluding(previouslyUsedActivities, null, newWeekNumber);
 
         activitySet = {
           activities: freshActivities.map(a => a._id),
@@ -1544,16 +1455,19 @@ export const getPlayWeekActivities = async (req, res) => {
         req.session.weekNumber = newWeekNumber;
         req.session.completedActivitiesInWeek = [];
 
-        console.log(`✅ Guest Week ${newWeekNumber} created`);
+        console.log(`✅ Guest Week ${newWeekNumber} created with CONSISTENT activities`);
+      } else {
+        console.log(`⏳ Guest Week ${weekNumber} still active - using EXISTING activities`);
       }
 
       weekNumber = activitySet.weekNumber;
     }
 
+    // FETCH THE SAME ACTIVITIES EVERY TIME (unless week has progressed)
     const activityDocs = await Activity.find({
       _id: { $in: activitySet.activities },
       isApproved: true,
-    });
+    }).sort({ _id: 1 }); // Consistent order
 
     let allTimeCompletedIds = [];
     let currentWeekCompletedIds = [];
@@ -1574,6 +1488,7 @@ export const getPlayWeekActivities = async (req, res) => {
       allTimeCompletedIds = req.session?.allTimeCompleted || [];
     }
 
+    // Create activity list in consistent order
     const activities = activityDocs.map((activity, index) => {
       const idStr = activity._id.toString();
       const isCompletedInCurrentWeek = currentWeekCompletedIds.includes(idStr);
@@ -1627,6 +1542,8 @@ export const getPlayWeekActivities = async (req, res) => {
       weekCompletionMessage = `Complete ${5 - completedThisWeek} more activities to finish Week ${weekNumber}`;
     }
 
+    console.log(`🎯 FINAL: Returning ${activities.length} CONSISTENT activities for Week ${weekNumber}`);
+
     res.status(200).json({
       success: true,
       activities,
@@ -1646,7 +1563,8 @@ export const getPlayWeekActivities = async (req, res) => {
         weekCompletionMessage,
         userAgeGroup: userAgeGroup || 'Not set',
         ageFilterApplied: !!userAgeGroup,
-        forceProgressionNote: "⚠️ Week automatically progresses after 7 days regardless of completion status. Old activities are removed and new ones are provided."
+        consistencyNote: "✅ Same 5 activities shown throughout the week until 7 days expire",
+        activitiesIds: activities.map(a => a._id) // For debugging
       }
     });
   } catch (err) {
@@ -1656,28 +1574,6 @@ export const getPlayWeekActivities = async (req, res) => {
 };
 
 
-const getActivityCompletionCounts = async () => {
-  try {
-    const completionCounts = await CompletedActivity.aggregate([
-      {
-        $group: {
-          _id: '$activityId',
-          completionCount: { $sum: 1 }
-        }
-      }
-    ]);
-
-    const countMap = {};
-    completionCounts.forEach(item => {
-      countMap[item._id.toString()] = item.completionCount;
-    });
-
-    return countMap;
-  } catch (error) {
-    console.error('Error getting completion counts:', error);
-    return {};
-  }
-};
 const checkAndProgressWeek = async (userId, currentWeekSet, userAgeGroup = null) => {
   try {
     const weekStartDate = new Date(currentWeekSet.generatedAt);
@@ -1699,14 +1595,14 @@ const checkAndProgressWeek = async (userId, currentWeekSet, userAgeGroup = null)
 
       const completedActivityIds = currentWeekCompleted.map(c => c.activityId.toString());
       
-      console.log(`📊 Week ${currentWeekSet.weekNumber} Status:`);
+      console.log(`📊 Week ${currentWeekSet.weekNumber} Final Status:`);
       console.log(`  - Completed: ${completedActivityIds.length}/5 activities`);
       console.log(`  - Old activities will be REMOVED regardless of completion`);
       
       // Mark current week as completed (for historical record)
       currentWeekSet.completedActivitiesInWeek = completedActivityIds;
       currentWeekSet.isWeekCompleted = completedActivityIds.length >= 5;
-      currentWeekSet.weekEndedAt = new Date(); // Track when week ended
+      currentWeekSet.weekEndedAt = new Date();
       await currentWeekSet.save();
 
       // Get all previously used activities from ALL previous weeks
@@ -1722,29 +1618,35 @@ const checkAndProgressWeek = async (userId, currentWeekSet, userAgeGroup = null)
 
       console.log(`🔍 Excluding ${previouslyUsedActivities.length} previously used activities`);
 
-      // Get fresh activities excluding previously used ones
-      const freshActivities = await getTop5ActivitiesExcluding(previouslyUsedActivities, userAgeGroup);
+      const newWeekNumber = currentWeekSet.weekNumber + 1;
+      
+      // FIXED: Get fresh activities with consistent selection
+      const freshActivities = await getTop5ActivitiesExcluding(
+        previouslyUsedActivities, 
+        userAgeGroup, 
+        newWeekNumber  // Pass week number for consistency
+      );
 
       // Create new week set with completely NEW activities
       const newWeekSet = new WeekPlaySet({
         userId,
         activities: freshActivities.map(a => a._id),
-        weekNumber: currentWeekSet.weekNumber + 1,
+        weekNumber: newWeekNumber,
         generatedAt: new Date(), // Fresh start date
         completedActivitiesInWeek: [],
         isWeekCompleted: false,
-        previousWeekId: currentWeekSet._id // Reference to previous week
+        previousWeekId: currentWeekSet._id
       });
 
       await newWeekSet.save();
       
-      console.log(`✅ Created Week ${newWeekSet.weekNumber} with ${freshActivities.length} NEW activities`);
-      console.log(`🗑️ Week ${currentWeekSet.weekNumber} activities are now REMOVED from playweek (but preserved in library if completed)`);
+      console.log(`✅ Created Week ${newWeekSet.weekNumber} with ${freshActivities.length} NEW CONSISTENT activities`);
+      console.log(`🗑️ Week ${currentWeekSet.weekNumber} activities are now REMOVED from playweek`);
       
       return newWeekSet;
     }
 
-    // If not time to progress, just update current week's progress
+    // If not time to progress, just update current week's progress (NO NEW ACTIVITIES)
     const currentWeekCompleted = await CompletedActivity.find({
       userId,
       activityId: { $in: currentWeekSet.activities },
@@ -1756,7 +1658,7 @@ const checkAndProgressWeek = async (userId, currentWeekSet, userAgeGroup = null)
     currentWeekSet.isWeekCompleted = completedActivityIds.length >= 5;
     await currentWeekSet.save();
 
-    console.log(`⏳ Week ${currentWeekSet.weekNumber}: ${7 - daysElapsed} days remaining`);
+    console.log(`⏳ Week ${currentWeekSet.weekNumber}: ${7 - daysElapsed} days remaining - KEEPING SAME ACTIVITIES`);
     console.log(`📊 Progress: ${completedActivityIds.length}/5 activities completed`);
 
     return currentWeekSet;
@@ -1766,7 +1668,7 @@ const checkAndProgressWeek = async (userId, currentWeekSet, userAgeGroup = null)
     return currentWeekSet;
   }
 };
-const getTop5ActivitiesExcluding = async (excludeIds = [], userAgeGroup = null) => {
+const getTop5ActivitiesExcluding = async (excludeIds = [], userAgeGroup = null, weekNumber = 1) => {
   try {
     const excludeObjectIds = excludeIds.map(id => {
       try {
@@ -1776,14 +1678,11 @@ const getTop5ActivitiesExcluding = async (excludeIds = [], userAgeGroup = null) 
       }
     }).filter(id => id !== null);
 
-    // Get completion counts for all activities
-    const completionCounts = await getActivityCompletionCounts();
-
     let activities = [];
 
+    // SCENARIO 1: User ka age set hai - us age ki activities show karo
     if (userAgeGroup) {
-      // AGE-BASED FILTERING: User has set age group
-      console.log(`🎯 Getting activities for age group: ${userAgeGroup}`);
+      console.log(`🎯 SCENARIO 1: Getting activities for age group: ${userAgeGroup}, Week: ${weekNumber}`);
       
       const ageBasedQuery = {
         isApproved: true,
@@ -1791,18 +1690,20 @@ const getTop5ActivitiesExcluding = async (excludeIds = [], userAgeGroup = null) 
         _id: { $nin: excludeObjectIds }
       };
 
+      // Age ki activities get karo, highest rated first
       activities = await Activity.find(ageBasedQuery)
         .sort({
-          averageRating: -1,  // Top rated first
-          createdAt: -1       // Then newest
+          averageRating: -1,  // Sabse zyada rated pehle
+          createdAt: -1,      // Phir newest
+          _id: 1              // Consistency ke liye
         })
-        .limit(10);
+        .limit(10); // Extra lenge case fallback needed ho
 
       console.log(`Found ${activities.length} activities for age group ${userAgeGroup}`);
 
-      // If not enough activities for this age group, get more without age filter
+      // Agar age group ki kam activities hain, to baki high rated activities add karo
       if (activities.length < 5) {
-        console.log(`⚠️ Not enough activities for age ${userAgeGroup}, getting additional activities`);
+        console.log(`⚠️ Age ${userAgeGroup} ki activities kam hain, high rated activities add kar rahe`);
         
         const additionalQuery = {
           isApproved: true,
@@ -1810,68 +1711,56 @@ const getTop5ActivitiesExcluding = async (excludeIds = [], userAgeGroup = null) 
         };
 
         const additionalActivities = await Activity.find(additionalQuery)
-          .sort({ averageRating: -1, createdAt: -1 })
+          .sort({ 
+            averageRating: -1,  // Sabse high rated
+            createdAt: -1,
+            _id: 1
+          })
           .limit(5 - activities.length);
 
         activities = [...activities, ...additionalActivities];
       }
 
     } else {
-      // NO AGE SET: Random but prioritize top-rated and most completed
-      console.log(`🎲 Getting random activities prioritizing top-rated and most completed`);
+      // SCENARIO 2 & 3: Age set nahi hai - high rated ya random
+      console.log(`🎯 SCENARIO 2/3: Age set nahi hai, high rated activities get kar rahe, Week: ${weekNumber}`);
       
-      const randomQuery = {
+      const query = {
         isApproved: true,
         _id: { $nin: excludeObjectIds }
       };
 
-      // Get all eligible activities
-      const allActivities = await Activity.find(randomQuery);
-
-      // Sort by combination of rating and completion count
-      const scoredActivities = allActivities.map(activity => {
-        const activityId = activity._id.toString();
-        const completions = completionCounts[activityId] || 0;
-        const rating = parseFloat(activity.averageRating) || 0;
-        
-        // Scoring formula: 40% rating + 30% completion count + 30% randomness
-        const ratingScore = (rating / 10) * 0.4; // Normalize rating to 0-1, then 40%
-        const completionScore = Math.min(completions / 100, 1) * 0.3; // Max 100 completions, then 30%
-        const randomScore = Math.random() * 0.3; // 30% randomness
-        
-        const totalScore = ratingScore + completionScore + randomScore;
-        
-        return {
-          ...activity.toObject(),
-          totalScore,
-          completions,
-          rating
-        };
-      });
-
-      // Sort by total score (highest first)
-      scoredActivities.sort((a, b) => b.totalScore - a.totalScore);
+      // Sabhi activities get karo highest rated first
+      activities = await Activity.find(query)
+        .sort({
+          averageRating: -1,  // Sabse highest rated pehle
+          createdAt: -1,      // Phir newest
+          _id: 1              // Consistency ke liye
+        })
+        .limit(10); // 5 se zyada lenge selection ke liye
       
-      activities = scoredActivities.slice(0, 10); // Take top 10 for selection
-      
-      console.log(`📊 Scored activities:`, activities.slice(0, 5).map(a => ({
+      console.log(`📊 High rated activities milayenge:`, activities.slice(0, 5).map((a, idx) => ({
+        index: idx + 1,
         title: a.title,
-        rating: a.rating,
-        completions: a.completions,
-        score: a.totalScore.toFixed(3)
+        rating: a.averageRating || 0,
+        ageGroup: a.ageGroup || 'Any'
       })));
     }
 
-    // Final fallback if still not enough activities
+    // Final fallback - agar phir bhi kam activities hain
     if (activities.length < 5) {
-      console.log('🆘 Final fallback - getting any available activities');
+      console.log('🆘 Final fallback - jo bhi available activities hain wo le rahe');
 
       const usedIds = [...excludeObjectIds, ...activities.map(a => a._id)];
       const finalFallback = await Activity.find({ 
         isApproved: true,
         _id: { $nin: usedIds }
       })
-      .sort({ averageRating: -1, createdAt: -1 })
+      .sort({ 
+        averageRating: -1, 
+        createdAt: -1,
+        _id: 1
+      })
       .limit(5 - activities.length);
 
       activities = [...activities, ...finalFallback];
@@ -1879,10 +1768,9 @@ const getTop5ActivitiesExcluding = async (excludeIds = [], userAgeGroup = null) 
 
     const finalActivities = activities.slice(0, 5);
     
-    console.log(`✅ Returning ${finalActivities.length} activities for playweek:`);
+    console.log(`✅ Final 5 activities for Week ${weekNumber}:`);
     finalActivities.forEach((activity, index) => {
-      const completions = completionCounts[activity._id.toString()] || 0;
-      console.log(`  ${index + 1}. ${activity.title} (Age: ${activity.ageGroup || 'Any'}, Rating: ${activity.averageRating || 0}, Completions: ${completions})`);
+      console.log(`  ${index + 1}. ${activity.title} (ID: ${activity._id}) (Age: ${activity.ageGroup || 'Any'}, Rating: ${activity.averageRating || 0})`);
     });
 
     return finalActivities;
@@ -1890,10 +1778,10 @@ const getTop5ActivitiesExcluding = async (excludeIds = [], userAgeGroup = null) 
   } catch (error) {
     console.error('❌ Error in getTop5ActivitiesExcluding:', error);
     
-    // // Emergency fallback
-    // return await Activity.find({ isApproved: true })
-    //   .sort({ averageRating: -1, createdAt: -1 })
-    //   .limit(5);
+    // Emergency fallback
+    return await Activity.find({ isApproved: true })
+      .sort({ averageRating: -1, createdAt: -1, _id: 1 })
+      .limit(5);
   }
 };
 

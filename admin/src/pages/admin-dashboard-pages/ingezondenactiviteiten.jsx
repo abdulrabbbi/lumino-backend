@@ -332,7 +332,6 @@ const totalPages = Math.ceil(pendingCount / activitiesPerPage)
                 value={editData.effect}
                 onChange={(e) => handleInputChange('effect', e.target.value)}
                 className="w-full px-4 py-3 bg-[#F9FAFB] border border-[#E5E7EB] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent text-sm"
-                maxLength={50}
               />
             </div>
 
@@ -420,7 +419,6 @@ const totalPages = Math.ceil(pendingCount / activitiesPerPage)
   <option value="3 - 4">Leeftijd 3 - 4</option>
   <option value="3 - 6">Leeftijd 3 - 6</option>
   <option value="5 - 6">Leeftijd 5 - 6</option>
-  <option value="7 - 8">Leeftijd 7 - 8</option>
 </select>
 
 </div>

@@ -402,8 +402,9 @@ const totalPages = Math.ceil(pendingCount / activitiesPerPage)
 >
   <option value="">Selecteer een leeftijdsgroep</option>
   <option value="3 - 4">Leeftijd 3 - 4</option>
+  <option value="3 - 6">Leeftijd 3 - 6</option>
+
   <option value="5 - 6">Leeftijd 5 - 6</option>
-  <option value="7 - 8">Leeftijd 7 - 8</option>
 </select>
 
 </div>

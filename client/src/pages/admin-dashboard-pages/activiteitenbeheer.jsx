@@ -646,7 +646,6 @@ export default function ActiviteitenBeheer() {
                           <option value="3 - 4">Age 3 - 4</option>
                           <option value="3 - 6">Age 3 - 6</option>
                           <option value="5 - 6">Age 5 - 6</option>
-                          <option value="7 - 8">Age 7 - 8</option>
                         </select>
                       </div>
 
@@ -817,7 +816,6 @@ export default function ActiviteitenBeheer() {
                       <option value="3 - 4">Age 3 - 4</option>
                       <option value="3 - 6">Age 3 - 6</option>
                       <option value="5 - 6">Age 5 - 6</option>
-                      <option value="7 - 8">Age 7 - 8</option>
                     </select>
                   </div>
 

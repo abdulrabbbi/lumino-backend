@@ -106,6 +106,7 @@ function ActivityDetail() {
   const [earnedBadges, setEarnedBadges] = useState([]);
   const [apiResponseReceived, setApiResponseReceived] = useState(false);
   const [isMarkingComplete, setIsMarkingComplete] = useState(false);
+  const [hasShownRatingModal, setHasShownRatingModal] = useState(false);
 
   const { markCompleted } = useMarkActivityCompleted();
   const { rateActivity } = useRateActivity();
@@ -133,7 +134,7 @@ function ActivityDetail() {
       const response = await markCompleted(id);
       
       setCompleted(true);
-      console.log("API Response:", response);
+      // console.log("API Response:", response);
 
       // Handle badges from the response
       let badgesToSet = [];
@@ -164,6 +165,11 @@ function ActivityDetail() {
       setTimeout(() => {
         setShowBadgeModal(true);
       }, 100);
+    } else if (apiResponseReceived && !hasShownRatingModal) {
+      setTimeout(() => {
+        setShowRatingModal(true);
+        setHasShownRatingModal(true);
+      }, 100);
     }
   };
 
@@ -180,6 +186,10 @@ function ActivityDetail() {
     setTimeout(() => {
       setEarnedBadges([]);
       setApiResponseReceived(false);
+      if (!hasShownRatingModal) {
+        setShowRatingModal(true);
+        setHasShownRatingModal(true);
+      }
     }, 300);
   };
 
@@ -200,7 +210,11 @@ function ActivityDetail() {
       await rateActivity(id, selectedRating);
       setShowRatingModal(false);
       setSelectedRating(0);
-      toast.success(" Beoordeling succesvol ingediend!");
+      setHasShownRatingModal(true);
+      toast.success("Beoordeling succesvol ingediend!");
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     } catch (error) {
       toast.error(error.message);
     }
@@ -209,6 +223,7 @@ function ActivityDetail() {
   const handleRateLater = () => {
     setShowRatingModal(false);
     setSelectedRating(0);
+    setHasShownRatingModal(true);
   };
 
   const getRatingRange = (index) => {

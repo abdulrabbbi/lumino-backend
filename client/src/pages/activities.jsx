@@ -25,11 +25,9 @@ export default function Activities() {
   const [activeTab, setActiveTab] = useState("speelweek")
   const [totalCountActivities, settotalCountActivities] = useState(0)
 
-  // Pagination state
   const [currentPage, setCurrentPage] = useState(1)
   const activitiesPerPage = 30
 
-  // Ref for scrolling to the top of the activity list
   const activityListRef = useRef(null)
 
   // usePlayweekActivities is still used for 'speelweek' tab
@@ -258,35 +256,43 @@ export default function Activities() {
     const pageNumbers = getPaginationRange(currentPage, totalPages)
 
     return (
-      <div className="flex justify-center items-center space-x-2 mt-8">
+      <div className="flex flex-wrap justify-center items-center gap-1 sm:gap-2 mt-8 px-2">
         <button
           onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
           disabled={currentPage === 1}
-          className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 inter-tight-400 text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-2 sm:px-4 py-2 rounded-lg bg-gray-200 text-gray-700 inter-tight-400 text-xs sm:text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed min-w-[60px] sm:min-w-[80px]"
         >
-          Previous
+          <span className="hidden sm:inline">Previous</span>
+          <span className="sm:hidden">Prev</span>
         </button>
-        {pageNumbers.map((page, index) =>
-          page === "..." ? (
-            <span key={index} className="px-4 py-2">
-              ...
-            </span>
-          ) : (
-            <button
-              key={index}
-              onClick={() => handlePageChange(page)}
-              className={`px-4 py-2 rounded-lg text-sm inter-tight-400  cursor-pointer ${currentPage === page ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-700"}`}
-            >
-              {page}
-            </button>
-          ),
-        )}
+
+        <div className="flex flex-wrap justify-center items-center gap-1 sm:gap-2 max-w-full overflow-x-auto">
+          {pageNumbers.map((page, index) =>
+            page === "..." ? (
+              <span key={index} className="px-2 sm:px-4 py-2 text-xs sm:text-sm">
+                ...
+              </span>
+            ) : (
+              <button
+                key={index}
+                onClick={() => handlePageChange(page)}
+                className={`px-2 sm:px-4 py-2 rounded-lg text-xs sm:text-sm inter-tight-400 cursor-pointer min-w-[32px] sm:min-w-[40px] ${
+                  currentPage === page ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                }`}
+              >
+                {page}
+              </button>
+            ),
+          )}
+        </div>
+
         <button
           onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
           disabled={currentPage === totalPages || totalPages === 0}
-          className="px-4 py-2 rounded-lg bg-gray-200 inter-tight-400 text-sm cursor-pointer text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-2 sm:px-4 py-2 rounded-lg bg-gray-200 inter-tight-400 text-xs sm:text-sm cursor-pointer text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed min-w-[60px] sm:min-w-[80px]"
         >
-          Next
+          <span className="hidden sm:inline">Next</span>
+          <span className="sm:hidden">Next</span>
         </button>
       </div>
     )

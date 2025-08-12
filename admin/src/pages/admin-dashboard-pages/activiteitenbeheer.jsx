@@ -807,7 +807,6 @@ export default function ActiviteitenBeheer() {
                             value={formData.effect}
                             onChange={(e) => handleInputChange("effect", e.target.value)}
                             className="w-full rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent"
-                            maxLength={50}
                           />
                         </div>
                         <div className="mb-4">
@@ -878,7 +877,6 @@ export default function ActiviteitenBeheer() {
                           <option value="3 - 4">Age 3 - 4</option>
                           <option value="3 - 6">Age 3 - 6</option>
                           <option value="5 - 6">Age 5 - 6</option>
-                          <option value="7 - 8">Age 7 - 8</option>
                         </select>
                       </div>
                       <div>
@@ -1008,7 +1006,6 @@ export default function ActiviteitenBeheer() {
                         value={formData.effect}
                         onChange={(e) => handleInputChange("effect", e.target.value)}
                         className="w-full rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent"
-                        maxLength={50}
                       />
                     </div>
                     <div>
@@ -1038,7 +1035,6 @@ export default function ActiviteitenBeheer() {
                         <option value="3 - 4">Age 3 - 4</option>
                         <option value="3 - 6">Age 3 - 6</option>
                         <option value="5 - 6">Age 5 - 6</option>
-                        <option value="7 - 8">Age 7 - 8</option>
                       </select>
                     </div>
                     <button

@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import DashImage from "../../public/activities-images/Frame (6).svg"
 import DashImage2 from "../../public/activities-images/Frame (7).svg"
 import DashImage3 from "../../public/activities-images/Frame (8).svg"
@@ -9,8 +9,24 @@ import DashImage7 from "../../public/activities-images/SVG.svg"
 import StarImage from '../../public/profile-images/Frame (11)-star.svg'
 
 import AboutImageRight from '../../public/images/Layer_2.svg'
+import { BASE_URL } from '../utils/api'
+import axios from 'axios'
 
 const AboutUs = () => {
+      const [totalCountActivities, settotalCountActivities] = useState(0)
+
+      useEffect(() => {
+        const fetchTotalCountActivites = async () => {
+          try {
+            const res = await axios.get(`${BASE_URL}/get-total-activities-count`)
+            settotalCountActivities(res.data)
+          } catch (error) {
+            console.log(error)
+          }
+        }
+        fetchTotalCountActivites()
+      }, [])
+    
     return (
         <div className='h-full  p-4 mt-10 max-w-7xl mx-auto w-full'>
              
@@ -119,7 +135,7 @@ const AboutUs = () => {
                         </div>
                     </div>
                     <div className='text-center mt-7 max-w-4xl m-auto '>
-                        <p className='text-sm text-[#000000] inter-tight-400'>Naast de wekelijkse activiteiten hebben ouders toegang tot een groeiende bibliotheek met meer dan 35 activiteiten, voortgangsregistratie en spelfuncties zoals prestatiebadges.</p>
+                        <p className='text-sm text-[#000000] inter-tight-400'>Naast de wekelijkse activiteiten hebben ouders toegang tot een groeiende bibliotheek met meer dan  {totalCountActivities} activiteiten, voortgangsregistratie en spelfuncties zoals prestatiebadges.</p>
                     </div>
                 </div>
             </section>
