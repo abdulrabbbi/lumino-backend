@@ -1,35 +1,39 @@
-import { useEffect, useState } from "react";
-import { ArrowLeft, Clock, Users, Star, CheckCircle, X } from "lucide-react";
-import { useParams, useNavigate } from "react-router-dom";
-import DetailImage from "../../public/images/SVG-detail.svg";
-import DetailImage1 from "../../public/images/SVG-detail-1.svg";
-import DetailImage2 from "../../public/images/Frame (1)-detail.svg";
-import { IoMdStar } from "react-icons/io";
-import Faqs from "../components/faqs";
-import BadgeModal from "../components/badge-modal";
-import { useSingleActivity } from "../hooks/useSingleActivity";
+/* eslint-disable no-unused-vars */
+"use client"
+
+import { useEffect, useState } from "react"
+import { ArrowLeft, Clock, Users, Star, CheckCircle, X } from "lucide-react"
+import { useParams, useNavigate } from "react-router-dom"
+import DetailImage from "../../public/images/SVG-detail.svg"
+import DetailImage1 from "../../public/images/SVG-detail-1.svg"
+import DetailImage2 from "../../public/images/Frame (1)-detail.svg"
+import { IoMdStar } from "react-icons/io"
+import Faqs from "../components/faqs"
+import BadgeModal from "../components/badge-modal"
+import { useSingleActivity } from "../hooks/useSingleActivity"
 import {
   learningDomainImages,
   learningDomainColors,
   LearningDomainDescription,
   newlearningDomainColors,
-} from "../utils/learningDomain";
-import LoaderOverlay from "../components/LoaderOverlay";
-import { toast, ToastContainer } from "react-toastify";
-import { useMarkActivityCompleted, useRateActivity } from "../hooks/useActivityAPI";
+} from "../utils/learningDomain"
+import LoaderOverlay from "../components/LoaderOverlay"
+import { toast, ToastContainer } from "react-toastify"
+import { useMarkActivityCompleted, useRateActivity } from "../hooks/useActivityAPI"
+import { useNavigation } from "../components/NavigationContext"
 
 const Sparkle = ({ style }) => (
   <div className="absolute pointer-events-none" style={style}>
     <div className="sparkle">✨</div>
   </div>
-);
+)
 
 const CelebrationSparkles = ({ isVisible, onComplete }) => {
-  const [sparkles, setSparkles] = useState([]);
+  const [sparkles, setSparkles] = useState([])
 
   useEffect(() => {
     if (isVisible) {
-      const newSparkles = [];
+      const newSparkles = []
       for (let i = 0; i < 10; i++) {
         newSparkles.push({
           id: i,
@@ -37,18 +41,18 @@ const CelebrationSparkles = ({ isVisible, onComplete }) => {
           top: Math.random() * 90 + 20 + "%",
           animationDelay: Math.random() * 2 + "s",
           animationDuration: Math.random() * 3 + 2 + "s",
-        });
+        })
       }
-      setSparkles(newSparkles);
+      setSparkles(newSparkles)
       const timer = setTimeout(() => {
-        setSparkles([]);
-        onComplete();
-      }, 2000);
-      return () => clearTimeout(timer);
+        setSparkles([])
+        onComplete()
+      }, 1000)
+      return () => clearTimeout(timer)
     }
-  }, [isVisible, onComplete]);
+  }, [isVisible, onComplete])
 
-  if (!isVisible) return null;
+  if (!isVisible) return null
 
   return (
     <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
@@ -92,139 +96,143 @@ const CelebrationSparkles = ({ isVisible, onComplete }) => {
         }
       `}</style>
     </div>
-  );
-};
+  )
+}
 
 function ActivityDetail() {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const [showRatingModal, setShowRatingModal] = useState(false);
-  const [selectedRating, setSelectedRating] = useState(0);
-  const [showCelebration, setShowCelebration] = useState(false);
-  const [showBadgeModal, setShowBadgeModal] = useState(false);
-  const [completed, setCompleted] = useState(false);
-  const [earnedBadges, setEarnedBadges] = useState([]);
-  const [apiResponseReceived, setApiResponseReceived] = useState(false);
-  const [isMarkingComplete, setIsMarkingComplete] = useState(false);
-  const [hasShownRatingModal, setHasShownRatingModal] = useState(false);
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const { getNavigationState } = useNavigation()
 
-  const { markCompleted } = useMarkActivityCompleted();
-  const { rateActivity } = useRateActivity();
-  const { activity, loading, error } = useSingleActivity(id);
+  const [showRatingModal, setShowRatingModal] = useState(false)
+  const [selectedRating, setSelectedRating] = useState(0)
+  const [showCelebration, setShowCelebration] = useState(false)
+  const [showBadgeModal, setShowBadgeModal] = useState(false)
+  const [completed, setCompleted] = useState(false)
+  const [earnedBadges, setEarnedBadges] = useState([])
+  const [isMarkingComplete, setIsMarkingComplete] = useState(false)
+  const [hasShownRatingModal, setHasShownRatingModal] = useState(false)
+  const [isSubmittingRating, setIsSubmittingRating] = useState(false)
+
+  const { markCompleted } = useMarkActivityCompleted()
+  const { rateActivity } = useRateActivity()
+  const { activity, loading, error } = useSingleActivity(id)
 
   useEffect(() => {
-    window.scrollTo(0, 0);
+    window.scrollTo(0, 0)
     if (activity?.isCompleted) {
-      setCompleted(true);
+      setCompleted(true)
     }
-  }, [activity]);
+  }, [activity])
 
   const handleBack = () => {
-    navigate(-1);
-  };
+    const savedState = getNavigationState()
+    if (savedState) {
+      navigate("/activities", { state: { fromActivity: true } })
+    } else {
+      navigate(-1)
+    }
+  }
+
+  const handleReturnToOrigin = () => {
+    const savedState = getNavigationState()
+    if (savedState) {
+      navigate("/activities", { state: { fromActivity: true } })
+    } else {
+      navigate("/activities")
+    }
+  }
 
   const handleMarkComplete = async () => {
-    if (completed || isMarkingComplete) return;
-
+    if (completed || isMarkingComplete) return
+  
     try {
-      setIsMarkingComplete(true);
-      setShowCelebration(true);
-      setApiResponseReceived(false);
-
-      const response = await markCompleted(id);
+      setIsMarkingComplete(true)
       
-      setCompleted(true);
-      // console.log("API Response:", response);
+      // const loadingToastId = toast.info('Completing activity...', { 
+      //   autoClose: false,
+      //   closeButton: false 
+      // })
 
-      // Handle badges from the response
-      let badgesToSet = [];
-      if (response.badges && Array.isArray(response.badges) && response.badges.length > 0) {
-        badgesToSet = response.badges;
-      } else if (response.badge && typeof response.badge === "object") {
-        badgesToSet = [response.badge];
-      }
+      const response = await markCompleted(id)
+      setCompleted(true)
 
-      if (badgesToSet.length > 0) {
-        setEarnedBadges(badgesToSet);
-      }
+      let badgesToSet = response.badges || (response.badge ? [response.badge] : [])
+      setEarnedBadges(badgesToSet)
 
-      setApiResponseReceived(true);
+      // toast.dismiss(loadingToastId)
+      
+      setShowCelebration(true)
+      
     } catch (error) {
-      setShowCelebration(false);
-      setApiResponseReceived(true);
-      toast.error(error.message);
+      toast.error(error.message)
     } finally {
-      setIsMarkingComplete(false);
+      setIsMarkingComplete(false)
     }
-  };
+  }
 
   const handleCelebrationComplete = () => {
-    setShowCelebration(false);
-
-    if (apiResponseReceived && earnedBadges.length > 0) {
-      setTimeout(() => {
-        setShowBadgeModal(true);
-      }, 100);
-    } else if (apiResponseReceived && !hasShownRatingModal) {
-      setTimeout(() => {
-        setShowRatingModal(true);
-        setHasShownRatingModal(true);
-      }, 100);
-    }
-  };
-
-  useEffect(() => {
-    if (!showCelebration && apiResponseReceived && earnedBadges.length > 0 && !showBadgeModal) {
-      setTimeout(() => {
-        setShowBadgeModal(true);
-      }, 100);
-    }
-  }, [showCelebration, apiResponseReceived, earnedBadges, showBadgeModal]);
+    setShowCelebration(false)
+    
+    setTimeout(() => {
+      if (earnedBadges.length > 0) {
+        setShowBadgeModal(true)
+      } else {
+        setShowRatingModal(true)
+      }
+    }, 300)
+  }
 
   const handleBadgeModalClose = () => {
-    setShowBadgeModal(false);
+    setShowBadgeModal(false)
+    
     setTimeout(() => {
-      setEarnedBadges([]);
-      setApiResponseReceived(false);
-      if (!hasShownRatingModal) {
-        setShowRatingModal(true);
-        setHasShownRatingModal(true);
-      }
-    }, 300);
-  };
+      setShowRatingModal(true)
+    }, 300)
+  }
 
   const handleRatingClick = () => {
-    setShowRatingModal(true);
-  };
+    setShowRatingModal(true)
+  }
 
   const handleStarClick = (rating) => {
-    setSelectedRating(rating * 2);
-  };
+    setSelectedRating(rating * 2)
+  }
 
   const handleSubmitRating = async () => {
-    try {
+    if (isSubmittingRating || selectedRating < 1 || selectedRating > 10) {
       if (selectedRating < 1 || selectedRating > 10) {
-        toast.error("Rating must be between 1 and 10");
-        return;
+        toast.error("Rating must be between 1 and 10")
       }
-      await rateActivity(id, selectedRating);
-      setShowRatingModal(false);
-      setSelectedRating(0);
-      setHasShownRatingModal(true);
-      toast.success("Beoordeling succesvol ingediend!");
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
-    } catch (error) {
-      toast.error(error.message);
+      return
     }
-  };
+
+    try {
+      setIsSubmittingRating(true)
+      await rateActivity(id, selectedRating)
+      setShowRatingModal(false)
+      setSelectedRating(0)
+      
+      toast.success("Beoordeling succesvol ingediend!")
+
+      setTimeout(() => {
+        handleReturnToOrigin()
+      }, 1500)
+    } catch (error) {
+      toast.error(error.message)
+    } finally {
+      setIsSubmittingRating(false)
+    }
+  }
 
   const handleRateLater = () => {
-    setShowRatingModal(false);
-    setSelectedRating(0);
-    setHasShownRatingModal(true);
-  };
+    setShowRatingModal(false)
+    setSelectedRating(0)
+
+    setTimeout(() => {
+      handleReturnToOrigin()
+    }, 500)
+  }
 
   const getRatingRange = (index) => {
     const ranges = [
@@ -243,27 +251,27 @@ function ActivityDetail() {
       <span key={4}>
         <span className="font-bold">9-10</span>
       </span>,
-    ];
-    return ranges[index];
-  };
+    ]
+    return ranges[index]
+  }
 
   if (loading) {
-    return <LoaderOverlay />;
+    return <LoaderOverlay />
   }
 
   if (error) {
-    return <div className="min-h-screen flex items-center justify-center">Error: {error.message}</div>;
+    return <div className="min-h-screen flex items-center justify-center">Error: {error.message}</div>
   }
 
   if (!activity) {
-    return <div className="min-h-screen flex items-center justify-center">Activity not found</div>;
+    return <div className="min-h-screen flex items-center justify-center">Activity not found</div>
   }
 
-  const domainImage = learningDomainImages[activity.learningDomain];
-  const domainColor = learningDomainColors[activity.learningDomain];
-  const domainDescription = LearningDomainDescription[activity.learningDomain];
-  const newdomainColor = newlearningDomainColors[activity.learningDomain];
-  const averageRating = activity.averageRating || 0;
+  const domainImage = learningDomainImages[activity.learningDomain]
+  const domainColor = learningDomainColors[activity.learningDomain]
+  const domainDescription = LearningDomainDescription[activity.learningDomain]
+  const newdomainColor = newlearningDomainColors[activity.learningDomain]
+  const averageRating = activity.averageRating || 0
 
   return (
     <>
@@ -271,7 +279,7 @@ function ActivityDetail() {
       <div className="min-h-screen bg-gray-50 pb-10">
         <CelebrationSparkles isVisible={showCelebration} onComplete={handleCelebrationComplete} />
         <BadgeModal isVisible={showBadgeModal} onClose={handleBadgeModalClose} badges={earnedBadges} />
-        
+
         {isMarkingComplete && <LoaderOverlay />}
 
         <div className="md:w-[90%] w-full mx-auto p-4 lg:p-6">
@@ -375,13 +383,7 @@ function ActivityDetail() {
                 }`}
               >
                 <CheckCircle className="w-5 h-5" />
-                <span>
-                  {completed 
-                    ? "Voltooid" 
-                    : isMarkingComplete 
-                      ? "Bezig..." 
-                      : "Markeer als voltooid"}
-                </span>
+                <span>{completed ? "Voltooid" : isMarkingComplete ? "Bezig..." : "Markeer als voltooid"}</span>
               </button>
             </div>
 
@@ -495,14 +497,14 @@ function ActivityDetail() {
                   </button>
                   <button
                     onClick={handleSubmitRating}
-                    disabled={selectedRating === 0}
+                    disabled={selectedRating === 0 || isSubmittingRating}
                     className={`flex-1 px-6 py-2 md:w-auto w-full rounded-xl inter-tight-400 text-sm font-medium transition-colors ${
-                      selectedRating > 0
+                      selectedRating > 0 && !isSubmittingRating
                         ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:from-blue-600 hover:to-purple-700"
                         : "bg-gray-300 text-gray-500 cursor-not-allowed"
                     }`}
                   >
-                    Verstuur
+                    {isSubmittingRating ? "Versturen..." : "Verstuur"}
                   </button>
                 </div>
               </div>
@@ -512,7 +514,7 @@ function ActivityDetail() {
         <Faqs />
       </div>
     </>
-  );
+  )
 }
 
-export default ActivityDetail;
+export default ActivityDetail

@@ -1,10 +1,8 @@
-"use client"
-
 /* eslint-disable no-unused-vars */
-import { Plus } from "lucide-react"
+import { Plus } from 'lucide-react'
 import Specs from "../components/specs"
 import Faqs from "../components/faqs"
-import { Clock, Star } from "lucide-react"
+import { Clock, Star } from 'lucide-react'
 import { IoPlayCircleOutline } from "react-icons/io5"
 import { FiUsers } from "react-icons/fi"
 import { useEffect, useState, useRef } from "react"
@@ -15,18 +13,24 @@ import { useActivitiesFilter } from "../hooks/useActivityFilter"
 import { usePlayweekActivities } from "../hooks/usePlayweekActivities"
 import { learningDomainImages, learningDomainColors } from "../utils/learningDomain"
 import EmailCollectionPopup from "../components/EmailCollectionPopup"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useLocation } from "react-router-dom"
 import LoaderOverlay from "../components/LoaderOverlay"
 import { BASE_URL } from "../utils/api"
 import axios from "axios"
+import { useNavigation } from "../components/NavigationContext"
+import { useScrollPosition } from "../hooks/useScrollPosition"
 
 export default function Activities() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const { saveNavigationState, getNavigationState, clearNavigationState } = useNavigation()
+  const { saveScrollPosition, restoreScrollPosition } = useScrollPosition('activities')
+  
   const [activeTab, setActiveTab] = useState("speelweek")
   const [totalCountActivities, settotalCountActivities] = useState(0)
-
   const [currentPage, setCurrentPage] = useState(1)
   const activitiesPerPage = 30
+  const [hasRestoredState, setHasRestoredState] = useState(false)
 
   const activityListRef = useRef(null)
 
@@ -47,11 +51,40 @@ export default function Activities() {
     setSelectedAge,
     setSelectedSort,
     resetFilters,
-    triggerSearch, // Destructure the new triggerSearch function
+    triggerSearch,
   } = useActivitiesFilter()
 
   const [showEmailPopup, setShowEmailPopup] = useState(false)
   const [isGuest, setIsGuest] = useState(false)
+
+  // Restore navigation state when component mounts or when returning from activity
+  useEffect(() => {
+    if (!hasRestoredState) {
+      const savedState = getNavigationState()
+      if (savedState && location.state?.fromActivity) {
+        // Restore the exact state
+        setActiveTab(savedState.activeTab)
+        setCurrentPage(savedState.currentPage || 1)
+        
+        if (savedState.activeTab === 'library' && savedState.filters) {
+          setSearchTerm(savedState.filters.searchTerm || '')
+          setSelectedCategory(savedState.filters.selectedCategory || 'Alle Leergebieden')
+          setSelectedAge(savedState.filters.selectedAge || 'alle-leeftijden')
+          setSelectedSort(savedState.filters.selectedSort || 'hoogstgewaardeerde')
+        }
+        
+        setHasRestoredState(true)
+        
+        // Restore scroll position after a short delay to ensure content is loaded
+        setTimeout(() => {
+          restoreScrollPosition()
+          clearNavigationState() // Clear after successful restoration
+        }, 500)
+      } else {
+        setHasRestoredState(true)
+      }
+    }
+  }, [hasRestoredState, location.state, getNavigationState, clearNavigationState, restoreScrollPosition, setSearchTerm, setSelectedCategory, setSelectedAge, setSelectedSort])
 
   useEffect(() => {
     const authToken = localStorage.getItem("authToken")
@@ -123,7 +156,7 @@ export default function Activities() {
           id: activity._id,
           title: activity.title,
           description: activity.description,
-          image: learningDomainImages[domain] || "/placeholder.svg", // Fallback image
+          image: learningDomainImages[domain] || "/placeholder.svg",
           progress: `${activity.time} min`,
           ageRange: activity.ageGroup,
           rating: activity.averageRating?.toFixed(1) || "0.0",
@@ -157,7 +190,7 @@ export default function Activities() {
         tag: domain,
         tagColor: learningDomainColors[domain],
         isLocked: activity.isLocked,
-        isCompleted: activity.isCompleted, // This flag is now correctly set by the backend
+        isCompleted: activity.isCompleted,
         learningDomain: domain,
       }
     })
@@ -177,6 +210,24 @@ export default function Activities() {
       toast.info("Deze activiteit is vergrendeld. Upgrade je account om toegang te krijgen.")
       return
     }
+
+    // Save current navigation state before navigating
+    saveScrollPosition()
+    
+    const navigationState = {
+      activeTab,
+      currentPage,
+      scrollPosition: window.pageYOffset,
+      filters: activeTab === 'library' ? {
+        searchTerm,
+        selectedCategory,
+        selectedAge,
+        selectedSort
+      } : null,
+      timestamp: Date.now()
+    }
+    
+    saveNavigationState(navigationState)
     navigate(`/activity-detail/${activity.id}`)
   }
 
@@ -184,7 +235,7 @@ export default function Activities() {
     setActiveTab(tab)
     if (tab === "library") {
       resetFilters()
-      setCurrentPage(1) // Reset page when switching to library
+      setCurrentPage(1)
       if (activityListRef.current) {
         activityListRef.current.scrollIntoView({ behavior: "smooth" })
       }
@@ -208,7 +259,7 @@ export default function Activities() {
   // Helper function to generate pagination range
   const getPaginationRange = (currentPage, totalPages) => {
     const pageNumbers = []
-    const maxPagesToShow = 5 // e.g., 1, 2, 3, ..., 10
+    const maxPagesToShow = 5
 
     if (totalPages <= maxPagesToShow) {
       for (let i = 1; i <= totalPages; i++) {
@@ -249,10 +300,9 @@ export default function Activities() {
 
   const renderPagination = () => {
     if (activeTab !== "library") {
-      return null // Only render pagination for the 'library' tab
+      return null
     }
 
-    // Render pagination even if there's only one page, but disable next/previous if not applicable
     const pageNumbers = getPaginationRange(currentPage, totalPages)
 
     return (
@@ -425,7 +475,7 @@ export default function Activities() {
                   className="w-full pl-10 pr-4 py-2 border-none outline-none text-sm bg-[#FFFFFF] rounded-xl inter-tight-400 "
                 />
                 <button
-                  onClick={triggerSearch} // Call triggerSearch on button click
+                  onClick={triggerSearch}
                   className="absolute inset-y-0 left-0 bottom-0 pl-3 flex items-center cursor-pointer"
                   aria-label="Search activities"
                 >
@@ -476,8 +526,6 @@ export default function Activities() {
           </div>
         )}
         <div className="md:w-[90%] mx-auto" ref={activityListRef}>
-          {" "}
-          {/* Add ref here */}
           <div className="h-auto relative bg-gradient-to-br rounded-3xl from-[#EFF6FF] via-[#FAF5FF] to-[#FDF2F8] mt-5 p-4 md:p-8">
             <img
               src={StarImage || "/placeholder.svg"}
@@ -496,7 +544,6 @@ export default function Activities() {
                 </div>
               )}
               {(playweekLoading || filterLoading) && <LoaderOverlay />}
-              {/* Conditional rendering for errors */}
               {activeTab === "library" && filterError === "Login required to view completed activities." ? (
                 <div className="flex justify-center items-center py-8">
                   <div className="text-[#666666] inter-tight-400 text-[16px] text-center">
@@ -622,7 +669,7 @@ export default function Activities() {
                   ))}
                 </div>
               )}
-              {renderPagination()} {/* Render pagination here */}
+              {renderPagination()}
               <div className="lg:grid lg:grid-cols-3 lg:gap-6 lg:mt-6">
                 <div className="lg:col-start-1 lg:col-end-3"></div>
               </div>

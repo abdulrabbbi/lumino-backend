@@ -49,17 +49,15 @@ export default function HeroSection() {
               <div className="text-center ">
                 <h1 className="text-4xl py-16 sm:text-5xl lg:text-6xl font-bold ">
                   <span className="inter-tight-700 bg-clip-text text-transparent bg-gradient-to-b to-[#2563EB] from-[#9333EA]">
-                    Je kind future-proof maken?
-                  </span>
+                  Geef je kind een sterke start.                  </span>
                   <br />
-                  <span className="text-[#111827] inter-tight-700">Dat doe je samen.</span>
+                  {/* <span className="text-[#111827] inter-tight-700">Dat doe je samen.</span> */}
                 </h1>
-                <div className="flex items-center mt-2 justify-center mb-12">
+                <div className="flex items-center  justify-center mb-12">
                   <div className="flex items-center space-x-4">
                     <div className="text-center max-w-xl">
                       <p className="text-sm sm:text-[18px] text-[#8F8F8F] inter-tight-400 leading-relaxed">
-                        Luumilo helpt je kind (3–6 jaar) groeien in dankbaarheid, Veerkracht zelfzorg en meer – via korte,
-                        speelse missies die jullie band versterken.
+                      Luumilo helpt je kind (3–6 jaar) groeien in dankbaarheid, veerkracht, zelfzorg en meer via korte, speelse missies die jullie band versterken
                       </p>
                     </div>
                   </div>
@@ -285,7 +283,7 @@ export default function HeroSection() {
                     <h3 className="text-black  text-center inter-tight-600 text-lg sm:text-2xl mb-2">
                       Speel, leer en groei 
                       <br />
-                       - samen thuis
+                    
                     </h3>
                     {/* <img
                       src={ArrowImage || "/placeholder.svg"}

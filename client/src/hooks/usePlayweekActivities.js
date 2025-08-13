@@ -4,7 +4,15 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import { BASE_URL } from "../utils/api";
 
+const getUserTimezone = () => {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone;
+};
+
 export function usePlayweekActivities() {
+  const userTimezone = getUserTimezone();
+  console.log('user timezone', userTimezone);
+  
+ 
   const [playweekActivities, setPlayweekActivities] = useState([]);
   const [weekInfo, setWeekInfo] = useState(null); // ✅ Add weekInfo state
   const [loading, setLoading] = useState(true);
@@ -16,6 +24,7 @@ export function usePlayweekActivities() {
         const token = localStorage.getItem("authToken");
         const response = await axios.get(`${BASE_URL}/get-playweek-activities`, {
           headers: {
+           'User-Timezone': userTimezone,
             Authorization: `Bearer ${token}`,
           },
         });

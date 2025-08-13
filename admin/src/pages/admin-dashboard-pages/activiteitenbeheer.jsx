@@ -25,6 +25,7 @@ export default function ActiviteitenBeheer() {
   const [activeTab, setActiveTab] = useState("list")
   const [currentPage, setCurrentPage] = useState(1)
   const [bulkMode, setBulkMode] = useState(false)
+  const [searchTerm, setSearchTerm] = useState("");
   const [bulkActivities, setBulkActivities] = useState([
     { title: "", description: "", instructions: "", materials: "", effect: "" },
   ])
@@ -74,15 +75,20 @@ export default function ActiviteitenBeheer() {
     { label: "Concept Activiteiten", count: counts.draft },
   ]
 
-  // Pagination logic
+  const filteredActivities = activities.filter(activity =>
+    activity.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    activity.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    activity.creatorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    activity.learningDomain.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   const indexOfLastActivity = currentPage * activitiesPerPage
   const indexOfFirstActivity = indexOfLastActivity - activitiesPerPage
-  const currentActivities = activities.slice(indexOfFirstActivity, indexOfLastActivity)
-  const totalPages = Math.ceil(activities.length / activitiesPerPage)
+  const currentActivities = filteredActivities.slice(indexOfFirstActivity, indexOfLastActivity);
+  const totalPages = Math.ceil(filteredActivities.length / activitiesPerPage);
 
   const paginate = (pageNumber) => setCurrentPage(pageNumber)
 
-  // Refresh activities list
   const refreshActivities = useCallback(async () => {
     try {
       await refetch()
@@ -154,10 +160,10 @@ export default function ActiviteitenBeheer() {
             description: activity.description,
             instructions: activity.instructions
               ? activity.instructions
-                  .split("\n")
-                  .filter((step) => step.trim() !== "")
-                  .map((step) => step.trim())
-                  .slice(0, 5)
+                .split("\n")
+                .filter((step) => step.trim() !== "")
+                .map((step) => step.trim())
+                .slice(0, 5)
               : [],
             materials: activity.materials || undefined,
             effect: activity.effect || undefined,
@@ -389,6 +395,7 @@ export default function ActiviteitenBeheer() {
                 ⚠️ Deze actie kan niet ongedaan worden gemaakt.
               </p>
             </div>
+
             <div className="flex justify-end space-x-3">
               <button
                 onClick={cancelDelete}
@@ -428,6 +435,7 @@ export default function ActiviteitenBeheer() {
                     Beheer alle activiteiten: status wijzigen, verbergen of permanent verwijderen
                   </p>
                 </div>
+
                 <div className="flex gap-2">
                   <button
                     onClick={() => {
@@ -472,6 +480,24 @@ export default function ActiviteitenBeheer() {
                   >
                     <Plus className="h-4 w-4" /> Bulk Activiteiten
                   </button>
+                </div>
+              </div>
+
+              <div className="relative w-full mb-2 sm:w-auto">
+                <input
+                  type="text"
+                  placeholder="Zoek activiteiten..."
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="w-full rounded-lg border border-gray-300 text-sm  bg-white px-4 py-3 pl-10 text-[#707070] transition-colors hover:bg-gray-50 outline-none"
+                />
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                  <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
                 </div>
               </div>
               <div className="mb-6 rounded-lg">
@@ -610,11 +636,10 @@ export default function ActiviteitenBeheer() {
                         <button
                           onClick={() => paginate(Math.max(1, currentPage - 1))}
                           disabled={currentPage === 1}
-                          className={`px-3 py-1 rounded-md ${
-                            currentPage === 1
+                          className={`px-3 py-1 rounded-md ${currentPage === 1
                               ? "cursor-not-allowed bg-gray-100 text-gray-400"
                               : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                          }`}
+                            }`}
                         >
                           <ChevronLeft className="h-5 w-5" />
                         </button>
@@ -675,11 +700,10 @@ export default function ActiviteitenBeheer() {
                               <button
                                 key={page}
                                 onClick={() => paginate(page)}
-                                className={`px-3 py-1 rounded-md ${
-                                  currentPage === page
+                                className={`px-3 py-1 rounded-md ${currentPage === page
                                     ? "bg-indigo-600 text-white"
                                     : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                                }`}
+                                  }`}
                               >
                                 {page}
                               </button>
@@ -690,11 +714,10 @@ export default function ActiviteitenBeheer() {
                         <button
                           onClick={() => paginate(Math.min(totalPages, currentPage + 1))}
                           disabled={currentPage === totalPages}
-                          className={`px-3 py-1 rounded-md ${
-                            currentPage === totalPages
+                          className={`px-3 py-1 rounded-md ${currentPage === totalPages
                               ? "cursor-not-allowed bg-gray-100 text-gray-400"
                               : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                          }`}
+                            }`}
                         >
                           <ChevronRight className="h-5 w-5" />
                         </button>

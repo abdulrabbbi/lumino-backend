@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import User from "../Models/User.js";
 import WeekPlaySet from "../Models/WeekPlaySet.js";
 import Badge from "../Models/Badge.js";
-import { parseWeekKey, areConsecutiveWeeks, getTop5Activities, getWeekOfYear, isMoreThanAWeekOld } from "../Helper/ActivityHelper.js";
+import { parseWeekKey, areConsecutiveWeeks, getTop5Activities, getWeekOfYear, isMoreThanAWeekOld, isPastMondayRefresh, getCurrentMondayAt6AM, getNextMondayAt6AM } from "../Helper/ActivityHelper.js";
 import mongoose from "mongoose";
 
 export const createActivity = async (req, res) => {
@@ -1362,6 +1362,9 @@ export const getProgressStats = async (req, res) => {
     res.status(500).json({ success: false, error: "Server Error" });
   }
 };
+
+
+
 export const getPlayWeekActivities = async (req, res) => {
   try {
     const userId = req.user?.userId;
@@ -1369,14 +1372,26 @@ export const getPlayWeekActivities = async (req, res) => {
     let isTestFamily = false;
     let userAgeGroup = null;
 
+    let userTimezone = req.headers['user-timezone'];
+    console.log('user time zone', userTimezone);
+    
+
+    try {
+      Intl.DateTimeFormat(undefined, { timeZone: userTimezone });
+    } catch (e) {
+      userTimezone = 'UTC'; 
+    }
+
     if (userId) {
       const user = await User.findById(userId);
       if (user) {
         isTestFamily = user.isTestFamily;
         userAgeGroup = user.ageGroup;
-        console.log(`👤 User: ${user.username}`);
-        console.log(`🧒 Age Group: ${userAgeGroup || 'Not set'}`);
-        console.log(`🧪 Test Family: ${isTestFamily}`);
+        userTimezone = userTimezone || 'UTC'; 
+        // console.log(`👤 User: ${user.username}`);
+        // console.log(`🧒 Age Group: ${userAgeGroup || 'Not set'}`);
+        // console.log(`🧪 Test Family: ${isTestFamily}`);
+        // console.log(`🌍 Timezone: ${userTimezone}`);
       }
     }
 
@@ -1384,90 +1399,96 @@ export const getPlayWeekActivities = async (req, res) => {
     let weekNumber = 1;
 
     if (userId) {
-      // FIXED: Find the current active week set
+      // REGISTERED USER LOGIC
       activitySet = await WeekPlaySet.findOne({ userId }).sort({ weekNumber: -1 });
 
       if (!activitySet) {
+        // Create first week
         console.log(`🎯 Creating Week 1 for new user`);
-        // Pass weekNumber to ensure consistent selection
+        const currentMondayAt6AM = getCurrentMondayAt6AM(userTimezone);
         const freshActivities = await getTop5ActivitiesExcluding([], userAgeGroup, 1);
 
         activitySet = new WeekPlaySet({
           userId,
           activities: freshActivities.map(a => a._id),
           weekNumber: 1,
-          generatedAt: new Date(),
+          generatedAt: currentMondayAt6AM,
+          nextRefreshAt: getNextMondayAt6AM(userTimezone),
           completedActivitiesInWeek: [],
-          isWeekCompleted: false
+          isWeekCompleted: false,
+          timezone: userTimezone
         });
 
         await activitySet.save();
-        console.log(`✅ Week 1 created with ${freshActivities.length} CONSISTENT activities`);
+        // console.log(`✅ Week 1 created with ${freshActivities.length} activities`);
       } else {
-        // FIXED: Only regenerate activities when actually progressing weeks
-        const weekStartDate = new Date(activitySet.generatedAt);
-        const currentDate = new Date();
-        const daysElapsed = Math.floor((currentDate - weekStartDate) / (1000 * 60 * 60 * 24));
-
-        console.log(`📅 Current Week: ${activitySet.weekNumber}`);
-        console.log(`⏰ Days elapsed: ${daysElapsed}/7`);
-        console.log(`🏠 Activities in current week: ${activitySet.activities.length}`);
-
-        // FIXED: Only call checkAndProgressWeek when time has actually elapsed
-        if (daysElapsed >= 7) {
-          console.log(`🚨 7+ days passed - Processing week progression`);
-          activitySet = await checkAndProgressWeek(userId, activitySet, userAgeGroup);
+        // Check if we need Monday refresh
+        const shouldRefresh = isPastMondayRefresh(activitySet.generatedAt, userTimezone);
+        
+        if (shouldRefresh) {
+          console.log(`🔄 Monday 6 AM refresh triggered for user`);
+          activitySet = await createNewMondayWeek(userId, activitySet, userAgeGroup, userTimezone);
         } else {
-          console.log(`⏳ Week ${activitySet.weekNumber} still active - using EXISTING activities`);
-          // Don't regenerate activities, use existing ones
+          console.log(`⏳ Current week still active until next Monday 6 AM`);
+          // Update completion status but keep same activities
+          const currentWeekCompleted = await CompletedActivity.find({
+            userId,
+            activityId: { $in: activitySet.activities },
+            completedAt: { $gte: activitySet.generatedAt }
+          });
+
+          const completedActivityIds = currentWeekCompleted.map(c => c.activityId.toString());
+          activitySet.completedActivitiesInWeek = completedActivityIds;
+          activitySet.isWeekCompleted = completedActivityIds.length >= 5;
+          await activitySet.save();
         }
       }
 
       weekNumber = activitySet.weekNumber;
     } else {
-      // GUEST LOGIC - FIXED
+      // GUEST LOGIC
       console.log(`👤 Guest user session`);
 
       activitySet = req.session?.weeklyActivities;
-      weekNumber = req.session?.weekNumber || 1;
+      const lastRefresh = req.session?.lastMondayRefresh;
+      
+      const shouldRefresh = !activitySet || isPastMondayRefresh(lastRefresh, userTimezone);
 
-      const shouldCreateNewWeek = !activitySet || isMoreThanAWeekOld(activitySet?.generatedAt);
-
-      if (shouldCreateNewWeek) {
-        const newWeekNumber = isMoreThanAWeekOld(activitySet?.generatedAt) 
-          ? (activitySet?.weekNumber || 0) + 1 
-          : 1;
-
-        console.log(`🔄 Guest creating Week ${newWeekNumber}`);
+      if (shouldRefresh) {
+        const currentMondayAt6AM = getCurrentMondayAt6AM(userTimezone);
+        const newWeekNumber = activitySet ? activitySet.weekNumber + 1 : 1;
+        
+        console.log(`🔄 Guest Monday refresh: Creating Week ${newWeekNumber}`);
 
         const previouslyUsedActivities = activitySet?.activities || [];
-        // FIXED: Pass weekNumber for consistent selection
         const freshActivities = await getTop5ActivitiesExcluding(previouslyUsedActivities, null, newWeekNumber);
 
         activitySet = {
           activities: freshActivities.map(a => a._id),
           weekNumber: newWeekNumber,
-          generatedAt: new Date(),
+          generatedAt: currentMondayAt6AM,
+          nextRefreshAt: getNextMondayAt6AM(userTimezone),
           completedActivitiesInWeek: []
         };
 
         req.session.weeklyActivities = activitySet;
         req.session.weekNumber = newWeekNumber;
         req.session.completedActivitiesInWeek = [];
+        req.session.lastMondayRefresh = currentMondayAt6AM.toISOString();
 
-        console.log(`✅ Guest Week ${newWeekNumber} created with CONSISTENT activities`);
+        console.log(`✅ Guest Week ${newWeekNumber} created`);
       } else {
-        console.log(`⏳ Guest Week ${weekNumber} still active - using EXISTING activities`);
+        console.log(`⏳ Guest week still active until next Monday 6 AM`);
       }
 
       weekNumber = activitySet.weekNumber;
     }
 
-    // FETCH THE SAME ACTIVITIES EVERY TIME (unless week has progressed)
+    // Fetch activities and prepare response
     const activityDocs = await Activity.find({
       _id: { $in: activitySet.activities },
       isApproved: true,
-    }).sort({ _id: 1 }); // Consistent order
+    }).sort({ _id: 1 });
 
     let allTimeCompletedIds = [];
     let currentWeekCompletedIds = [];
@@ -1488,7 +1509,7 @@ export const getPlayWeekActivities = async (req, res) => {
       allTimeCompletedIds = req.session?.allTimeCompleted || [];
     }
 
-    // Create activity list in consistent order
+    // Create activity list
     const activities = activityDocs.map((activity, index) => {
       const idStr = activity._id.toString();
       const isCompletedInCurrentWeek = currentWeekCompletedIds.includes(idStr);
@@ -1513,36 +1534,34 @@ export const getPlayWeekActivities = async (req, res) => {
       };
     });
 
-    const weekStartDate = new Date(activitySet.generatedAt);
-    const currentDate = new Date();
-    const daysElapsed = Math.floor((currentDate - weekStartDate) / (1000 * 60 * 60 * 24));
-    const daysRemaining = Math.max(0, 7 - daysElapsed);
-    const hoursRemaining = Math.max(0, (7 * 24) - Math.floor((currentDate - weekStartDate) / (1000 * 60 * 60)));
+    // Calculate timing info
+    const nextRefreshAt = new Date(activitySet.nextRefreshAt || getNextMondayAt6AM(userTimezone));
+    const now = new Date();
+    const timeUntilRefresh = nextRefreshAt - now;
+    const daysUntilRefresh = Math.max(0, Math.ceil(timeUntilRefresh / (1000 * 60 * 60 * 24)));
+    const hoursUntilRefresh = Math.max(0, Math.ceil(timeUntilRefresh / (1000 * 60 * 60)));
 
     const completedThisWeek = currentWeekCompletedIds.length;
     const weekProgress = Math.round((completedThisWeek / 5) * 100);
     const isWeekCompleted = completedThisWeek >= 5;
-    const isTimeExpired = daysElapsed >= 7;
 
-    const nextWeekUnlockDate = new Date(weekStartDate);
-    nextWeekUnlockDate.setDate(nextWeekUnlockDate.getDate() + 7);
-
-    let autoProgressMessage = '';
-    let weekCompletionMessage = '';
-
-    if (isTimeExpired) {
-      autoProgressMessage = `🎉 Week ${weekNumber + 1} is now available!`;
-    } else {
-      autoProgressMessage = `Week ${weekNumber + 1} unlocks in ${daysRemaining} day${daysRemaining !== 1 ? 's' : ''}`;
-    }
-
+    let weekStatusMessage = '';
     if (isWeekCompleted) {
-      weekCompletionMessage = `🎉 Week ${weekNumber} completed! ${isTimeExpired ? `Week ${weekNumber + 1} available now!` : `Week ${weekNumber + 1} unlocks in ${daysRemaining} days`}`;
+      weekStatusMessage = `🎉 Week ${weekNumber} completed! New activities available next Monday at 6 AM`;
     } else {
-      weekCompletionMessage = `Complete ${5 - completedThisWeek} more activities to finish Week ${weekNumber}`;
+      weekStatusMessage = `Complete ${5 - completedThisWeek} more activities to finish Week ${weekNumber}`;
     }
 
-    console.log(`🎯 FINAL: Returning ${activities.length} CONSISTENT activities for Week ${weekNumber}`);
+    let refreshMessage = '';
+    if (daysUntilRefresh === 0) {
+      refreshMessage = `🔄 New activities available now!`;
+    } else if (daysUntilRefresh === 1) {
+      refreshMessage = `⏰ New activities tomorrow at 6 AM`;
+    } else {
+      refreshMessage = `⏰ New activities in ${daysUntilRefresh} days (Monday 6 AM)`;
+    }
+
+    console.log(`🎯 FINAL: Returning Week ${weekNumber} activities (Monday refresh system)`);
 
     res.status(200).json({
       success: true,
@@ -1553,18 +1572,16 @@ export const getPlayWeekActivities = async (req, res) => {
         totalActivities: 5,
         weekProgress,
         isWeekCompleted,
-        daysRemaining,
-        daysElapsed,
-        hoursRemaining,
-        isTimeExpired,
-        weekStartDate: weekStartDate.toISOString(),
-        nextWeekUnlockDate: nextWeekUnlockDate.toISOString(),
-        autoProgressMessage,
-        weekCompletionMessage,
+        daysUntilRefresh,
+        hoursUntilRefresh,
+        nextRefreshAt: nextRefreshAt.toISOString(),
+        currentWeekStart: new Date(activitySet.generatedAt).toISOString(),
+        weekStatusMessage,
+        refreshMessage,
         userAgeGroup: userAgeGroup || 'Not set',
-        ageFilterApplied: !!userAgeGroup,
-        consistencyNote: "✅ Same 5 activities shown throughout the week until 7 days expire",
-        activitiesIds: activities.map(a => a._id) // For debugging
+        userTimezone,
+        refreshSystem: 'Every Monday at 6 AM',
+        activitiesIds: activities.map(a => a._id)
       }
     });
   } catch (err) {
@@ -1573,80 +1590,13 @@ export const getPlayWeekActivities = async (req, res) => {
   }
 };
 
-
-const checkAndProgressWeek = async (userId, currentWeekSet, userAgeGroup = null) => {
+const createNewMondayWeek = async (userId, currentWeekSet, userAgeGroup, userTimezone) => {
   try {
-    const weekStartDate = new Date(currentWeekSet.generatedAt);
-    const currentDate = new Date();
-    const daysElapsed = Math.floor((currentDate - weekStartDate) / (1000 * 60 * 60 * 24));
+    const currentMondayAt6AM = getCurrentMondayAt6AM(userTimezone);
     
-    const shouldAutoProgress = daysElapsed >= 7;
+    console.log(`🔄 Creating new Monday week from Week ${currentWeekSet.weekNumber} to Week ${currentWeekSet.weekNumber + 1}`);
     
-    if (shouldAutoProgress) {
-      console.log(`🔄 FORCE progressing from Week ${currentWeekSet.weekNumber} to Week ${currentWeekSet.weekNumber + 1}`);
-      console.log(`📅 Days elapsed: ${daysElapsed} (≥7 days = auto progress)`);
-      
-      // Get current week's completion status before progressing
-      const currentWeekCompleted = await CompletedActivity.find({
-        userId,
-        activityId: { $in: currentWeekSet.activities },
-        completedAt: { $gte: currentWeekSet.generatedAt }
-      });
-
-      const completedActivityIds = currentWeekCompleted.map(c => c.activityId.toString());
-      
-      console.log(`📊 Week ${currentWeekSet.weekNumber} Final Status:`);
-      console.log(`  - Completed: ${completedActivityIds.length}/5 activities`);
-      console.log(`  - Old activities will be REMOVED regardless of completion`);
-      
-      // Mark current week as completed (for historical record)
-      currentWeekSet.completedActivitiesInWeek = completedActivityIds;
-      currentWeekSet.isWeekCompleted = completedActivityIds.length >= 5;
-      currentWeekSet.weekEndedAt = new Date();
-      await currentWeekSet.save();
-
-      // Get all previously used activities from ALL previous weeks
-      const allPreviousWeeks = await WeekPlaySet.find({
-        userId,
-        weekNumber: { $lte: currentWeekSet.weekNumber }
-      });
-
-      const previouslyUsedActivities = [];
-      allPreviousWeeks.forEach(week => {
-        previouslyUsedActivities.push(...week.activities.map(id => id.toString()));
-      });
-
-      console.log(`🔍 Excluding ${previouslyUsedActivities.length} previously used activities`);
-
-      const newWeekNumber = currentWeekSet.weekNumber + 1;
-      
-      // FIXED: Get fresh activities with consistent selection
-      const freshActivities = await getTop5ActivitiesExcluding(
-        previouslyUsedActivities, 
-        userAgeGroup, 
-        newWeekNumber  // Pass week number for consistency
-      );
-
-      // Create new week set with completely NEW activities
-      const newWeekSet = new WeekPlaySet({
-        userId,
-        activities: freshActivities.map(a => a._id),
-        weekNumber: newWeekNumber,
-        generatedAt: new Date(), // Fresh start date
-        completedActivitiesInWeek: [],
-        isWeekCompleted: false,
-        previousWeekId: currentWeekSet._id
-      });
-
-      await newWeekSet.save();
-      
-      console.log(`✅ Created Week ${newWeekSet.weekNumber} with ${freshActivities.length} NEW CONSISTENT activities`);
-      console.log(`🗑️ Week ${currentWeekSet.weekNumber} activities are now REMOVED from playweek`);
-      
-      return newWeekSet;
-    }
-
-    // If not time to progress, just update current week's progress (NO NEW ACTIVITIES)
+    // Mark current week as finished
     const currentWeekCompleted = await CompletedActivity.find({
       userId,
       activityId: { $in: currentWeekSet.activities },
@@ -1654,22 +1604,63 @@ const checkAndProgressWeek = async (userId, currentWeekSet, userAgeGroup = null)
     });
 
     const completedActivityIds = currentWeekCompleted.map(c => c.activityId.toString());
+    
     currentWeekSet.completedActivitiesInWeek = completedActivityIds;
     currentWeekSet.isWeekCompleted = completedActivityIds.length >= 5;
+    currentWeekSet.weekEndedAt = new Date();
     await currentWeekSet.save();
 
-    console.log(`⏳ Week ${currentWeekSet.weekNumber}: ${7 - daysElapsed} days remaining - KEEPING SAME ACTIVITIES`);
-    console.log(`📊 Progress: ${completedActivityIds.length}/5 activities completed`);
+    console.log(`📊 Week ${currentWeekSet.weekNumber} Final Status: ${completedActivityIds.length}/5 completed`);
 
-    return currentWeekSet;
+    // Get all previously used activities
+    const allPreviousWeeks = await WeekPlaySet.find({
+      userId,
+      weekNumber: { $lte: currentWeekSet.weekNumber }
+    });
+
+    const previouslyUsedActivities = [];
+    allPreviousWeeks.forEach(week => {
+      previouslyUsedActivities.push(...week.activities.map(id => id.toString()));
+    });
+
+    const newWeekNumber = currentWeekSet.weekNumber + 1;
+    
+    // Get fresh activities
+    const freshActivities = await getTop5ActivitiesExcluding(
+      previouslyUsedActivities, 
+      userAgeGroup, 
+      newWeekNumber
+    );
+
+    // Create new week set
+    const newWeekSet = new WeekPlaySet({
+      userId,
+      activities: freshActivities.map(a => a._id),
+      weekNumber: newWeekNumber,
+      generatedAt: currentMondayAt6AM,
+      nextRefreshAt: getNextMondayAt6AM(userTimezone),
+      completedActivitiesInWeek: [],
+      isWeekCompleted: false,
+      previousWeekId: currentWeekSet._id,
+      timezone: userTimezone
+    });
+
+    await newWeekSet.save();
+    
+    console.log(`✅ Created Week ${newWeekSet.weekNumber} with ${freshActivities.length} NEW activities`);
+    
+    return newWeekSet;
 
   } catch (error) {
-    console.error('❌ Error in checkAndProgressWeek:', error);
+    console.error('❌ Error in createNewMondayWeek:', error);
     return currentWeekSet;
   }
 };
+
 const getTop5ActivitiesExcluding = async (excludeIds = [], userAgeGroup = null, weekNumber = 1) => {
   try {
+    console.log(`🎯 Getting 5 activities for Week ${weekNumber} (Monday System)`);
+    
     const excludeObjectIds = excludeIds.map(id => {
       try {
         return new mongoose.Types.ObjectId(id);
@@ -1680,9 +1671,9 @@ const getTop5ActivitiesExcluding = async (excludeIds = [], userAgeGroup = null, 
 
     let activities = [];
 
-    // SCENARIO 1: User ka age set hai - us age ki activities show karo
+    // Age-based selection if user has age group set
     if (userAgeGroup) {
-      console.log(`🎯 SCENARIO 1: Getting activities for age group: ${userAgeGroup}, Week: ${weekNumber}`);
+      console.log(`🎯 Age-based selection for: ${userAgeGroup}`);
       
       const ageBasedQuery = {
         isApproved: true,
@@ -1690,21 +1681,18 @@ const getTop5ActivitiesExcluding = async (excludeIds = [], userAgeGroup = null, 
         _id: { $nin: excludeObjectIds }
       };
 
-      // Age ki activities get karo, highest rated first
       activities = await Activity.find(ageBasedQuery)
         .sort({
-          averageRating: -1,  // Sabse zyada rated pehle
-          createdAt: -1,      // Phir newest
-          _id: 1              // Consistency ke liye
+          averageRating: -1,
+          createdAt: -1,
+          _id: 1
         })
-        .limit(10); // Extra lenge case fallback needed ho
+        .limit(10);
 
       console.log(`Found ${activities.length} activities for age group ${userAgeGroup}`);
 
-      // Agar age group ki kam activities hain, to baki high rated activities add karo
+      // Fill remaining slots with high-rated activities
       if (activities.length < 5) {
-        console.log(`⚠️ Age ${userAgeGroup} ki activities kam hain, high rated activities add kar rahe`);
-        
         const additionalQuery = {
           isApproved: true,
           _id: { $nin: [...excludeObjectIds, ...activities.map(a => a._id)] }
@@ -1712,7 +1700,7 @@ const getTop5ActivitiesExcluding = async (excludeIds = [], userAgeGroup = null, 
 
         const additionalActivities = await Activity.find(additionalQuery)
           .sort({ 
-            averageRating: -1,  // Sabse high rated
+            averageRating: -1,
             createdAt: -1,
             _id: 1
           })
@@ -1722,34 +1710,26 @@ const getTop5ActivitiesExcluding = async (excludeIds = [], userAgeGroup = null, 
       }
 
     } else {
-      // SCENARIO 2 & 3: Age set nahi hai - high rated ya random
-      console.log(`🎯 SCENARIO 2/3: Age set nahi hai, high rated activities get kar rahe, Week: ${weekNumber}`);
+      // High-rated selection for users without age group
+      console.log(`🎯 High-rated selection for Week ${weekNumber}`);
       
       const query = {
         isApproved: true,
         _id: { $nin: excludeObjectIds }
       };
 
-      // Sabhi activities get karo highest rated first
       activities = await Activity.find(query)
         .sort({
-          averageRating: -1,  // Sabse highest rated pehle
-          createdAt: -1,      // Phir newest
-          _id: 1              // Consistency ke liye
+          averageRating: -1,
+          createdAt: -1,
+          _id: 1
         })
-        .limit(10); // 5 se zyada lenge selection ke liye
-      
-      console.log(`📊 High rated activities milayenge:`, activities.slice(0, 5).map((a, idx) => ({
-        index: idx + 1,
-        title: a.title,
-        rating: a.averageRating || 0,
-        ageGroup: a.ageGroup || 'Any'
-      })));
+        .limit(10);
     }
 
-    // Final fallback - agar phir bhi kam activities hain
+    // Final fallback
     if (activities.length < 5) {
-      console.log('🆘 Final fallback - jo bhi available activities hain wo le rahe');
+      console.log('🆘 Final fallback - getting remaining activities');
 
       const usedIds = [...excludeObjectIds, ...activities.map(a => a._id)];
       const finalFallback = await Activity.find({ 
@@ -1768,9 +1748,9 @@ const getTop5ActivitiesExcluding = async (excludeIds = [], userAgeGroup = null, 
 
     const finalActivities = activities.slice(0, 5);
     
-    console.log(`✅ Final 5 activities for Week ${weekNumber}:`);
+    console.log(`✅ Monday System: Week ${weekNumber} activities selected:`);
     finalActivities.forEach((activity, index) => {
-      console.log(`  ${index + 1}. ${activity.title} (ID: ${activity._id}) (Age: ${activity.ageGroup || 'Any'}, Rating: ${activity.averageRating || 0})`);
+      console.log(`  ${index + 1}. ${activity.title} (Rating: ${activity.averageRating || 0})`);
     });
 
     return finalActivities;

@@ -46,7 +46,7 @@ const AboutUs = () => {
                 <div className="max-w-6xl mx-auto">
                     <div className="text-center mb-8">
                         <h2 className="text-3xl sm:text-4xl inter-tight-700 text-[#000000] mb-2">Wat wij doen</h2>
-                        <p className="text-md inter-tight-400 text-[#000000] text-sm mb-3">Elke week biedt Luumilo een samengestelde set van vijf praktische activiteiten aan – genaamd Speelweek-activiteiten – gericht op leren door te spelen. Elke activiteit is ontworpen om de band tussen ouder en kind te versterken en thema's te verkennen zoals</p>
+                        <p className="text-md inter-tight-400 text-[#000000] text-sm mb-3">Elke week biedt Luumilo een samengestelde set van vijf praktische activiteiten aan, in de Speelweek, gericht op leren door te spelen. Elke activiteit is ontworpen om de band tussen ouder en kind te versterken en thema's te verkennen zoals</p>
 
 
                     </div>
@@ -149,7 +149,7 @@ const AboutUs = () => {
                             Waarom het ertoe doet
                         </h1>
                         <p className="mt-7 text-[#4B5563] md:text-[18px] text-sm inter-tight-400 max-w-2xl">
-                        We weten dat de kindertijd de belangrijkste fase is voor het ontwikkelen van gezonde gewoonten en emotionele vaardigheden. Luumilo moedigt kinderen aan om niet alleen academisch, maar ook sociaal en emotioneel te groeien – vaardigheden waar ze hun hele leven profijt van hebben.
+                        Wist je dat 90% van de hersenontwikkeling plaatsvindt vóór het 7e levensjaar? Juist in deze vormende jaren legt Luumilo de basis voor gezonde gewoonten en emotionele veerkracht. Zo groeien kinderen op tot zelfverzekerde, empathische en sterke mensen,  met kwaliteiten waar ze hun hele leven op kunnen bouwen.
                         </p>
                     </div>
 
