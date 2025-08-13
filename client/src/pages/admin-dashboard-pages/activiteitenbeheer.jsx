@@ -261,7 +261,7 @@ export default function ActiviteitenBeheer() {
 
   return (
     <>
-      <ToastContainer style={{ zIndex: 10000000000 }} />
+      {/* <ToastContainer style={{ zIndex: 10000000000 }} /> */}
       <div className="min-h-screen py-8">
         <div className="max-w-7xl mx-auto">
           {activeTab === 'list' ? (

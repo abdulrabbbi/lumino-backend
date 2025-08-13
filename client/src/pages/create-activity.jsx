@@ -214,7 +214,7 @@ const CreateActivity = () => {
 
   return (
     <div className="h-full bg-gradient-to-br from-[#EFF6FF] via-[#FAF5FF] to-[#FDF2F8] px-4 py-6">
-      <ToastContainer style={{ zIndex: 1000000000 }} />
+      {/* <ToastContainer style={{ zIndex: 1000000000 }} /> */}
 
       {/* Badge Modal */}
       <BadgeModal

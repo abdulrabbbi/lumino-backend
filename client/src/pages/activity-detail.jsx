@@ -200,30 +200,55 @@ function ActivityDetail() {
   }
 
   const handleSubmitRating = async () => {
-    if (isSubmittingRating || selectedRating < 1 || selectedRating > 10) {
-      if (selectedRating < 1 || selectedRating > 10) {
-        toast.error("Rating must be between 1 and 10")
-      }
-      return
+    // Prevent multiple submissions
+    if (isSubmittingRating) return;
+    
+    // Validate rating
+    if (selectedRating < 1 || selectedRating > 10) {
+      toast.error("Selecteer een beoordeling tussen 1 en 10", { 
+        toastId: 'rating-error',
+        autoClose: 3000 
+      });
+      return;
     }
-
+  
     try {
-      setIsSubmittingRating(true)
-      await rateActivity(id, selectedRating)
-      setShowRatingModal(false)
-      setSelectedRating(0)
+      setIsSubmittingRating(true);
       
-      toast.success("Beoordeling succesvol ingediend!")
+      // Clear any existing toasts first
+      toast.dismiss();
+      
+      // Make API call
+      await rateActivity(id, selectedRating);
+
 
       setTimeout(() => {
         handleReturnToOrigin()
-      }, 1500)
+        
+      }, 2000);
+      
+      // Show success toast (with unique ID and auto-close)
+      // toast.success("Beoordeling succesvol ingediend!", {
+      //   toastId: 'rating-success', // Unique ID prevents duplicates
+      //   autoClose: 2000,
+      //   onClose: () => {
+      //     handleReturnToOrigin();
+      //   }
+      // });
+  
+      // Close modal and reset
+      setShowRatingModal(false);
+      setSelectedRating(0);
+      
     } catch (error) {
-      toast.error(error.message)
+      toast.error(error.message, { 
+        toastId: 'rating-api-error',
+        autoClose: 3000 
+      });
     } finally {
-      setIsSubmittingRating(false)
+      setIsSubmittingRating(false);
     }
-  }
+  };
 
   const handleRateLater = () => {
     setShowRatingModal(false)
@@ -275,7 +300,7 @@ function ActivityDetail() {
 
   return (
     <>
-      <ToastContainer style={{ zIndex: 100000000 }} />
+      {/* <ToastContainer style={{ zIndex: 100000000 }} /> */}
       <div className="min-h-screen bg-gray-50 pb-10">
         <CelebrationSparkles isVisible={showCelebration} onComplete={handleCelebrationComplete} />
         <BadgeModal isVisible={showBadgeModal} onClose={handleBadgeModalClose} badges={earnedBadges} />
@@ -496,7 +521,10 @@ function ActivityDetail() {
                     Beoordeel Later
                   </button>
                   <button
-                    onClick={handleSubmitRating}
+                    onClick={(e) => {
+                      e.stopPropagation(); // Prevent event bubbling
+                      handleSubmitRating();
+                    }}
                     disabled={selectedRating === 0 || isSubmittingRating}
                     className={`flex-1 px-6 py-2 md:w-auto w-full rounded-xl inter-tight-400 text-sm font-medium transition-colors ${
                       selectedRating > 0 && !isSubmittingRating

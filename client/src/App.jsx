@@ -28,6 +28,7 @@ import ReferFriend from './pages/refer-a-friend'
 import EarnBadge from './pages/earn-badge'
 
 import ScrollToTop from './components/ScrollToTop'
+import { ToastContainer } from 'react-toastify'
 
 
 function AppWrapper() {
@@ -77,6 +78,19 @@ function App() {
   return (
     <BrowserRouter>
       <ScrollToTop />
+      <ToastContainer
+        position="top-right"
+        autoClose={2000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        limit={1} // Ensures only one toast shows at a time
+        style={{ zIndex: 100000000 }} // Ensures the toast is on top of other elements
+      />
       <AppWrapper />
     </BrowserRouter>
   )

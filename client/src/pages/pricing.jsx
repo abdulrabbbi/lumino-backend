@@ -37,7 +37,7 @@ const Pricing = () => {
 
   return (
     <section className="py-16 px-4 mt-10 sm:px-6 lg:px-8 h-auto max-w-7xl m-auto">
-      <ToastContainer style={{ zIndex: 100000000 }} />
+      {/* <ToastContainer style={{ zIndex: 100000000 }} /> */}
       <div className="max-w-7xl w-full m-auto">
         <div className="text-center mb-12">
           <h2 className="text-3xl inter-tight-700 lg:text-2xl text-[#636363]">

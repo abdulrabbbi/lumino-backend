@@ -112,7 +112,7 @@ export default function ResetPassword() {
 
     return (
         <div className="min-h-screen flex relative">
-            <ToastContainer
+            {/* <ToastContainer
                 position="top-right"
                 autoClose={5000}
                 hideProgressBar={false}
@@ -123,7 +123,7 @@ export default function ResetPassword() {
                 draggable
                 pauseOnHover
                 theme="light"
-            />
+            /> */}
             <div className="hidden lg:flex lg:w-[25%] bg-gradient-to-br from-purple-100 to-purple-200 items-center justify-center p-8">
                 <div className="text-center">
                     <div className="flex items-center justify-center space-x-1 mb-4">

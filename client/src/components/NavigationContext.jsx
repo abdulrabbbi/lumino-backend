@@ -8,7 +8,43 @@ export const useNavigation = () => {
   if (!context) {
     throw new Error('useNavigation must be used within a NavigationProvider');
   }
-  return context;
+  
+  const saveNavigationState = (state) => {
+    // Save to both context and localStorage
+    context.saveNavigationState(state);
+    localStorage.setItem('activityNavigationState', JSON.stringify({
+      ...state,
+      _persisted: true // Add marker that this was persisted
+    }));
+  };
+
+  const getNavigationState = () => {
+    // First try context
+    const ctxState = context.getNavigationState();
+    if (ctxState) return ctxState;
+    
+    // Then try localStorage
+    const saved = localStorage.getItem('activityNavigationState');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed._persisted) {
+          context.saveNavigationState(parsed);
+          return parsed;
+        }
+      } catch (e) {
+        console.error('Failed to parse navigation state', e);
+      }
+    }
+    
+    return null;
+  };
+
+  return {
+    ...context,
+    saveNavigationState,
+    getNavigationState
+  };
 };
 
 export const NavigationProvider = ({ children }) => {

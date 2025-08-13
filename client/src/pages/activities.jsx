@@ -210,10 +210,8 @@ export default function Activities() {
       toast.info("Deze activiteit is vergrendeld. Upgrade je account om toegang te krijgen.")
       return
     }
-
+  
     // Save current navigation state before navigating
-    saveScrollPosition()
-    
     const navigationState = {
       activeTab,
       currentPage,
@@ -227,7 +225,13 @@ export default function Activities() {
       timestamp: Date.now()
     }
     
+    // Save both to context and localStorage for reliability
     saveNavigationState(navigationState)
+    localStorage.setItem('activityNavigationState', JSON.stringify(navigationState))
+    
+    // Save scroll position
+    saveScrollPosition()
+    
     navigate(`/activity-detail/${activity.id}`)
   }
 
@@ -350,7 +354,7 @@ export default function Activities() {
 
   return (
     <>
-      <ToastContainer style={{ zIndex: 1000000000 }} />
+      {/* <ToastContainer style={{ zIndex: 1000000000 }} /> */}
       {isGuest && showEmailPopup && <EmailCollectionPopup onClose={handleClosePopup} onSubmit={handleSubmitEmail} />}
       <div className="h-full flex flex-col items-center justify-center px-4 py-8">
         <div className="md:w-[90%] mx-auto w-full  text-center space-y-8">
