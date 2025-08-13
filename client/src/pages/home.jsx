@@ -384,7 +384,7 @@ export default function HeroSection() {
         </section>
 
 
-        <section className="py-16 px-4 mt-10 sm:px-6 lg:px-8 h-auto max-w-7xl m-auto ">
+        {/* <section className="py-16 px-4 mt-10 sm:px-6 lg:px-8 h-auto max-w-7xl m-auto ">
           <div className="max-w-4xl w-full m-auto">
             <div className="text-center mb-12">
               <h2 className="text-3xl poppins-700 lg:text-4xl  text-[#0F2137]">
@@ -476,7 +476,7 @@ export default function HeroSection() {
               </a>
             </div>
           </div>
-        </section>
+        </section> */}
 
         {/* Educational Quotes Section - Replaces Testimonials */}
         {/* <section className="bg-white py-16 px-4 sm:px-6 lg:px-8">
