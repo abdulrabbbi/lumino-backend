@@ -24,6 +24,7 @@ export default function Activities() {
   const navigate = useNavigate()
   const location = useLocation()
   const { saveNavigationState, getNavigationState, clearNavigationState } = useNavigation()
+
   const { saveScrollPosition, restoreScrollPosition } = useScrollPosition('activities')
   
   const [activeTab, setActiveTab] = useState("speelweek")
@@ -211,11 +212,14 @@ export default function Activities() {
       return
     }
   
+    saveScrollPosition();
+
+
     // Save current navigation state before navigating
-    const navigationState = {
+       const navigationState = {
       activeTab,
       currentPage,
-      scrollPosition: window.pageYOffset,
+      scrollPosition: window.scrollY,
       filters: activeTab === 'library' ? {
         searchTerm,
         selectedCategory,
@@ -223,7 +227,7 @@ export default function Activities() {
         selectedSort
       } : null,
       timestamp: Date.now()
-    }
+    };
     
     // Save both to context and localStorage for reliability
     saveNavigationState(navigationState)
@@ -231,7 +235,7 @@ export default function Activities() {
     
     // Save scroll position
     saveScrollPosition()
-    
+
     navigate(`/activity-detail/${activity.id}`)
   }
 
@@ -246,16 +250,15 @@ export default function Activities() {
     }
   }
 
-  // Helper function to get week status message
-  const getWeekStatusMessage = () => {
-    if (!weekInfo) return null
-    if (weekInfo.isWeekCompleted) {
-      return "🎉 Week voltooid! Nieuwe activiteiten ontgrendeld!"
-    } else if (weekInfo.completedActivities > 0) {
-      return `${weekInfo.completedActivities} van ${weekInfo.totalActivities} activiteiten voltooid`
+  useEffect(() => {
+    if (location.state?.fromActivity) {
+      const timer = setTimeout(() => {
+        restoreScrollPosition();
+      }, 100); // Small delay to ensure DOM is ready
+      
+      return () => clearTimeout(timer);
     }
-    return "Begin je week met deze geweldige activiteiten!"
-  }
+  }, [location.state, restoreScrollPosition]);
 
   // Calculate total pages for library tab
   const totalPages = Math.ceil(filteredActivities.length / activitiesPerPage)

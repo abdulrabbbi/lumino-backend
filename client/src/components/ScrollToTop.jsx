@@ -1,12 +1,19 @@
-import { useEffect } from "react";
-import { useLocation } from "react-router-dom";
+// components/ScrollToTop.js
+import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 
 const ScrollToTop = () => {
-  const { pathname } = useLocation();
+  const { pathname, state } = useLocation();
 
   useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [pathname]);
+    // Only scroll to top if not coming from an activity
+    if (!state?.fromActivity) {
+      window.scrollTo({
+        top: 0,
+        behavior: 'auto'
+      });
+    }
+  }, [pathname, state]);
 
   return null;
 };
