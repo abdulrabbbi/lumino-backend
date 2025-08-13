@@ -258,7 +258,7 @@ export default function HeroSection() {
 
         <section
           id="4rth-section"
-          className="relative h-auto max-w-7xl m-auto mt-16 rounded-3xl bg-gradient-to-br from-[#ad1a75] via-[#435CDE] to-[#344bc0] py-16 px-4 sm:px-6 lg:px-8"
+          className="relative h-auto max-w-7xl mb-10 m-auto mt-16 rounded-3xl bg-gradient-to-br from-[#ad1a75] via-[#435CDE] to-[#344bc0] py-16 px-4 sm:px-6 lg:px-8"
         >
           <div className="max-w-7xl mx-auto">
             <div className="text-center mb-12">
