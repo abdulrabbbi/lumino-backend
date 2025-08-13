@@ -360,7 +360,7 @@ function ActivityDetail() {
                       <img src={DetailImage2 || "/placeholder.svg"} alt="" />
                     </div>
                   </div>
-                  Effect op het kind
+                  Effect op je kind
                 </h2>
                 {activity.effect ? (
                   <p className="text-[#374151] inter-tight-400 text-md leading-relaxed">{activity.effect}</p>
