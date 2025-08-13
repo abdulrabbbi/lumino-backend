@@ -149,10 +149,10 @@ function ActivityDetail() {
     try {
       setIsMarkingComplete(true)
       
-      // const loadingToastId = toast.info('Completing activity...', { 
-      //   autoClose: false,
-      //   closeButton: false 
-      // })
+      const loadingToastId = toast.info('Even geduld, de activiteit wordt afgerond…', { 
+        autoClose: false,
+        closeButton: false 
+      })
 
       const response = await markCompleted(id)
       setCompleted(true)
@@ -160,7 +160,7 @@ function ActivityDetail() {
       let badgesToSet = response.badges || (response.badge ? [response.badge] : [])
       setEarnedBadges(badgesToSet)
 
-      // toast.dismiss(loadingToastId)
+      toast.dismiss(loadingToastId)
       
       setShowCelebration(true)
       
