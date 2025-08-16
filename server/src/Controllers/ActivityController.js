@@ -151,13 +151,24 @@ export const getActivityLibrary = async (req, res) => {
       if (user) {
         isLoggedIn = true;
         isTestFamily = user.isTestFamily;
-        console.log(`User ${user.username} isTestFamily: ${isTestFamily}`);
+        // console.log(`User ${user.username} isTestFamily: ${isTestFamily}`);
       }
     }
 
+    // Pagination params (default: page=1, limit=10)
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    // Total count
+    const totalItems = await Activity.countDocuments({ isApproved: true });
+
     let activities = await Activity.find({
       isApproved: true
-    }).sort({ createdAt: -1 });
+    })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
 
     // If user is logged in, fetch completed activity IDs
     let completedActivityIds = [];
@@ -190,12 +201,22 @@ export const getActivityLibrary = async (req, res) => {
       return a.isCompleted ? 1 : -1; // completed go after
     });
 
-    res.status(200).json({ success: true, activities: enrichedActivities });
+    res.status(200).json({
+      success: true,
+      activities: enrichedActivities,
+      pagination: {
+        totalItems,
+        totalPages: Math.ceil(totalItems / limit),
+        currentPage: page,
+        limit
+      }
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server Error" });
   }
 };
+
 export const getSingleActivity = async (req, res) => {
   try {
     const { id } = req.params;
@@ -1373,7 +1394,7 @@ export const getPlayWeekActivities = async (req, res) => {
     let userAgeGroup = null;
 
     let userTimezone = req.headers['user-timezone'];
-    console.log('user time zone', userTimezone);
+    // console.log('user time zone', userTimezone);
     
 
     try {
@@ -1404,7 +1425,7 @@ export const getPlayWeekActivities = async (req, res) => {
 
       if (!activitySet) {
         // Create first week
-        console.log(`🎯 Creating Week 1 for new user`);
+        // console.log(`🎯 Creating Week 1 for new user`);
         const currentMondayAt6AM = getCurrentMondayAt6AM(userTimezone);
         const freshActivities = await getTop5ActivitiesExcluding([], userAgeGroup, 1);
 
@@ -1426,10 +1447,10 @@ export const getPlayWeekActivities = async (req, res) => {
         const shouldRefresh = isPastMondayRefresh(activitySet.generatedAt, userTimezone);
         
         if (shouldRefresh) {
-          console.log(`🔄 Monday 6 AM refresh triggered for user`);
+          // console.log(`🔄 Monday 6 AM refresh triggered for user`);
           activitySet = await createNewMondayWeek(userId, activitySet, userAgeGroup, userTimezone);
         } else {
-          console.log(`⏳ Current week still active until next Monday 6 AM`);
+          // console.log(`⏳ Current week still active until next Monday 6 AM`);
           // Update completion status but keep same activities
           const currentWeekCompleted = await CompletedActivity.find({
             userId,
@@ -1447,7 +1468,7 @@ export const getPlayWeekActivities = async (req, res) => {
       weekNumber = activitySet.weekNumber;
     } else {
       // GUEST LOGIC
-      console.log(`👤 Guest user session`);
+      // console.log(`👤 Guest user session`);
 
       activitySet = req.session?.weeklyActivities;
       const lastRefresh = req.session?.lastMondayRefresh;
@@ -1458,7 +1479,7 @@ export const getPlayWeekActivities = async (req, res) => {
         const currentMondayAt6AM = getCurrentMondayAt6AM(userTimezone);
         const newWeekNumber = activitySet ? activitySet.weekNumber + 1 : 1;
         
-        console.log(`🔄 Guest Monday refresh: Creating Week ${newWeekNumber}`);
+        // console.log(`🔄 Guest Monday refresh: Creating Week ${newWeekNumber}`);
 
         const previouslyUsedActivities = activitySet?.activities || [];
         const freshActivities = await getTop5ActivitiesExcluding(previouslyUsedActivities, null, newWeekNumber);
@@ -1476,9 +1497,9 @@ export const getPlayWeekActivities = async (req, res) => {
         req.session.completedActivitiesInWeek = [];
         req.session.lastMondayRefresh = currentMondayAt6AM.toISOString();
 
-        console.log(`✅ Guest Week ${newWeekNumber} created`);
+        // console.log(`✅ Guest Week ${newWeekNumber} created`);
       } else {
-        console.log(`⏳ Guest week still active until next Monday 6 AM`);
+        // console.log(`⏳ Guest week still active until next Monday 6 AM`);
       }
 
       weekNumber = activitySet.weekNumber;
@@ -1561,7 +1582,7 @@ export const getPlayWeekActivities = async (req, res) => {
       refreshMessage = `⏰ New activities in ${daysUntilRefresh} days (Monday 6 AM)`;
     }
 
-    console.log(`🎯 FINAL: Returning Week ${weekNumber} activities (Monday refresh system)`);
+    // console.log(`🎯 FINAL: Returning Week ${weekNumber} activities (Monday refresh system)`);
 
     res.status(200).json({
       success: true,
@@ -1594,7 +1615,7 @@ const createNewMondayWeek = async (userId, currentWeekSet, userAgeGroup, userTim
   try {
     const currentMondayAt6AM = getCurrentMondayAt6AM(userTimezone);
     
-    console.log(`🔄 Creating new Monday week from Week ${currentWeekSet.weekNumber} to Week ${currentWeekSet.weekNumber + 1}`);
+    // console.log(`🔄 Creating new Monday week from Week ${currentWeekSet.weekNumber} to Week ${currentWeekSet.weekNumber + 1}`);
     
     // Mark current week as finished
     const currentWeekCompleted = await CompletedActivity.find({
@@ -1610,7 +1631,7 @@ const createNewMondayWeek = async (userId, currentWeekSet, userAgeGroup, userTim
     currentWeekSet.weekEndedAt = new Date();
     await currentWeekSet.save();
 
-    console.log(`📊 Week ${currentWeekSet.weekNumber} Final Status: ${completedActivityIds.length}/5 completed`);
+    // console.log(`📊 Week ${currentWeekSet.weekNumber} Final Status: ${completedActivityIds.length}/5 completed`);
 
     // Get all previously used activities
     const allPreviousWeeks = await WeekPlaySet.find({
@@ -1647,7 +1668,7 @@ const createNewMondayWeek = async (userId, currentWeekSet, userAgeGroup, userTim
 
     await newWeekSet.save();
     
-    console.log(`✅ Created Week ${newWeekSet.weekNumber} with ${freshActivities.length} NEW activities`);
+    // console.log(`✅ Created Week ${newWeekSet.weekNumber} with ${freshActivities.length} NEW activities`);
     
     return newWeekSet;
 
@@ -1659,7 +1680,7 @@ const createNewMondayWeek = async (userId, currentWeekSet, userAgeGroup, userTim
 
 const getTop5ActivitiesExcluding = async (excludeIds = [], userAgeGroup = null, weekNumber = 1) => {
   try {
-    console.log(`🎯 Getting 5 activities for Week ${weekNumber} (Monday System)`);
+    // console.log(`🎯 Getting 5 activities for Week ${weekNumber} (Monday System)`);
     
     const excludeObjectIds = excludeIds.map(id => {
       try {
@@ -1673,7 +1694,7 @@ const getTop5ActivitiesExcluding = async (excludeIds = [], userAgeGroup = null, 
 
     // Age-based selection if user has age group set
     if (userAgeGroup) {
-      console.log(`🎯 Age-based selection for: ${userAgeGroup}`);
+      // console.log(`🎯 Age-based selection for: ${userAgeGroup}`);
       
       const ageBasedQuery = {
         isApproved: true,
@@ -1689,7 +1710,7 @@ const getTop5ActivitiesExcluding = async (excludeIds = [], userAgeGroup = null, 
         })
         .limit(10);
 
-      console.log(`Found ${activities.length} activities for age group ${userAgeGroup}`);
+      // console.log(`Found ${activities.length} activities for age group ${userAgeGroup}`);
 
       // Fill remaining slots with high-rated activities
       if (activities.length < 5) {
@@ -1711,7 +1732,7 @@ const getTop5ActivitiesExcluding = async (excludeIds = [], userAgeGroup = null, 
 
     } else {
       // High-rated selection for users without age group
-      console.log(`🎯 High-rated selection for Week ${weekNumber}`);
+      // console.log(`🎯 High-rated selection for Week ${weekNumber}`);
       
       const query = {
         isApproved: true,
@@ -1729,7 +1750,7 @@ const getTop5ActivitiesExcluding = async (excludeIds = [], userAgeGroup = null, 
 
     // Final fallback
     if (activities.length < 5) {
-      console.log('🆘 Final fallback - getting remaining activities');
+      // console.log('🆘 Final fallback - getting remaining activities');
 
       const usedIds = [...excludeObjectIds, ...activities.map(a => a._id)];
       const finalFallback = await Activity.find({ 
@@ -1748,10 +1769,10 @@ const getTop5ActivitiesExcluding = async (excludeIds = [], userAgeGroup = null, 
 
     const finalActivities = activities.slice(0, 5);
     
-    console.log(`✅ Monday System: Week ${weekNumber} activities selected:`);
-    finalActivities.forEach((activity, index) => {
-      console.log(`  ${index + 1}. ${activity.title} (Rating: ${activity.averageRating || 0})`);
-    });
+    // // console.log(`✅ Monday System: Week ${weekNumber} activities selected:`);
+    // finalActivities.forEach((activity, index) => {
+    //   // console.log(`  ${index + 1}. ${activity.title} (Rating: ${activity.averageRating || 0})`);
+    // });
 
     return finalActivities;
 

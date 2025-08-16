@@ -347,7 +347,7 @@ const totalPages = Math.ceil(pendingCount / activitiesPerPage)
                         required
                       >
                         <option value="">Selecteer een leergebied</option>
-                        <option value="Emotionele gezondheid">Emotionele Gezondheid</option>
+                        <option value="Emotionele Gezondheid">Emotionele Gezondheid</option>
                         <option value="Veerkracht">Veerkracht</option>
                         <option value="Dankbaarheid">Dankbaarheid</option>
                         <option value="Zelfzorg">Zelfzorg</option>

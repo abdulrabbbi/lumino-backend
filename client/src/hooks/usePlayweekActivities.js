@@ -14,7 +14,7 @@ export function usePlayweekActivities() {
   
  
   const [playweekActivities, setPlayweekActivities] = useState([]);
-  const [weekInfo, setWeekInfo] = useState(null); // ✅ Add weekInfo state
+  const [weekInfo, setWeekInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
