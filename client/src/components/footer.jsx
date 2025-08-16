@@ -68,7 +68,7 @@ const Footer = () => {
 
                         <div className="flex flex-col items-end justify-end gap-3 space-x-4">
                             <div className="text-[#B1B7BE] text-sm">
-                            Met liefde gemaakt voor kinderen over de hele wereld
+                            Met liefde gemaakt voor kinderen over de hele wereld.
                             </div>
                             <div className="flex items-end justify-end space-x-2">
                                 <div className="w-8 h-8  bg-[#8937EA99] cursor-pointer rounded-full flex items-center justify-center">
