@@ -19,18 +19,18 @@ import { BASE_URL } from "../utils/api"
 import axios from "axios"
 import { useNavigation } from "../components/NavigationContext"
 import { useScrollPosition } from "../hooks/useScrollPosition"
-import { useActivityLibrary } from "../hooks/useActivityLibrary"
 
 export default function Activities() {
   const navigate = useNavigate()
   const location = useLocation()
   const { saveNavigationState, getNavigationState, clearNavigationState } = useNavigation()
+
   const { saveScrollPosition, restoreScrollPosition } = useScrollPosition('activities')
   
   const [activeTab, setActiveTab] = useState("speelweek")
   const [totalCountActivities, settotalCountActivities] = useState(0)
   const [currentPage, setCurrentPage] = useState(1)
-  const activitiesPerPage = 10
+  const activitiesPerPage = 30
   const [hasRestoredState, setHasRestoredState] = useState(false)
 
   const activityListRef = useRef(null)
@@ -38,16 +38,7 @@ export default function Activities() {
   // usePlayweekActivities is still used for 'speelweek' tab
   const { playweekActivities, weekInfo, loading: playweekLoading, error: playweekError } = usePlayweekActivities()
 
-  // useActivityLibrary for default library view
-  const {
-    activities: libraryActivities,
-    loading: libraryLoading,
-    error: libraryError,
-    pagination: libraryPagination,
-    refetch: refetchLibrary
-  } = useActivityLibrary(currentPage, activitiesPerPage)
-
-  // useActivitiesFilter for when filters are applied
+  // useActivitiesFilter now fetches its own data
   const {
     activities: filteredActivities,
     loading: filterLoading,
@@ -66,23 +57,13 @@ export default function Activities() {
 
   const [showEmailPopup, setShowEmailPopup] = useState(false)
   const [isGuest, setIsGuest] = useState(false)
-  const [filtersApplied, setFiltersApplied] = useState(false)
 
-  // Check if filters are applied
-  useEffect(() => {
-    const hasFilters = 
-      searchTerm !== '' || 
-      selectedCategory !== 'Alle Leergebieden' || 
-      selectedAge !== 'alle-leeftijden' || 
-      selectedSort !== 'hoogstgewaardeerde'
-    setFiltersApplied(hasFilters)
-  }, [searchTerm, selectedCategory, selectedAge, selectedSort])
-
-  // Restore navigation state
+  // Restore navigation state when component mounts or when returning from activity
   useEffect(() => {
     if (!hasRestoredState) {
       const savedState = getNavigationState()
       if (savedState && location.state?.fromActivity) {
+        // Restore the exact state
         setActiveTab(savedState.activeTab)
         setCurrentPage(savedState.currentPage || 1)
         
@@ -95,9 +76,10 @@ export default function Activities() {
         
         setHasRestoredState(true)
         
+        // Restore scroll position after a short delay to ensure content is loaded
         setTimeout(() => {
           restoreScrollPosition()
-          clearNavigationState()
+          clearNavigationState() // Clear after successful restoration
         }, 500)
       } else {
         setHasRestoredState(true)
@@ -130,6 +112,18 @@ export default function Activities() {
     }
     fetchTotalCountActivites()
   }, [])
+
+  // Effect to adjust currentPage if filters change and current page becomes invalid
+  useEffect(() => {
+    if (activeTab === "library") {
+      const newTotalPages = Math.ceil(filteredActivities.length / activitiesPerPage)
+      if (currentPage > newTotalPages && newTotalPages > 0) {
+        setCurrentPage(newTotalPages)
+      } else if (newTotalPages === 0 && currentPage !== 1) {
+        setCurrentPage(1)
+      }
+    }
+  }, [filteredActivities.length, activeTab, activitiesPerPage, currentPage])
 
   const handleSubmitEmail = async (email) => {
     try {
@@ -178,10 +172,12 @@ export default function Activities() {
       })
     }
 
-    // Use filtered activities if filters are applied, otherwise use library activities
-    const activitiesToShow = filtersApplied ? filteredActivities : libraryActivities
+    // Pagination logic for 'library' tab
+    const indexOfLastActivity = currentPage * activitiesPerPage
+    const indexOfFirstActivity = indexOfLastActivity - activitiesPerPage
+    const currentActivities = filteredActivities.slice(indexOfFirstActivity, indexOfLastActivity)
 
-    return activitiesToShow.map((activity) => {
+    return currentActivities.map((activity) => {
       const domain = (activity.learningDomain || "").trim()
       return {
         id: activity._id,
@@ -218,7 +214,9 @@ export default function Activities() {
   
     saveScrollPosition();
 
-    const navigationState = {
+
+    // Save current navigation state before navigating
+       const navigationState = {
       activeTab,
       currentPage,
       scrollPosition: window.scrollY,
@@ -231,8 +229,11 @@ export default function Activities() {
       timestamp: Date.now()
     };
     
+    // Save both to context and localStorage for reliability
     saveNavigationState(navigationState)
     localStorage.setItem('activityNavigationState', JSON.stringify(navigationState))
+    
+    // Save scroll position
     saveScrollPosition()
 
     navigate(`/activity-detail/${activity.id}`)
@@ -240,9 +241,9 @@ export default function Activities() {
 
   const handleTabChange = (tab) => {
     setActiveTab(tab)
-    setCurrentPage(1)
     if (tab === "library") {
       resetFilters()
+      setCurrentPage(1)
       if (activityListRef.current) {
         activityListRef.current.scrollIntoView({ behavior: "smooth" })
       }
@@ -253,16 +254,14 @@ export default function Activities() {
     if (location.state?.fromActivity) {
       const timer = setTimeout(() => {
         restoreScrollPosition();
-      }, 100);
+      }, 100); // Small delay to ensure DOM is ready
       
       return () => clearTimeout(timer);
     }
   }, [location.state, restoreScrollPosition]);
 
-  // Calculate total pages based on whether filters are applied
-  const totalPages = filtersApplied 
-    ? Math.ceil(filteredActivities.length / activitiesPerPage)
-    : libraryPagination?.totalPages || 1
+  // Calculate total pages for library tab
+  const totalPages = Math.ceil(filteredActivities.length / activitiesPerPage)
 
   // Helper function to generate pagination range
   const getPaginationRange = (currentPage, totalPages) => {
@@ -358,7 +357,7 @@ export default function Activities() {
 
   return (
     <>
-      <ToastContainer style={{ zIndex: 1000000000 }} />
+      {/* <ToastContainer style={{ zIndex: 1000000000 }} /> */}
       {isGuest && showEmailPopup && <EmailCollectionPopup onClose={handleClosePopup} onSubmit={handleSubmitEmail} />}
       <div className="h-full flex flex-col items-center justify-center px-4 py-8">
         <div className="md:w-[90%] mx-auto w-full  text-center space-y-8">
@@ -551,22 +550,22 @@ export default function Activities() {
                   </p>
                 </div>
               )}
-              {(playweekLoading || (activeTab === 'library' && (libraryLoading || (filtersApplied && filterLoading)))) && <LoaderOverlay />}
-              {activeTab === "library" && libraryError && !filtersApplied && (
+              {(playweekLoading || filterLoading) && <LoaderOverlay />}
+              {activeTab === "library" && filterError === "Login required to view completed activities." ? (
                 <div className="flex justify-center items-center py-8">
-                  <div className="text-red-500 text-center">
-                    <p>Fout bij het laden van activiteiten:</p>
-                    <p className="text-sm">{libraryError}</p>
+                  <div className="text-[#666666] inter-tight-400 text-[16px] text-center">
+                    <p>Geen activiteiten gevonden met de huidige filters.</p>
                   </div>
                 </div>
-              )}
-              {activeTab === "library" && filterError && filtersApplied && (
-                <div className="flex justify-center items-center py-8">
-                  <div className="text-red-500 text-center">
-                    <p>Fout bij het laden van activiteiten:</p>
-                    <p className="text-sm">{filterError}</p>
+              ) : (
+                (playweekError || filterError) && (
+                  <div className="flex justify-center items-center py-8">
+                    <div className="text-red-500 text-center">
+                      <p>Fout bij het laden van activiteiten:</p>
+                      <p className="text-sm">{playweekError || filterError}</p>
+                    </div>
                   </div>
-                </div>
+                )
               )}
               {!playweekLoading &&
                 !playweekError &&
@@ -578,21 +577,14 @@ export default function Activities() {
                     </div>
                   </div>
                 )}
-              {!libraryLoading && !libraryError && activeTab === "library" && !filtersApplied && libraryActivities.length === 0 && (
+              {!filterLoading && !filterError && activeTab === "library" && filteredActivities.length === 0 && (
                 <div className="flex justify-center items-center py-8">
                   <div className="text-[#666666] inter-tight-400 text-[16px] text-center">
-                    <p>Geen activiteiten gevonden in de bibliotheek.</p>
+                    <p>Geen activiteiten gevonden met the current filters.</p>
                   </div>
                 </div>
               )}
-              {!filterLoading && !filterError && activeTab === "library" && filtersApplied && filteredActivities.length === 0 && (
-                <div className="flex justify-center items-center py-8">
-                  <div className="text-[#666666] inter-tight-400 text-[16px] text-center">
-                    <p>Geen activiteiten gevonden met de huidige filters.</p>
-                  </div>
-                </div>
-              )}
-              {!playweekLoading && !(activeTab === 'library' && (libraryLoading || (filtersApplied && filterLoading))) && (
+              {!playweekLoading && !filterLoading && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {getCurrentActivities().map((activity, index) => (
                     <div
