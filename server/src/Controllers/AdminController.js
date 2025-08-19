@@ -229,6 +229,7 @@ export const getPlatformStats = async (req, res) => {
     const totalSubscribers = await User.countDocuments();
     const totalActivities = await Activity.countDocuments();
     const completedActivities = await Activity.countDocuments({ status: "Voltooid" });
+    const completedActivitiesCount = await CompletedActivity.countDocuments();
     const newSubscribers = await User.countDocuments({ createdAt: { $gte: getDate30DaysAgo() } });
     let avgActivitiesPerUser = 0;
     if (totalSubscribers > 0) {
@@ -249,7 +250,8 @@ export const getPlatformStats = async (req, res) => {
       avgActivitiesPerUser: avgActivitiesPerUser.toFixed(2),
       completedActivities,
       newSubscribersLast30Days: newSubscribers,
-      customerLifetimeValue: `€${avgPrice.toFixed(2)}`
+      customerLifetimeValue: `€${avgPrice.toFixed(2)}`,
+      TotalActvitiesCompleted: completedActivitiesCount,
     });
 
   } catch (error) {

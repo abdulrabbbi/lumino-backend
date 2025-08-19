@@ -912,7 +912,7 @@ const createNewMondayWeek = async (userId, currentWeekSet, userAgeGroup, userTim
 
     // console.log(`📊 Week ${currentWeekSet.weekNumber} Final Status: ${completedActivityIds.length}/5 completed`);
 
-    // Get all previously used activities
+    // Get all previously used activities from previous weeks
     const allPreviousWeeks = await WeekPlaySet.find({
       userId,
       weekNumber: { $lte: currentWeekSet.weekNumber }
@@ -923,11 +923,18 @@ const createNewMondayWeek = async (userId, currentWeekSet, userAgeGroup, userTim
       previouslyUsedActivities.push(...week.activities.map(id => id.toString()));
     });
 
+    // ✅ FIX: Also get ALL activities the user has ever completed (from library or weekly sets)
+    const allCompletedActivities = await CompletedActivity.find({ userId });
+    const allCompletedActivityIds = allCompletedActivities.map(c => c.activityId.toString());
+
+    // Combine both exclusion lists: previously used + all completed
+    const activitiesToExclude = [...new Set([...previouslyUsedActivities, ...allCompletedActivityIds])];
+
     const newWeekNumber = currentWeekSet.weekNumber + 1;
     
-    // Get fresh activities
+    // Get fresh activities (excluding both previously used AND completed activities)
     const freshActivities = await getTop5ActivitiesExcluding(
-      previouslyUsedActivities, 
+      activitiesToExclude, 
       userAgeGroup, 
       newWeekNumber
     );
