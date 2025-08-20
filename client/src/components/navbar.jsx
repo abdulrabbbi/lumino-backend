@@ -77,18 +77,18 @@ export default function Navbar() {
     { label: "Home", icon: <Home className="h-4 w-4 mr-1" />, to: "/" },
     { label: "Activiteiten", icon: <Activity className="h-4 w-4 mr-1" />, to: "/activities" },
     { label: "Vooruitgang", icon: <BarChart2 className="h-4 w-4 mr-1" />, to: "/progress" },
-    { label: "Over ons", icon: <Info className="h-4 w-4 mr-1" />, to: "/about-us" },
     ...(isTestFamily ? [] : [{ label: "Abonnementen", icon: <Newspaper className="h-4 w-4 mr-1" />, to: "/pricing" }]),
     { label: "Mijlpalen", icon: <Badge className="h-4 w-4 mr-1" />, to: "/badge-journey" },
+    { label: "Over ons", icon: <Info className="h-4 w-4 mr-1" />, to: "/about-us" },
   ]
   
   const bottomNavItems = [
     { label: "Home", icon: <Home className="h-5 w-5" />, to: "/" },
     { label: "Activiteiten", icon: <Activity className="h-5 w-5" />, to: "/activities" },
     { label: "Vooruitgang", icon: <BarChart2 className="h-5 w-5" />, to: "/progress" },
-    { label: "Over ons", icon: <Info className="h-5 w-5" />, to: "/about-us" },
     ...(isTestFamily ? [] : [{ label: "Abonnementen", icon: <Newspaper className="h-5 w-5" />, to: "/pricing" }]),
     { label: "Mijlpalen", icon: <Badge className="h-5 w-5" />, to: "/badge-journey" },
+    { label: "Over ons", icon: <Info className="h-5 w-5" />, to: "/about-us" },
   ]
   return (
     <>
