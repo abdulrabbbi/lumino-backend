@@ -1,13 +1,39 @@
+/* eslint-disable no-unused-vars */
 import { Link, useNavigate } from 'react-router-dom'
 import Logo from '../../public/images/logo.svg'
+import {jwtDecode} from "jwt-decode"
+import { useEffect, useState } from 'react';
+
 
 export default function CreateProfile() {
+      const [isLoggedIn, setIsLoggedIn] = useState(false)
+      const [isTestFamily, setIsTestFamily] = useState(false)
 
     const navigate = useNavigate();
 
     const handleContinue = () =>{
         navigate('/user-profile/profile');
     }
+
+     useEffect(() => {
+        const token = localStorage.getItem("authToken")
+        if (token) {
+          try {
+            const decoded = jwtDecode(token)
+            setIsLoggedIn(true)
+            setIsTestFamily(decoded?.isTestFamily === true)
+            
+          } catch (error) {
+            console.error("Failed to decode token", error)
+            setIsLoggedIn(false)
+            setIsTestFamily(false)
+          }
+        } else {
+          setIsLoggedIn(false)
+          setIsTestFamily(false)
+        }
+      }, [])
+    
 
     return (
         <div className="min-h-screen flex relative">
@@ -42,11 +68,11 @@ export default function CreateProfile() {
                                 Create Profile
                             </button>
                         </div>
-                        <Link to={"/test-register"}>
+                       {!isTestFamily && <Link to={"/test-register"}>
                         <div className='flex justify-center items-center'>
                             <span className='text-[#8A8A8A] text-sm cursor-pointer underline'>Subscriber Testers Family</span>
                         </div>
-                        </Link>
+                        </Link>}
                     </div>
                 </div>
             </div>

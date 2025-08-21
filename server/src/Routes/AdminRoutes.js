@@ -9,7 +9,7 @@ router.get("/get-all-badges", getAllBadges);
 
 router.get('/get-all-parent-approval-activities', getParentApprovalActivity);
 router.post("/create-bulk-activities", authenticate, createBulkActivities);
-router.post("/create-activity", authenticate, createActivity);
+router.post("/create-activity-by-admin", authenticate, createActivity);
 
 router.post('/approve-activity/:id', authenticate, approveActivity);
 router.put('/edit-activity/:id', authenticate, editParentsActivity);

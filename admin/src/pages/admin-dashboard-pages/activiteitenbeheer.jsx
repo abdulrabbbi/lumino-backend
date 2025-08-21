@@ -146,8 +146,8 @@ export default function ActiviteitenBeheer() {
         })
         return
       }
-      if (!formData.creatorName || !formData.learningDomain) {
-        toast.error("Maker naam en leergebied zijn verplicht voor bulk activiteiten", {
+      if (!formData.learningDomain) {
+        toast.error("Leergebied is verplicht voor bulk activiteiten", {
           position: "top-right",
           autoClose: 3000,
         })
@@ -168,7 +168,8 @@ export default function ActiviteitenBeheer() {
             materials: activity.materials || undefined,
             effect: activity.effect || undefined,
           })),
-          creatorName: formData.creatorName,
+          // Alleen creatorName meesturen als het niet leeg is
+          creatorName: formData.creatorName.trim() || undefined,
           learningDomain: formData.learningDomain,
           ageGroup: formData.ageGroup || undefined,
           time: formData.time || undefined,
@@ -206,8 +207,7 @@ export default function ActiviteitenBeheer() {
         !formData.title ||
         !formData.description ||
         !formData.learningDomain ||
-        !formData.instructions ||
-        !formData.creatorName
+        !formData.instructions 
       ) {
         toast.error("Vul alle verplichte velden in", {
           position: "top-right",
@@ -245,7 +245,8 @@ export default function ActiviteitenBeheer() {
             materials: formData.materials,
             learningDomain: formData.learningDomain,
             ageGroup: formData.ageGroup,
-            creatorName: formData.creatorName,
+            // Alleen creatorName meesturen als het niet leeg is
+            creatorName: formData.creatorName.trim() || undefined,
             time: formData.time,
             status: "Actief",
             effect: formData.effect,
@@ -265,7 +266,8 @@ export default function ActiviteitenBeheer() {
             materials: formData.materials,
             learningDomain: formData.learningDomain,
             ageGroup: formData.ageGroup,
-            creatorName: formData.creatorName,
+            // Alleen creatorName meesturen als het niet leeg is
+            creatorName: formData.creatorName.trim() || undefined,
             time: formData.time,
             status: "Actief",
             effect: formData.effect,
@@ -857,7 +859,7 @@ export default function ActiviteitenBeheer() {
                     <div className="mt-6 space-y-6">
                       <div>
                         <label className="mb-2 block text-sm font-medium text-[#000000]">
-                          Maker Naam <span className="text-red-500">*</span>
+                          Maker Naam 
                         </label>
                         <input
                           type="text"
@@ -964,7 +966,7 @@ export default function ActiviteitenBeheer() {
                     </div>
                     <div>
                       <label className="mb-2 block text-sm font-medium text-[#000000]">
-                        Maker Naam <span className="text-red-500">*</span>
+                        Maker Naam 
                       </label>
                       <input
                         type="text"

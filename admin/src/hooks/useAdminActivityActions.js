@@ -48,7 +48,7 @@ export default function useAdminActivityActions() {
   const createActivity = async (activityData) => {
     try {
       setLoading(true);
-      const response = await axios.post(`${BASE_URL}/create-activity`, activityData, {
+      const response = await axios.post(`${BASE_URL}/create-activity-by-admin`, activityData, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('adminAuthToken')}`
         }

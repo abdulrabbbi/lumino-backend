@@ -20,7 +20,7 @@ export const learningDomainImages = {
   export const learningDomainColors = {
     'Emotionele Gezondheid': 'bg-[#EF4444] text-white', // fixed casing
     'Veerkracht': 'bg-[#3B82F6] text-white',
-    'Dankbaarheid': 'bg-orange-500 text-white',
+    'Dankbaarheid': 'bg-orange-600 text-white',
     'Zelfzorg': 'bg-[#10B981] text-white',
     'Geldwijsheid': 'bg-[#8B5CF6] text-white',
     'Ondernemerschap': 'bg-[#F97316] text-white',
@@ -29,7 +29,7 @@ export const learningDomainImages = {
   export const newlearningDomainColors = {
     'Emotionele Gezondheid': 'bg-[#DC2626] text-white', // was #EF4444
     'Veerkracht': 'bg-[#2563EB] text-white',           // was #3B82F6
-    'Dankbaarheid': 'bg-orange-600 text-white',         // was bg-orange-500
+    'Dankbaarheid': 'bg-orange-500 text-white',         // was bg-orange-500
     'Zelfzorg': 'bg-[#059669] text-white',              // was #10B981
     'Geldwijsheid': 'bg-[#7C3AED] text-white',          // was #8B5CF6
     'Ondernemerschap': 'bg-[#EA580C] text-white',       // was #F97316

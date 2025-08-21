@@ -229,7 +229,7 @@ export const getPlatformStats = async (req, res) => {
     const totalSubscribers = await User.countDocuments();
     const totalActivities = await Activity.countDocuments();
     const completedActivities = await Activity.countDocuments({ status: "Voltooid" });
-    const completedActivitiesCount = await CompletedActivity.countDocuments();
+    const completedActivitiesCount = await CompletedActivity.countDocuments({ userId: {$ne: null}});
     const newSubscribers = await User.countDocuments({ createdAt: { $gte: getDate30DaysAgo() } });
     let avgActivitiesPerUser = 0;
     if (totalSubscribers > 0) {
@@ -274,8 +274,8 @@ export const createActivity = async (req, res) => {
       status = 'Actief';
     }
 
-    let creatorName = req.user.username;
-
+    let creatorName = req.body.creatorName || req.user.username || "Floris";
+    
     const activity = new Activity({
       ...req.body,
       createdBy: user._id,
@@ -307,6 +307,9 @@ export const createBulkActivities = async (req, res) => {
 
     const { activities: bulkActivities, creatorName, learningDomain, ageGroup, time } = req.body;
 
+    const defaultCreatorName = creatorName || "Floris";
+    
+
     if (!bulkActivities || !Array.isArray(bulkActivities) || bulkActivities.length === 0) {
       return res.status(400).json({ error: "No activities provided" });
     }
@@ -327,7 +330,7 @@ export const createBulkActivities = async (req, res) => {
       ...activity,
       createdBy: user._id,
       userId: user._id,
-      creatorName,
+      creatorName: defaultCreatorName,
       learningDomain,
       ageGroup: ageGroup || undefined,
       time: time || undefined,
