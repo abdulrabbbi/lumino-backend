@@ -151,11 +151,10 @@ export const getActivityLibrary = async (req, res) => {
       if (user) {
         isLoggedIn = true;
         isTestFamily = user.isTestFamily;
-        // console.log(`User ${user.username} isTestFamily: ${isTestFamily}`);
       }
     }
 
-    // Pagination params (default: page=1, limit=10)
+    // Pagination params
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
@@ -163,12 +162,11 @@ export const getActivityLibrary = async (req, res) => {
     // Total count
     const totalItems = await Activity.countDocuments({ isApproved: true });
 
+    // Get more activities for better sorting
     let activities = await Activity.find({
       isApproved: true
     })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
+      .sort({ createdAt: -1 });
 
     // If user is logged in, fetch completed activity IDs
     let completedActivityIds = [];
@@ -177,7 +175,7 @@ export const getActivityLibrary = async (req, res) => {
       completedActivityIds = completedActivities.map(a => a.activityId.toString());
     }
 
-    // Map activities with isLocked and isCompleted flags
+    // Map activities with weighted score and flags
     const enrichedActivities = activities.map(activity => {
       const isCompleted = completedActivityIds.includes(activity._id.toString());
 
@@ -188,22 +186,50 @@ export const getActivityLibrary = async (req, res) => {
         isLocked = false;
       }
 
+      const weightedScore = calculateWeightedScore(activity);
+
       return {
         ...activity.toObject(),
         isLocked,
-        isCompleted
+        isCompleted,
+        weightedScore
       };
     });
 
-    // Sort so incomplete activities come first
+    // Sort by weighted score (better activities first)
+    enrichedActivities.sort((a, b) => {
+      // First by weighted score
+      if (b.weightedScore !== a.weightedScore) {
+        return b.weightedScore - a.weightedScore;
+      }
+      // Then by review count
+      const aReviewCount = a.ratings?.length || 0;
+      const bReviewCount = b.ratings?.length || 0;
+      if (bReviewCount !== aReviewCount) {
+        return bReviewCount - aReviewCount;
+      }
+      // Finally by rating
+      return (b.averageRating || 0) - (a.averageRating || 0);
+    });
+
+    // Then sort so incomplete activities come first within same quality tier
     enrichedActivities.sort((a, b) => {
       if (a.isCompleted === b.isCompleted) return 0;
-      return a.isCompleted ? 1 : -1; // completed go after
+      return a.isCompleted ? 1 : -1;
+    });
+
+    // Apply pagination after sorting
+    const paginatedActivities = enrichedActivities.slice(skip, skip + limit);
+
+    // Remove weightedScore from response
+    const responseActivities = paginatedActivities.map(activity => {
+      const { weightedScore, ...activityWithoutScore } = activity;
+      return activityWithoutScore;
     });
 
     res.status(200).json({
       success: true,
-      activities: enrichedActivities,
+      activities: responseActivities,
       pagination: {
         totalItems,
         totalPages: Math.ceil(totalItems / limit),
@@ -277,12 +303,12 @@ export const filterActivities = async (req, res) => {
       query.title = { $regex: searchTerm, $options: "i" }
     }
 
-    // Category filter: Corrected to use 'learningDomain' from the schema
+    // Category filter
     if (category && category !== "Alle Leergebieden") {
       query.learningDomain = category
     }
 
-    // Age filter: Corrected to match ageGroup string with spaces
+    // Age filter
     if (age && age !== "alle-leeftijden") {
       const formattedAge = age.replace("-", " - ")
       query.ageGroup = formattedAge
@@ -291,72 +317,97 @@ export const filterActivities = async (req, res) => {
     const userId = req.user?.userId
     let isTestFamily = false
     let isLoggedIn = false
-    let completedActivityIds = new Set() // To store IDs of activities completed by the user
+    let completedActivityIds = new Set()
 
     if (userId) {
       const user = await User.findById(userId)
       if (user) {
         isLoggedIn = true
         isTestFamily = user.isTestFamily
-        // Fetch all completed activities for the logged-in user
         const completedActivities = await CompletedActivity.find({ userId }).select("activityId")
         completedActivityIds = new Set(completedActivities.map((c) => c.activityId.toString()))
       }
     }
 
-    // --- Handle 'voltooid' filter (strict filtering) ---
+    // Handle 'voltooid' filter
     if (sort === "voltooid") {
       if (!isLoggedIn) {
-        // If a guest user tries to sort by 'voltooid', return an empty array
         return res.status(200).json({
           success: true,
           activities: [],
           message: "Login required to view completed activities.",
         })
       }
-      // If logged in, add a filter to the query to only include completed activities
       query._id = { $in: Array.from(completedActivityIds).map((id) => new mongoose.Types.ObjectId(id)) }
     }
 
     // Fetch activities based on the constructed query
     const activities = await Activity.find(query).exec()
 
-    // Add isLocked and isCompleted flags to all activities before sending
+    // Add isLocked and isCompleted flags
     const finalActivities = activities.map((activity) => {
       const activityObject = activity.toObject()
       let isLocked = true
       if (isLoggedIn && isTestFamily) {
         isLocked = false
       }
-      // Check if the current activity's ID is in the set of completed activities for the user
       const isCompleted = completedActivityIds.has(activityObject._id.toString())
 
-      return { ...activityObject, isLocked, isCompleted }
+      // Calculate weighted score for sorting
+      const weightedScore = calculateWeightedScore(activityObject);
+
+      return { 
+        ...activityObject, 
+        isLocked, 
+        isCompleted,
+        weightedScore
+      }
     })
 
-    // --- Apply sorting logic ---
+    // Apply sorting logic
     if (sort === "hoogstgewaardeerde") {
-      finalActivities.sort((a, b) => (b.averageRating || 0) - (a.averageRating || 0))
+      // Sort by weighted score (considers both rating and review count)
+      finalActivities.sort((a, b) => {
+        if (b.weightedScore !== a.weightedScore) {
+          return b.weightedScore - a.weightedScore;
+        }
+        // If weighted scores are equal, prefer more reviews
+        const aReviewCount = a.ratings?.length || 0;
+        const bReviewCount = b.ratings?.length || 0;
+        if (bReviewCount !== aReviewCount) {
+          return bReviewCount - aReviewCount;
+        }
+        // Finally by rating
+        return (b.averageRating || 0) - (a.averageRating || 0);
+      });
     } else if (sort === "meestgewaardeerde") {
-      // Assuming 'likes' is a field in your Activity model for 'meestgewaardeerde'
-      finalActivities.sort((a, b) => (b.likes || 0) - (a.likes || 0))
+      // Sort by number of ratings first, then by average rating
+      finalActivities.sort((a, b) => {
+        const aReviewCount = a.ratings?.length || 0;
+        const bReviewCount = b.ratings?.length || 0;
+        if (bReviewCount !== aReviewCount) {
+          return bReviewCount - aReviewCount;
+        }
+        return (b.averageRating || 0) - (a.averageRating || 0);
+      });
     }
 
     // Default sorting: uncompleted activities first, then completed activities
-    // This applies if 'sort' is not 'voltooid' (which is handled as a strict filter above)
-    // and also as a primary sort for 'hoogstgewaardeerde'/'meestgewaardeerde'
     if (sort !== "voltooid") {
       finalActivities.sort((a, b) => {
-        // If 'a' is completed and 'b' is not, 'b' comes first (-1)
         if (a.isCompleted && !b.isCompleted) return 1
-        // If 'a' is not completed and 'b' is, 'a' comes first (1)
         if (!a.isCompleted && b.isCompleted) return -1
-        // If both have the same completion status, maintain existing order or apply secondary sort
-        return 0 // Keep original order if completion status is same, secondary sorts already applied
+        return 0
       })
     }
 
-    res.status(200).json({ success: true, activities: finalActivities })
+    // Remove the weightedScore from final response (it's just for sorting)
+    const responseActivities = finalActivities.map(activity => {
+      const { weightedScore, ...activityWithoutScore } = activity;
+      return activityWithoutScore;
+    });
+
+    res.status(200).json({ success: true, activities: responseActivities })
   } catch (error) {
     console.error("Error filtering activities:", error)
     res.status(500).json({ message: "Server error" })
@@ -965,7 +1016,7 @@ const createNewMondayWeek = async (userId, currentWeekSet, userAgeGroup, userTim
 };
 const getTop5ActivitiesExcluding = async (excludeIds = [], userAgeGroup = null, weekNumber = 1) => {
   try {
-    // console.log(`🎯 Getting 5 activities for Week ${weekNumber} (Monday System)`);
+    console.log(`🎯 Getting 5 activities for Week ${weekNumber} (Monday System)`);
     
     const excludeObjectIds = excludeIds.map(id => {
       try {
@@ -979,7 +1030,7 @@ const getTop5ActivitiesExcluding = async (excludeIds = [], userAgeGroup = null, 
 
     // Age-based selection if user has age group set
     if (userAgeGroup) {
-      // console.log(`🎯 Age-based selection for: ${userAgeGroup}`);
+      console.log(`🎯 Age-based selection for: ${userAgeGroup}`);
       
       const ageBasedQuery = {
         isApproved: true,
@@ -987,15 +1038,37 @@ const getTop5ActivitiesExcluding = async (excludeIds = [], userAgeGroup = null, 
         _id: { $nin: excludeObjectIds }
       };
 
+      // Get more activities to sort them properly
       activities = await Activity.find(ageBasedQuery)
         .sort({
-          averageRating: -1,
           createdAt: -1,
           _id: 1
         })
-        .limit(10);
+        .limit(50); // Get more to sort by weighted score
 
-      // console.log(`Found ${activities.length} activities for age group ${userAgeGroup}`);
+      // Sort by weighted score (rating * review count consideration)
+      activities = activities
+        .map(activity => ({
+          ...activity.toObject(),
+          weightedScore: calculateWeightedScore(activity)
+        }))
+        .sort((a, b) => {
+          // First sort by weighted score (higher is better)
+          if (b.weightedScore !== a.weightedScore) {
+            return b.weightedScore - a.weightedScore;
+          }
+          // If weighted scores are equal, prefer more reviews
+          const aReviewCount = a.ratings?.length || 0;
+          const bReviewCount = b.ratings?.length || 0;
+          if (bReviewCount !== aReviewCount) {
+            return bReviewCount - aReviewCount;
+          }
+          // Finally, sort by rating
+          return (b.averageRating || 0) - (a.averageRating || 0);
+        })
+        .slice(0, 10);
+
+      console.log(`Found ${activities.length} activities for age group ${userAgeGroup}`);
 
       // Fill remaining slots with high-rated activities
       if (activities.length < 5) {
@@ -1004,60 +1077,106 @@ const getTop5ActivitiesExcluding = async (excludeIds = [], userAgeGroup = null, 
           _id: { $nin: [...excludeObjectIds, ...activities.map(a => a._id)] }
         };
 
-        const additionalActivities = await Activity.find(additionalQuery)
-          .sort({ 
-            averageRating: -1,
-            createdAt: -1,
-            _id: 1
+        const additionalActivitiesRaw = await Activity.find(additionalQuery)
+          .sort({ createdAt: -1, _id: 1 })
+          .limit(50);
+
+        const additionalActivities = additionalActivitiesRaw
+          .map(activity => ({
+            ...activity.toObject(),
+            weightedScore: calculateWeightedScore(activity)
+          }))
+          .sort((a, b) => {
+            if (b.weightedScore !== a.weightedScore) {
+              return b.weightedScore - a.weightedScore;
+            }
+            const aReviewCount = a.ratings?.length || 0;
+            const bReviewCount = b.ratings?.length || 0;
+            if (bReviewCount !== aReviewCount) {
+              return bReviewCount - aReviewCount;
+            }
+            return (b.averageRating || 0) - (a.averageRating || 0);
           })
-          .limit(5 - activities.length);
+          .slice(0, 5 - activities.length);
 
         activities = [...activities, ...additionalActivities];
       }
 
     } else {
       // High-rated selection for users without age group
-      // console.log(`🎯 High-rated selection for Week ${weekNumber}`);
+      console.log(`🎯 High-rated selection for Week ${weekNumber}`);
       
       const query = {
         isApproved: true,
         _id: { $nin: excludeObjectIds }
       };
 
-      activities = await Activity.find(query)
-        .sort({
-          averageRating: -1,
-          createdAt: -1,
-          _id: 1
+      const activitiesRaw = await Activity.find(query)
+        .sort({ createdAt: -1, _id: 1 })
+        .limit(50); // Get more to sort properly
+
+      activities = activitiesRaw
+        .map(activity => ({
+          ...activity.toObject(),
+          weightedScore: calculateWeightedScore(activity)
+        }))
+        .sort((a, b) => {
+          // First sort by weighted score
+          if (b.weightedScore !== a.weightedScore) {
+            return b.weightedScore - a.weightedScore;
+          }
+          // Then by review count
+          const aReviewCount = a.ratings?.length || 0;
+          const bReviewCount = b.ratings?.length || 0;
+          if (bReviewCount !== aReviewCount) {
+            return bReviewCount - aReviewCount;
+          }
+          // Finally by rating
+          return (b.averageRating || 0) - (a.averageRating || 0);
         })
-        .limit(10);
+        .slice(0, 10);
     }
 
     // Final fallback
     if (activities.length < 5) {
-      // console.log('🆘 Final fallback - getting remaining activities');
+      console.log('🆘 Final fallback - getting remaining activities');
 
       const usedIds = [...excludeObjectIds, ...activities.map(a => a._id)];
-      const finalFallback = await Activity.find({ 
+      const finalFallbackRaw = await Activity.find({ 
         isApproved: true,
         _id: { $nin: usedIds }
       })
-      .sort({ 
-        averageRating: -1, 
-        createdAt: -1,
-        _id: 1
-      })
-      .limit(5 - activities.length);
+      .sort({ createdAt: -1, _id: 1 })
+      .limit(50);
+
+      const finalFallback = finalFallbackRaw
+        .map(activity => ({
+          ...activity.toObject(),
+          weightedScore: calculateWeightedScore(activity)
+        }))
+        .sort((a, b) => {
+          if (b.weightedScore !== a.weightedScore) {
+            return b.weightedScore - a.weightedScore;
+          }
+          const aReviewCount = a.ratings?.length || 0;
+          const bReviewCount = b.ratings?.length || 0;
+          if (bReviewCount !== aReviewCount) {
+            return bReviewCount - aReviewCount;
+          }
+          return (b.averageRating || 0) - (a.averageRating || 0);
+        })
+        .slice(0, 5 - activities.length);
 
       activities = [...activities, ...finalFallback];
     }
 
     const finalActivities = activities.slice(0, 5);
     
-    // // console.log(`✅ Monday System: Week ${weekNumber} activities selected:`);
-    // finalActivities.forEach((activity, index) => {
-    //   // console.log(`  ${index + 1}. ${activity.title} (Rating: ${activity.averageRating || 0})`);
-    // });
+    console.log(`✅ Monday System: Week ${weekNumber} activities selected:`);
+    finalActivities.forEach((activity, index) => {
+      const reviewCount = activity.ratings?.length || 0;
+      console.log(`  ${index + 1}. ${activity.title} (Rating: ${activity.averageRating || 0}, Reviews: ${reviewCount}, Weighted: ${activity.weightedScore?.toFixed(2) || 0})`);
+    });
 
     return finalActivities;
 
@@ -1066,9 +1185,23 @@ const getTop5ActivitiesExcluding = async (excludeIds = [], userAgeGroup = null, 
     
     // Emergency fallback
     return await Activity.find({ isApproved: true })
-      .sort({ averageRating: -1, createdAt: -1, _id: 1 })
+      .sort({ createdAt: -1, _id: 1 })
       .limit(5);
   }
+};
+const calculateWeightedScore = (activity) => {
+  const rating = activity.averageRating || 0;
+  const reviewCount = activity.ratings?.length || 0;
+  
+  // Wilson Score Interval approach for better ranking
+  // This gives more weight to activities with more ratings
+  if (reviewCount === 0) return 0;
+  
+  // Simple weighted approach: rating * log(reviewCount + 1)
+  // You can adjust this formula based on your needs
+  const weightedScore = rating * Math.log(reviewCount + 1) * 0.1;
+  
+  return weightedScore;
 };
 export const getTotalActivitiesCount = async (req,res) =>{
   try{
