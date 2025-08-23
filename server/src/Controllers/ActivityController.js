@@ -642,15 +642,49 @@ export const getProgressStats = async (req, res) => {
       isApproved: true,
     });
 
-    const oneWeekAgo = new Date();
-    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    // ✅ FIX: Calculate week percentage based on current week's play set activities
+    let weekPercentage = 0;
+    
+    // Get the current week's activity set
+    const currentWeekSet = await WeekPlaySet.findOne({ userId }).sort({ weekNumber: -1 });
+    
+    if (currentWeekSet) {
+      console.log('🔍 Debug - Current Week Set:', {
+        weekNumber: currentWeekSet.weekNumber,
+        activitiesCount: currentWeekSet.activities.length,
+        generatedAt: currentWeekSet.generatedAt,
+        activities: currentWeekSet.activities
+      });
 
-    const weeklyCompleted = await CompletedActivity.countDocuments({
-      userId,
-      completedAt: { $gte: oneWeekAgo },
-    });
+      // Count only activities completed from the current week set since it was generated
+      const currentWeekCompleted = await CompletedActivity.find({
+        userId,
+        activityId: { $in: currentWeekSet.activities }, // ✅ Only current week activities
+        completedAt: { $gte: currentWeekSet.generatedAt } // ✅ Since current week started
+      });
 
-    const weekPercentage = Math.min(Math.round((weeklyCompleted / 5) * 100), 100);
+      console.log('🔍 Debug - Current Week Completed:', {
+        count: currentWeekCompleted.length,
+        completedActivityIds: currentWeekCompleted.map(c => c.activityId.toString()),
+        completedDates: currentWeekCompleted.map(c => c.completedAt)
+      });
+
+      const completedCount = currentWeekCompleted.length;
+      const totalActivities = currentWeekSet.activities.length;
+      
+      console.log('🔍 Debug - Calculation:', {
+        completedCount,
+        totalActivities,
+        calculation: `(${completedCount} ÷ ${totalActivities}) × 100`,
+        result: (completedCount / totalActivities) * 100
+      });
+
+      weekPercentage = Math.min(Math.round((completedCount / totalActivities) * 100), 100);
+      
+      console.log('🔍 Debug - Final Week Percentage:', weekPercentage);
+    } else {
+      console.log('🔍 Debug - No current week set found for user');
+    }
 
     const allActivities = await Activity.find({ isApproved: true });
     const categoryMap = new Map();
@@ -661,7 +695,6 @@ export const getProgressStats = async (req, res) => {
 
       const normalizedDomain = rawDomain?.toLowerCase();
       // console.log(normalizedDomain);
-
 
       if (!normalizedDomain) return;
 
@@ -674,8 +707,6 @@ export const getProgressStats = async (req, res) => {
         categoryMap.get(normalizedDomain).ids.push(activity._id);
       }
     });
-
-
 
     const categoryProgress = await Promise.all(
       Array.from(categoryMap.entries()).map(async ([_, { title, ids }]) => {
@@ -706,7 +737,7 @@ export const getProgressStats = async (req, res) => {
       stats: {
         completedActivities: completedCount,
         badges: user.badges?.length || 0,
-        weekPercentage,
+        weekPercentage, // ✅ Now correctly calculated
         addedActivities: addedActivitiesCount,
       },
       categories: categoryProgress,
@@ -945,9 +976,7 @@ const createNewMondayWeek = async (userId, currentWeekSet, userAgeGroup, userTim
   try {
     const currentMondayAt6AM = getCurrentMondayAt6AM(userTimezone);
     
-    // console.log(`🔄 Creating new Monday week from Week ${currentWeekSet.weekNumber} to Week ${currentWeekSet.weekNumber + 1}`);
     
-    // Mark current week as finished
     const currentWeekCompleted = await CompletedActivity.find({
       userId,
       activityId: { $in: currentWeekSet.activities },
@@ -957,13 +986,11 @@ const createNewMondayWeek = async (userId, currentWeekSet, userAgeGroup, userTim
     const completedActivityIds = currentWeekCompleted.map(c => c.activityId.toString());
     
     currentWeekSet.completedActivitiesInWeek = completedActivityIds;
-    currentWeekSet.isWeekCompleted = completedActivityIds.length >= 5;
+    currentWeekSet.isWeekCompleted = true; // ✅ Always true when week ends
     currentWeekSet.weekEndedAt = new Date();
     await currentWeekSet.save();
 
-    // console.log(`📊 Week ${currentWeekSet.weekNumber} Final Status: ${completedActivityIds.length}/5 completed`);
 
-    // Get all previously used activities from previous weeks
     const allPreviousWeeks = await WeekPlaySet.find({
       userId,
       weekNumber: { $lte: currentWeekSet.weekNumber }
@@ -974,23 +1001,19 @@ const createNewMondayWeek = async (userId, currentWeekSet, userAgeGroup, userTim
       previouslyUsedActivities.push(...week.activities.map(id => id.toString()));
     });
 
-    // ✅ FIX: Also get ALL activities the user has ever completed (from library or weekly sets)
     const allCompletedActivities = await CompletedActivity.find({ userId });
     const allCompletedActivityIds = allCompletedActivities.map(c => c.activityId.toString());
 
-    // Combine both exclusion lists: previously used + all completed
     const activitiesToExclude = [...new Set([...previouslyUsedActivities, ...allCompletedActivityIds])];
 
     const newWeekNumber = currentWeekSet.weekNumber + 1;
     
-    // Get fresh activities (excluding both previously used AND completed activities)
     const freshActivities = await getTop5ActivitiesExcluding(
       activitiesToExclude, 
       userAgeGroup, 
       newWeekNumber
     );
 
-    // Create new week set
     const newWeekSet = new WeekPlaySet({
       userId,
       activities: freshActivities.map(a => a._id),
@@ -998,15 +1021,13 @@ const createNewMondayWeek = async (userId, currentWeekSet, userAgeGroup, userTim
       generatedAt: currentMondayAt6AM,
       nextRefreshAt: getNextMondayAt6AM(userTimezone),
       completedActivitiesInWeek: [],
-      isWeekCompleted: false,
+      isWeekCompleted: false, 
       previousWeekId: currentWeekSet._id,
       timezone: userTimezone
     });
 
     await newWeekSet.save();
-    
-    // console.log(`✅ Created Week ${newWeekSet.weekNumber} with ${freshActivities.length} NEW activities`);
-    
+        
     return newWeekSet;
 
   } catch (error) {
