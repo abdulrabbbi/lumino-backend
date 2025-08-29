@@ -7,6 +7,19 @@ import Badge from "../Models/Badge.js";
 import {  isPastMondayRefresh, getCurrentMondayAt6AM, getNextMondayAt6AM } from "../Helper/ActivityHelper.js";
 import mongoose from "mongoose";
 import { checkAndAwardAreaBadges, checkAndAwardBounceBack, checkAndAwardCategoriesMaster, checkAndAwardChampion, checkAndAwardConsistencyChamp, checkAndAwardFiveInARow, checkAndAwardFocusFinisher, checkAndAwardGratitudeGiver, checkAndAwardMasterParent, checkAndAwardMobileExplorer, checkAndAwardStreakBuilder, checkAndAwardSurprisePlayer, checkAndAwardSurpriseStreak } from "../Helper/BadgeHelper.js";
+import UserSubscription from "../Models/UserSubscription.js";
+
+const checkUserSubscription = async (userId) => {
+  if (!userId) return false;
+  
+  const userSubscription = await UserSubscription.findOne({
+    userId,
+    status: { $in: ['active', 'trial'] },
+    orderStatus: 'paid'
+  });
+  
+  return !!userSubscription;
+};
 
 export const createActivity = async (req, res) => {
   try {
@@ -145,12 +158,15 @@ export const getActivityLibrary = async (req, res) => {
 
     let isTestFamily = false;
     let isLoggedIn = false;
+    let hasSubscription = false;
 
     if (userId) {
       const user = await User.findById(userId);
       if (user) {
         isLoggedIn = true;
         isTestFamily = user.isTestFamily;
+        hasSubscription = await checkUserSubscription(userId);
+
       }
     }
 
@@ -179,10 +195,16 @@ export const getActivityLibrary = async (req, res) => {
     const enrichedActivities = activities.map(activity => {
       const isCompleted = completedActivityIds.includes(activity._id.toString());
 
-      let isLocked = true;
       if (isLoggedIn && isTestFamily) {
         isLocked = false;
-      } else if (isCompleted) {
+      } 
+      else if (isLoggedIn && hasSubscription) {
+        isLocked = false;
+      }
+      else if (isLoggedIn && !hasSubscription) {
+        isLocked = true;
+      }
+      else if (isCompleted) {
         isLocked = false;
       }
 
@@ -318,12 +340,14 @@ export const filterActivities = async (req, res) => {
     let isTestFamily = false
     let isLoggedIn = false
     let completedActivityIds = new Set()
+    let hasSubscription = false;
 
     if (userId) {
       const user = await User.findById(userId)
       if (user) {
         isLoggedIn = true
         isTestFamily = user.isTestFamily
+        hasSubscription = await checkUserSubscription(userId);
         const completedActivities = await CompletedActivity.find({ userId }).select("activityId")
         completedActivityIds = new Set(completedActivities.map((c) => c.activityId.toString()))
       }
@@ -348,8 +372,21 @@ export const filterActivities = async (req, res) => {
     const finalActivities = activities.map((activity) => {
       const activityObject = activity.toObject()
       let isLocked = true
+      // Test family users always unlocked
       if (isLoggedIn && isTestFamily) {
-        isLocked = false
+        isLocked = false;
+      }
+      // Users with subscription always unlocked
+      else if (isLoggedIn && hasSubscription) {
+        isLocked = false;
+      }
+      // Users without subscription - everything locked
+      else if (isLoggedIn && !hasSubscription) {
+        isLocked = true;
+      }
+      // Guest users - existing logic
+      else {
+        isLocked = true; // Guests see everything locked in filter
       }
       const isCompleted = completedActivityIds.has(activityObject._id.toString())
 
@@ -645,20 +682,11 @@ export const getProgressStats = async (req, res) => {
       isApproved: true,
     });
 
-    // ✅ FIX: Calculate week percentage based on current week's play set activities
     let weekPercentage = 0;
     
-    // Get the current week's activity set
     const currentWeekSet = await WeekPlaySet.findOne({ userId }).sort({ weekNumber: -1 });
     
     if (currentWeekSet) {
-      console.log('🔍 Debug - Current Week Set:', {
-        weekNumber: currentWeekSet.weekNumber,
-        activitiesCount: currentWeekSet.activities.length,
-        generatedAt: currentWeekSet.generatedAt,
-        activities: currentWeekSet.activities
-      });
-
       // Count only activities completed from the current week set since it was generated
       const currentWeekCompleted = await CompletedActivity.find({
         userId,
@@ -666,25 +694,15 @@ export const getProgressStats = async (req, res) => {
         completedAt: { $gte: currentWeekSet.generatedAt } // ✅ Since current week started
       });
 
-      console.log('🔍 Debug - Current Week Completed:', {
-        count: currentWeekCompleted.length,
-        completedActivityIds: currentWeekCompleted.map(c => c.activityId.toString()),
-        completedDates: currentWeekCompleted.map(c => c.completedAt)
-      });
+
 
       const completedCount = currentWeekCompleted.length;
       const totalActivities = currentWeekSet.activities.length;
       
-      console.log('🔍 Debug - Calculation:', {
-        completedCount,
-        totalActivities,
-        calculation: `(${completedCount} ÷ ${totalActivities}) × 100`,
-        result: (completedCount / totalActivities) * 100
-      });
+    
 
       weekPercentage = Math.min(Math.round((completedCount / totalActivities) * 100), 100);
       
-      console.log('🔍 Debug - Final Week Percentage:', weekPercentage);
     } else {
       console.log('🔍 Debug - No current week set found for user');
     }
@@ -694,10 +712,8 @@ export const getProgressStats = async (req, res) => {
 
     allActivities.forEach((activity) => {
       const rawDomain = activity.learningDomain?.trim();
-      // console.log(rawDomain);
 
       const normalizedDomain = rawDomain?.toLowerCase();
-      // console.log(normalizedDomain);
 
       if (!normalizedDomain) return;
 
@@ -757,9 +773,9 @@ export const getPlayWeekActivities = async (req, res) => {
     const isGuest = !userId;
     let isTestFamily = false;
     let userAgeGroup = null;
+    let hasSubscription = false;
 
     let userTimezone = req.headers['user-timezone'];
-    // console.log('user time zone', userTimezone);
     
 
     try {
@@ -774,10 +790,8 @@ export const getPlayWeekActivities = async (req, res) => {
         isTestFamily = user.isTestFamily;
         userAgeGroup = user.ageGroup;
         userTimezone = userTimezone || 'UTC'; 
-        // console.log(`👤 User: ${user.username}`);
-        // console.log(`🧒 Age Group: ${userAgeGroup || 'Not set'}`);
-        // console.log(`🧪 Test Family: ${isTestFamily}`);
-        // console.log(`🌍 Timezone: ${userTimezone}`);
+        hasSubscription = await checkUserSubscription(userId);
+
       }
     }
 
@@ -785,12 +799,10 @@ export const getPlayWeekActivities = async (req, res) => {
     let weekNumber = 1;
 
     if (userId) {
-      // REGISTERED USER LOGIC
       activitySet = await WeekPlaySet.findOne({ userId }).sort({ weekNumber: -1 });
 
       if (!activitySet) {
         // Create first week
-        // console.log(`🎯 Creating Week 1 for new user`);
         const currentMondayAt6AM = getCurrentMondayAt6AM(userTimezone);
         const freshActivities = await getTop5ActivitiesExcluding([], userAgeGroup, 1);
 
@@ -806,17 +818,12 @@ export const getPlayWeekActivities = async (req, res) => {
         });
 
         await activitySet.save();
-        // console.log(`✅ Week 1 created with ${freshActivities.length} activities`);
       } else {
-        // Check if we need Monday refresh
         const shouldRefresh = isPastMondayRefresh(activitySet.generatedAt, userTimezone);
         
         if (shouldRefresh) {
-          // console.log(`🔄 Monday 6 AM refresh triggered for user`);
           activitySet = await createNewMondayWeek(userId, activitySet, userAgeGroup, userTimezone);
         } else {
-          // console.log(`⏳ Current week still active until next Monday 6 AM`);
-          // Update completion status but keep same activities
           const currentWeekCompleted = await CompletedActivity.find({
             userId,
             activityId: { $in: activitySet.activities },
@@ -833,7 +840,6 @@ export const getPlayWeekActivities = async (req, res) => {
       weekNumber = activitySet.weekNumber;
     } else {
       // GUEST LOGIC
-      // console.log(`👤 Guest user session`);
 
       activitySet = req.session?.weeklyActivities;
       const lastRefresh = req.session?.lastMondayRefresh;
@@ -844,7 +850,6 @@ export const getPlayWeekActivities = async (req, res) => {
         const currentMondayAt6AM = getCurrentMondayAt6AM(userTimezone);
         const newWeekNumber = activitySet ? activitySet.weekNumber + 1 : 1;
         
-        // console.log(`🔄 Guest Monday refresh: Creating Week ${newWeekNumber}`);
 
         const previouslyUsedActivities = activitySet?.activities || [];
         const freshActivities = await getTop5ActivitiesExcluding(previouslyUsedActivities, null, newWeekNumber);
@@ -862,7 +867,6 @@ export const getPlayWeekActivities = async (req, res) => {
         req.session.completedActivitiesInWeek = [];
         req.session.lastMondayRefresh = currentMondayAt6AM.toISOString();
 
-        // console.log(`✅ Guest Week ${newWeekNumber} created`);
       } else {
         // console.log(`⏳ Guest week still active until next Monday 6 AM`);
       }
@@ -903,13 +907,23 @@ export const getPlayWeekActivities = async (req, res) => {
 
       let isLocked = true;
 
+      // Test family users - everything unlocked
       if (isTestFamily) {
         isLocked = false;
-      } else if (isGuest) {
-        isLocked = index !== 0 && !isCompletedInCurrentWeek;
-      } else {
+      }
+      // Users with subscription - everything unlocked
+      else if (userId && hasSubscription) {
+        isLocked = false;
+      }
+      // Users without subscription - first 3 unlocked, rest locked
+      else if (userId && !hasSubscription) {
         isLocked = index >= 3 && !isCompletedInCurrentWeek;
       }
+      // Guest users - existing logic
+      else if (isGuest) {
+        isLocked = index !== 0 && !isCompletedInCurrentWeek;
+      }
+
 
       return {
         ...activity.toObject(),
@@ -947,7 +961,6 @@ export const getPlayWeekActivities = async (req, res) => {
       refreshMessage = `⏰ New activities in ${daysUntilRefresh} days (Monday 6 AM)`;
     }
 
-    // console.log(`🎯 FINAL: Returning Week ${weekNumber} activities (Monday refresh system)`);
 
     res.status(200).json({
       success: true,
@@ -1049,36 +1062,114 @@ const getTop5ActivitiesExcluding = async (excludeIds = [], userAgeGroup = null, 
       }
     }).filter(id => id !== null);
 
-    const query = {
-      isApproved: true,
-      _id: { $nin: excludeObjectIds }
-    };
+    let activities = [];
 
-    console.log(`🎯 Highest rated selection for Week ${weekNumber} (ignoring age group)`);
-    
-    const activitiesRaw = await Activity.find(query)
-      .sort({ createdAt: -1, _id: 1 })
+    // Age-based selection if user has age group set
+    if (userAgeGroup) {
+      
+      const ageBasedQuery = {
+        isApproved: true,
+        ageGroup: userAgeGroup,
+        _id: { $nin: excludeObjectIds }
+      };
 
-    const activities = activitiesRaw
-      .map(activity => ({
-        ...activity.toObject(),
-        reviewCount: activity.ratings?.length || 0
-      }))
-      .sort((a, b) => {
-        // First priority: Number of reviews (more reviews = higher priority)
-        if (b.reviewCount !== a.reviewCount) {
-          return b.reviewCount - a.reviewCount;
-        }
-        // Second priority: Average rating (if review counts are equal)
-        return (b.averageRating || 0) - (a.averageRating || 0);
-      })
-      .slice(0, 10); 
+      // Get more activities to sort them properly
+      activities = await Activity.find(ageBasedQuery)
+        .sort({
+          createdAt: -1,
+          _id: 1
+        })
+        .limit(50); // Get more to sort by weighted score
+
+      // Sort by weighted score (rating * review count consideration)
+      activities = activities
+        .map(activity => ({
+          ...activity.toObject(),
+          weightedScore: calculateWeightedScore(activity)
+        }))
+        .sort((a, b) => {
+          // First sort by weighted score (higher is better)
+          if (b.weightedScore !== a.weightedScore) {
+            return b.weightedScore - a.weightedScore;
+          }
+          // If weighted scores are equal, prefer more reviews
+          const aReviewCount = a.ratings?.length || 0;
+          const bReviewCount = b.ratings?.length || 0;
+          if (bReviewCount !== aReviewCount) {
+            return bReviewCount - aReviewCount;
+          }
+          // Finally, sort by rating
+          return (b.averageRating || 0) - (a.averageRating || 0);
+        })
+        .slice(0, 10);
 
 
-    let finalActivities = activities.slice(0, 5);
-    
-    if (finalActivities.length < 5) {
-      console.log('🆘 Final fallback - getting remaining activities');
+      // Fill remaining slots with high-rated activities
+      if (activities.length < 5) {
+        const additionalQuery = {
+          isApproved: true,
+          _id: { $nin: [...excludeObjectIds, ...activities.map(a => a._id)] }
+        };
+
+        const additionalActivitiesRaw = await Activity.find(additionalQuery)
+          .sort({ createdAt: -1, _id: 1 })
+          .limit(50);
+
+        const additionalActivities = additionalActivitiesRaw
+          .map(activity => ({
+            ...activity.toObject(),
+            weightedScore: calculateWeightedScore(activity)
+          }))
+          .sort((a, b) => {
+            if (b.weightedScore !== a.weightedScore) {
+              return b.weightedScore - a.weightedScore;
+            }
+            const aReviewCount = a.ratings?.length || 0;
+            const bReviewCount = b.ratings?.length || 0;
+            if (bReviewCount !== aReviewCount) {
+              return bReviewCount - aReviewCount;
+            }
+            return (b.averageRating || 0) - (a.averageRating || 0);
+          })
+          .slice(0, 5 - activities.length);
+
+        activities = [...activities, ...additionalActivities];
+      }
+
+    } else {
+      // High-rated selection for users without age group
+      
+      const query = {
+        isApproved: true,
+        _id: { $nin: excludeObjectIds }
+      };
+
+      const activitiesRaw = await Activity.find(query)
+        .sort({ createdAt: -1, _id: 1 })
+        .limit(50); // Get more to sort properly
+
+      activities = activitiesRaw
+        .map(activity => ({
+          ...activity.toObject(),
+          weightedScore: calculateWeightedScore(activity)
+        }))
+        .sort((a, b) => {
+          // First sort by weighted score
+          if (b.weightedScore !== a.weightedScore) {
+            return b.weightedScore - a.weightedScore;
+          }
+          // Then by review count
+          const aReviewCount = a.ratings?.length || 0;
+          const bReviewCount = b.ratings?.length || 0;
+          if (bReviewCount !== aReviewCount) {
+            return bReviewCount - aReviewCount;
+          }
+          return (b.averageRating || 0) - (a.averageRating || 0);
+        })
+        .slice(0, 10);
+    }
+
+    if (activities.length < 5) {
 
       const usedIds = [...excludeObjectIds, ...finalActivities.map(a => a._id)];
       const finalFallbackRaw = await Activity.find({ 
@@ -1106,7 +1197,7 @@ const getTop5ActivitiesExcluding = async (excludeIds = [], userAgeGroup = null, 
 
     const top5Activities = finalActivities.slice(0, 5);
     
-    top5Activities.forEach((activity, index) => {
+    finalActivities.forEach((activity, index) => {
       const reviewCount = activity.ratings?.length || 0;
       console.log(`  ${index + 1}. ${activity.title} (Rating: ${activity.averageRating || 0}, Reviews: ${reviewCount})`);
     });

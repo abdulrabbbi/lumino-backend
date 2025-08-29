@@ -82,6 +82,5 @@ export const getUserTimezone = (req) => {
       req.user?.timezone ||                       // From user profile
       'UTC';                                      // Default fallback
   
-    console.log(`🌍 Detected timezone: ${timezone}`);
     return timezone;
   };

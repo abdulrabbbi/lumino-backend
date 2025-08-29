@@ -1,32 +1,60 @@
 /* eslint-disable no-unused-vars */
-import React from 'react';
+import React, { useState } from 'react';
 import { Check } from 'lucide-react';
 import Tick from '../../public/nav-images/contract.svg';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import useSubscriptions from '../hooks/useSubscriptions';
 import LoaderOverlay from '../components/LoaderOverlay';
+import { BASE_URL } from '../utils/api';
 
 const Pricing = () => {
   const { subscriptions, loading } = useSubscriptions();
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  const handleSubscribe = () => {
+  const handleSubscribe = async (subscriptionId) => {
     const token = localStorage.getItem('authToken');
     if (!token) {
-      toast.error('Make sure you have to login first', {
+      toast.error('Zorg ervoor dat u eerst moet inloggen', {
         position: 'top-right',
         autoClose: 3000,
       });
-    } else {
-      toast.success('Proceeding to checkout page!', {
+      return;
+    }
+
+    setIsProcessing(true);
+    
+    try {
+      const response = await fetch(`${BASE_URL}/purchase-subscription`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ subscriptionId })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create checkout session');
+      }
+
+      const { url } = await response.json();
+      
+      window.location.href = url;
+    } catch (error) {
+      console.error('Checkout error:', error);
+      toast.error(error.message || 'Something went wrong. Please try again.', {
         position: 'top-right',
         autoClose: 3000,
       });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
-  if (loading) {
-    return <LoaderOverlay />
+  if (loading || isProcessing) {
+    return <LoaderOverlay />;
   }
 
   const sorted = [
@@ -37,7 +65,7 @@ const Pricing = () => {
 
   return (
     <section className="py-16 px-4 mt-10 sm:px-6 lg:px-8 h-auto max-w-7xl m-auto">
-      {/* <ToastContainer style={{ zIndex: 100000000 }} /> */}
+      <ToastContainer style={{ zIndex: 100000000 }} />
       <div className="max-w-7xl w-full m-auto">
         <div className="text-center mb-12">
           <h2 className="text-3xl inter-tight-700 lg:text-2xl text-[#636363]">
@@ -45,9 +73,9 @@ const Pricing = () => {
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3  gap-8 mb-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
           {sorted.map((sub, idx) => (
-            <div key={sub._id} className={`relative   ${sub.name === 'Jaaravontuur' ? 'lg:col-span-1' : ''}`}>
+            <div key={sub._id} className={`relative ${sub.name === 'Jaaravontuur' ? 'lg:col-span-1' : ''}`}>
               {sub.name === 'Jaaravontuur' && (
                 <>
                   <div className="absolute inset-0 bg-gradient-to-br from-[#DB297A] to-[#7940EA] rounded-3xl z-0"></div>
@@ -86,7 +114,7 @@ const Pricing = () => {
                 </div>
 
                 <button
-                  onClick={handleSubscribe}
+                  onClick={() => handleSubscribe(sub._id)}
                   className="w-full bg-gradient-to-br from-[#22C55E] to-[#059669] cursor-pointer text-sm text-white inter-tight-400 py-3 px-6 rounded-2xl transition-colors duration-500"
                 >
                   Meld je NU aan!

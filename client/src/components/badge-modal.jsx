@@ -4,7 +4,6 @@ import { X } from "lucide-react"
 import Badge from "./badge"
 
 const BadgeModal = ({ isVisible, onClose, badges = [] }) => {
-  console.log("BadgeModal render - isVisible:", isVisible, "badges:", badges)
 
   // Handle both single badge (backward compatibility) and multiple badges
   let badgeList = []
@@ -14,9 +13,6 @@ const BadgeModal = ({ isVisible, onClose, badges = [] }) => {
     badgeList = [badges]
   }
 
-  console.log("BadgeModal processed badgeList:", badgeList)
-
-  // Show modal if visible AND we have badges
   const shouldShow = isVisible && badgeList.length > 0
 
   return (

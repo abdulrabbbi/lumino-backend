@@ -26,18 +26,12 @@ const userSchema = new mongoose.Schema({
     type: Date,
   },
 
-  subscription: {
-    type: String, // 'proefreis' | 'jaaravontuur' | 'eeuwigsterk'
-    default: null
-  },
-  subscriptionActive: {
-    type: Boolean,
-    default: false
-  },
-  subscriptionExpiresAt: {
-    type: Date,
-    default: null
-  },
+  subscription: { type: String, default: null },
+  subscriptionActive: { type: Boolean, default: false },
+  subscriptionExpiresAt: { type: Date, default: null },
+  isInTrial: { type: Boolean, default: false },
+  trialEndDate: { type: Date, default: null },
+  stripeCustomerId: { type: String, default: null },
 
   isTestFamily: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },

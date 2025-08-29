@@ -30,6 +30,9 @@ import EarnBadge from './pages/earn-badge'
 import ScrollToTop from './components/ScrollToTop'
 import { ToastContainer } from 'react-toastify'
 
+import Success from './pages/subscription-modes/success'
+import Cancel from './pages/subscription-modes/cancel'
+
 
 function AppWrapper() {
   const location = useLocation()
@@ -56,6 +59,8 @@ function AppWrapper() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/verify-otp" element={<VerifyOtp />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/success" element={<Success />} />
+        <Route path="/cancel" element={<Cancel />} />
 
         {/* User Profile Routes */}
 

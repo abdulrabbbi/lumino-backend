@@ -34,7 +34,7 @@ export const register = async (req, res) => {
       role: req.body.role,
       referralCode,
       referredBy: req.body.referredBy || null,
-      badges: totalUsers < 1000 ? ["Early Adopter"] : []
+      badges: []
     });
 
     await user.save();
@@ -162,7 +162,7 @@ export const resetPassword = async (req, res) => {
     res.status(500).json({ success: false, message: "Server Error" });
   }
 };
-export const checkUserSubscription = async (req, res ) => {
+export const checkUserSubscription = async (req, res) => {
   try {
     const userId = req.user?.userId;
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
@@ -176,14 +176,24 @@ export const checkUserSubscription = async (req, res ) => {
       const lifetimePlan = await Subscription.findOne({ priceType: 'one-time' });
       subscriptionInfo = {
         status: 'Active',
-        subscription: lifetimePlan
+        subscription: lifetimePlan,
+        isTestUser: true
       };
     } else {
-      const userSub = await UserSubscription.findOne({ userId, status: 'active' }).populate('subscriptionId');
+      // YEH LINE CHANGE KARO - 'trial' status bhi include karo
+      const userSub = await UserSubscription.findOne({ 
+        userId, 
+        status: { $in: ['active', 'trial'] } // BOTH active AND trial
+      }).populate('subscriptionId');
+      
       if (userSub) {
         subscriptionInfo = {
           status: userSub.status,
-          subscription: userSub.subscriptionId
+          subscription: userSub.subscriptionId,
+          startDate: userSub.startDate,
+          endDate: userSub.endDate,
+          trialEndDate: userSub.trialEndDate, // Trial end date bhi include karo
+          isTestUser: false
         };
       }
     }

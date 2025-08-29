@@ -6,6 +6,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { networkInterfaces } from 'os';
 import connectToDatabase from "./src/Utils/db.js";
+import prerender from "prerender-node";
 
 import UserRoutes from "./src/Routes/UserRoutes.js";
 import BadgeRoutes from './src/Routes/BadgeRoutes.js'
@@ -15,7 +16,9 @@ import TesterRoutes from './src/Routes/TesterRoutes.js'
 import AdminRoutes from './src/Routes/AdminRoutes.js'
 import SubscriptionRoutes from './src/Routes/SubscriptionRoutes.js'
 import session from "express-session";
+import { checkTrialStatuses, handleStripeWebhook } from "./src/Controllers/SubscriptionController.js";
 
+import cron from 'node-cron';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -24,12 +27,23 @@ configDotenv();
 connectToDatabase(process.env.MONGODB_URL);
 
 const app = express();
+
+app.use(prerender.set("prerenderToken", process.env.PRERENDER_TOKEN));
+
+
+app.post('/api/webhook', express.raw({type: 'application/json'}), handleStripeWebhook);
+
 app.use(cors());
 app.use(bodyParser.json());
 app.use(express.json()); 
 
 // Serve static files from 'uploads' directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+cron.schedule('0 0 * * *', () => {
+    console.log('Checking trial statuses...');
+    checkTrialStatuses();
+  });
 
 app.use(session({
     secret: process.env.EXPRESS_SESSION_KEY,

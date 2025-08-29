@@ -10,7 +10,6 @@ export const authenticate = (req, res, next) => {
     }
   
     const token = authHeader.split(" ")[1];
-    console.log("Token:", token);
   
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
