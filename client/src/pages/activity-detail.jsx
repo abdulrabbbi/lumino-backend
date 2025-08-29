@@ -1,6 +1,4 @@
 /* eslint-disable no-unused-vars */
-"use client"
-
 import { useEffect, useState } from "react"
 import { ArrowLeft, Clock, Users, Star, CheckCircle, X } from "lucide-react"
 import { useParams, useNavigate } from "react-router-dom"
@@ -114,6 +112,8 @@ function ActivityDetail() {
   const [hasShownRatingModal, setHasShownRatingModal] = useState(false)
   const [isSubmittingRating, setIsSubmittingRating] = useState(false)
 
+  const [showReminder, setShowReminder] = useState(false)
+
   const { markCompleted } = useMarkActivityCompleted()
   const { rateActivity } = useRateActivity()
   const { activity, loading, error } = useSingleActivity(id)
@@ -123,7 +123,22 @@ function ActivityDetail() {
     if (activity?.isCompleted) {
       setCompleted(true)
     }
-  }, [activity])
+    
+    let interval;
+  
+    if (!completed) {
+      interval = setInterval(() => {
+        setShowReminder(true);
+      }, 60000); // Every 1 minute
+    }
+    
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+
+  }, [activity, completed])
 
   const handleBack = () => {
     const savedState = getNavigationState()
@@ -145,7 +160,7 @@ function ActivityDetail() {
 
   const handleMarkComplete = async () => {
     if (completed || isMarkingComplete) return
-  
+
     try {
       setIsMarkingComplete(true)
       
@@ -168,6 +183,33 @@ function ActivityDetail() {
       toast.error(error.message)
     } finally {
       setIsMarkingComplete(false)
+    }
+  }
+
+  const handleReminderClose = () => {
+    setShowReminder(false)
+  }
+
+  const handleReminderAction = () => {
+    setShowReminder(false)
+    // Scroll to the complete button
+    const completeButtons = document.querySelectorAll('button')
+    let completeButton = null
+    
+    for (let button of completeButtons) {
+      if (button.textContent.includes('Markeer als voltooid') || button.textContent.includes('Voltooid')) {
+        completeButton = button
+        break
+      }
+    }
+    
+    if (completeButton) {
+      completeButton.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      // Add a slight highlight effect
+      completeButton.classList.add('ring-2', 'ring-blue-500', 'ring-opacity-50')
+      setTimeout(() => {
+        completeButton.classList.remove('ring-2', 'ring-blue-500', 'ring-opacity-50')
+      }, 2000)
     }
   }
 
@@ -227,15 +269,6 @@ function ActivityDetail() {
         
       }, 2000);
       
-      // Show success toast (with unique ID and auto-close)
-      // toast.success("Beoordeling succesvol ingediend!", {
-      //   toastId: 'rating-success', // Unique ID prevents duplicates
-      //   autoClose: 2000,
-      //   onClose: () => {
-      //     handleReturnToOrigin();
-      //   }
-      // });
-  
       // Close modal and reset
       setShowRatingModal(false);
       setSelectedRating(0);
@@ -305,6 +338,44 @@ function ActivityDetail() {
         <CelebrationSparkles isVisible={showCelebration} onComplete={handleCelebrationComplete} />
         <BadgeModal isVisible={showBadgeModal} onClose={handleBadgeModalClose} badges={earnedBadges} />
 
+        {showReminder && (
+          <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center z-50 md:p-4 p-2">
+            <div className="bg-white rounded-3xl p-8 max-w-md w-full mx-4 relative">
+              <button
+                onClick={handleReminderClose}
+                className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+              >
+                <X className="w-4 h-4 text-gray-600" />
+              </button>
+              <div className="text-center">
+                <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Clock className="w-8 h-8 text-yellow-500" />
+                </div>
+                <h2 className="text-xl font-semibold inter-tight-700 text-gray-800 mb-3">
+                  Vergeet niet af te ronden!
+                </h2>
+                <p className="text-gray-600 inter-tight-400 mb-6">
+                  Je bent al even bezig met deze activiteit. Vergeet niet om deze als voltooid te markeren om je vooruitgang bij te houden en badges te verdienen!
+                </p>
+                <div className="flex flex-col space-y-3">
+                  <button
+                    onClick={handleReminderAction}
+                    className="w-full bg-gradient-to-br from-[#079A68] to-[#20C25F] text-white py-3 rounded-xl inter-tight-700 font-medium hover:from-[#068a5d] hover:to-[#1cb055] transition-colors"
+                  >
+                    Naar voltooien knop
+                  </button>
+                  <button
+                    onClick={handleReminderClose}
+                    className="w-full border border-gray-300 text-gray-700 py-3 rounded-xl inter-tight-400 font-medium hover:bg-gray-50 transition-colors"
+                  >
+                    Later herinneren
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        
         {isMarkingComplete && <LoaderOverlay />}
 
         <div className="md:w-[90%] w-full mx-auto p-4 lg:p-6">
