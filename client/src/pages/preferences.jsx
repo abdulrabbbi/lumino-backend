@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { ChevronDown } from "lucide-react"
 import useChildSettings from "../hooks/useChildSettings"
+import LoaderOverlay from "../components/LoaderOverlay"
 
 export default function Preferences() {
   const [darkMode, setDarkMode] = useState(false)
@@ -9,11 +10,8 @@ export default function Preferences() {
   return (
     <div className="h-full bg-[#FFFFFF] space-y-6 relative">
       {loading && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-          <div className="w-12 h-12 border-4 border-blue-500 border-dashed rounded-full animate-spin"></div>
-        </div>
+      <LoaderOverlay/>
       )}
-
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="bg-white rounded-lg border border-[#E2E4E9] p-6 md:p-8">
           <h2 className="text-xl text-gray-950 mb-6 inter-tight-400">Child Setting</h2>

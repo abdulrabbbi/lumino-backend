@@ -129,7 +129,7 @@ function ActivityDetail() {
     if (!completed) {
       interval = setInterval(() => {
         setShowReminder(true);
-      }, 60000); // Every 1 minute
+      }, 180000); // Every 3 minutes
     }
     
     return () => {

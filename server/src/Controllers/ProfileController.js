@@ -157,3 +157,31 @@ export const getBadgePercentage = async (req,res) =>{
     res.status(500).json({ message: 'Internal server error' })
   }
 }
+
+export const checkProfileExists = async (req, res) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // console.log(user);
+    
+
+    const hasProfile = user.ageGroup;
+    console.log(hasProfile);
+    
+
+    res.status(200).json({
+      profileExists: hasProfile
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server Error" });
+  }
+};

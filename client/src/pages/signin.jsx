@@ -23,6 +23,7 @@ export default function SignInPage() {
 
         setLoading(true);
         try {
+            // Login request
             const response = await axios.post(`${BASE_URL}/login`, {
                 email,
                 password
@@ -32,11 +33,34 @@ export default function SignInPage() {
             
             localStorage.setItem("authToken", token);
             
-            toast.success("Sign in successful!");
-            setTimeout(() => {
-                navigate("/create-profile");
+            try {
+                const profileResponse = await axios.get(`${BASE_URL}/check-profile-exists`, {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                });
                 
-            }, 2000);
+                // If profile exists, redirect to home
+                if (profileResponse.data && profileResponse.data.profileExists) {
+                    toast.success("Sign in successful!");
+                    setTimeout(() => {
+                        navigate("/");
+                    }, 2000);
+                } else {
+                    // If no profile exists, redirect to create profile
+                    toast.success("Sign in successful!");
+                    setTimeout(() => {
+                        navigate("/create-profile");
+                    }, 2000);
+                }
+            } catch (profileError) {
+                console.error("Profile check error:", profileError);
+                // If there's an error checking profile, assume no profile exists
+                toast.success("Sign in successful!");
+                setTimeout(() => {
+                    navigate("/create-profile");
+                }, 2000);
+            }
         } catch (error) {
             console.error("Sign in error:", error);
             const errorMessage = error.response?.data?.message || "Sign in failed. Please try again.";

@@ -7,18 +7,17 @@ import 'react-toastify/dist/ReactToastify.css';
 import useSubscriptions from '../hooks/useSubscriptions';
 import LoaderOverlay from '../components/LoaderOverlay';
 import { BASE_URL } from '../utils/api';
+import { useNavigate } from 'react-router-dom'; // Import useNavigate
 
 const Pricing = () => {
   const { subscriptions, loading } = useSubscriptions();
   const [isProcessing, setIsProcessing] = useState(false);
+  const navigate = useNavigate(); // Initialize navigate
 
   const handleSubscribe = async (subscriptionId) => {
     const token = localStorage.getItem('authToken');
     if (!token) {
-      toast.error('Zorg ervoor dat u eerst moet inloggen', {
-        position: 'top-right',
-        autoClose: 3000,
-      });
+      navigate('/signup'); // Pas dit pad aan naar jouw aanmeldpagina
       return;
     }
 
