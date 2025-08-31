@@ -349,28 +349,22 @@ export const filterActivities = async (req, res) => {
       query._id = { $in: Array.from(completedActivityIds).map((id) => new mongoose.Types.ObjectId(id)) }
     }
 
-    // Fetch activities based on the constructed query
     const activities = await Activity.find(query).exec()
 
-    // Add isLocked and isCompleted flags
     const finalActivities = activities.map((activity) => {
       const activityObject = activity.toObject()
       let isLocked = true
-      // Test family users always unlocked
       if (isLoggedIn && isTestFamily) {
         isLocked = false;
       }
-      // Users with subscription always unlocked
       else if (isLoggedIn && hasSubscription) {
         isLocked = false;
       }
-      // Users without subscription - everything locked
       else if (isLoggedIn && !hasSubscription) {
         isLocked = true;
       }
-      // Guest users - existing logic
       else {
-        isLocked = true; // Guests see everything locked in filter
+        isLocked = true; 
       }
       const isCompleted = completedActivityIds.has(activityObject._id.toString())
 
