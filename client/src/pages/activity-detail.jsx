@@ -1,7 +1,9 @@
+"use client"
+
 /* eslint-disable no-unused-vars */
 import { useEffect, useState } from "react"
 import { ArrowLeft, Clock, Users, Star, CheckCircle, X } from "lucide-react"
-import { useParams, useNavigate } from "react-router-dom"
+import { useParams, useNavigate, useLocation } from "react-router-dom"
 import DetailImage from "../../public/images/SVG-detail.svg"
 import DetailImage1 from "../../public/images/SVG-detail-1.svg"
 import DetailImage2 from "../../public/images/Frame (1)-detail.svg"
@@ -16,7 +18,7 @@ import {
   newlearningDomainColors,
 } from "../utils/learningDomain"
 import LoaderOverlay from "../components/LoaderOverlay"
-import { toast, ToastContainer } from "react-toastify"
+import { toast } from "react-toastify"
 import { useMarkActivityCompleted, useRateActivity } from "../hooks/useActivityAPI"
 import { useNavigation } from "../components/NavigationContext"
 
@@ -100,7 +102,8 @@ const CelebrationSparkles = ({ isVisible, onComplete }) => {
 function ActivityDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { getNavigationState } = useNavigation()
+  const location = useLocation()
+  const { getNavigationState, saveNavigationState } = useNavigation()
 
   const [showRatingModal, setShowRatingModal] = useState(false)
   const [selectedRating, setSelectedRating] = useState(0)
@@ -123,38 +126,55 @@ function ActivityDetail() {
     if (activity?.isCompleted) {
       setCompleted(true)
     }
-    
-    let interval;
-  
+
+    let interval
+
     if (!completed) {
       interval = setInterval(() => {
-        setShowReminder(true);
-      }, 180000); // Every 3 minutes
+        setShowReminder(true)
+      }, 180000) // Every 3 minutes
     }
-    
+
     return () => {
       if (interval) {
-        clearInterval(interval);
+        clearInterval(interval)
       }
-    };
-
+    }
   }, [activity, completed])
 
   const handleBack = () => {
     const savedState = getNavigationState()
+    console.log("[ActivityDetail] Handling back with saved state:", savedState)
+
     if (savedState) {
-      navigate("/activities", { state: { fromActivity: true } })
+      // Navigate back to activities with restoration flag
+      navigate("/activities", {
+        state: {
+          fromActivity: true,
+          restoreState: savedState,
+        },
+        replace: false,
+      })
     } else {
-      navigate(-1)
+      // Fallback navigation
+      navigate("/activities", { state: { fromActivity: true } })
     }
   }
 
   const handleReturnToOrigin = () => {
     const savedState = getNavigationState()
+    console.log("[ActivityDetail] Returning to origin with saved state:", savedState)
+
     if (savedState) {
-      navigate("/activities", { state: { fromActivity: true } })
+      navigate("/activities", {
+        state: {
+          fromActivity: true,
+          restoreState: savedState,
+        },
+        replace: false,
+      })
     } else {
-      navigate("/activities")
+      navigate("/activities", { state: { fromActivity: true } })
     }
   }
 
@@ -163,22 +183,21 @@ function ActivityDetail() {
 
     try {
       setIsMarkingComplete(true)
-      
-      const loadingToastId = toast.info('Even geduld, de activiteit wordt afgerond…', { 
+
+      const loadingToastId = toast.info("Even geduld, de activiteit wordt afgerond…", {
         autoClose: false,
-        closeButton: false 
+        closeButton: false,
       })
 
       const response = await markCompleted(id)
       setCompleted(true)
 
-      let badgesToSet = response.badges || (response.badge ? [response.badge] : [])
+      const badgesToSet = response.badges || (response.badge ? [response.badge] : [])
       setEarnedBadges(badgesToSet)
 
       toast.dismiss(loadingToastId)
-      
+
       setShowCelebration(true)
-      
     } catch (error) {
       toast.error(error.message)
     } finally {
@@ -193,29 +212,29 @@ function ActivityDetail() {
   const handleReminderAction = () => {
     setShowReminder(false)
     // Scroll to the complete button
-    const completeButtons = document.querySelectorAll('button')
+    const completeButtons = document.querySelectorAll("button")
     let completeButton = null
-    
-    for (let button of completeButtons) {
-      if (button.textContent.includes('Markeer als voltooid') || button.textContent.includes('Voltooid')) {
+
+    for (const button of completeButtons) {
+      if (button.textContent.includes("Markeer als voltooid") || button.textContent.includes("Voltooid")) {
         completeButton = button
         break
       }
     }
-    
+
     if (completeButton) {
-      completeButton.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      completeButton.scrollIntoView({ behavior: "smooth", block: "center" })
       // Add a slight highlight effect
-      completeButton.classList.add('ring-2', 'ring-blue-500', 'ring-opacity-50')
+      completeButton.classList.add("ring-2", "ring-blue-500", "ring-opacity-50")
       setTimeout(() => {
-        completeButton.classList.remove('ring-2', 'ring-blue-500', 'ring-opacity-50')
+        completeButton.classList.remove("ring-2", "ring-blue-500", "ring-opacity-50")
       }, 2000)
     }
   }
 
   const handleCelebrationComplete = () => {
     setShowCelebration(false)
-    
+
     setTimeout(() => {
       if (earnedBadges.length > 0) {
         setShowBadgeModal(true)
@@ -227,7 +246,7 @@ function ActivityDetail() {
 
   const handleBadgeModalClose = () => {
     setShowBadgeModal(false)
-    
+
     setTimeout(() => {
       setShowRatingModal(true)
     }, 300)
@@ -242,46 +261,39 @@ function ActivityDetail() {
   }
 
   const handleSubmitRating = async () => {
-    // Prevent multiple submissions
-    if (isSubmittingRating) return;
-    
-    // Validate rating
+    if (isSubmittingRating) return
+
     if (selectedRating < 1 || selectedRating > 10) {
-      toast.error("Selecteer een beoordeling tussen 1 en 10", { 
-        toastId: 'rating-error',
-        autoClose: 3000 
-      });
-      return;
+      toast.error("Selecteer een beoordeling tussen 1 en 10", {
+        toastId: "rating-error",
+        autoClose: 3000,
+      })
+      return
     }
-  
+
     try {
-      setIsSubmittingRating(true);
-      
-      // Clear any existing toasts first
-      toast.dismiss();
-      
-      // Make API call
-      await rateActivity(id, selectedRating);
+      setIsSubmittingRating(true)
+      toast.dismiss()
 
+      await rateActivity(id, selectedRating)
 
+      // Close modal and reset
+      setShowRatingModal(false)
+      setSelectedRating(0)
+
+      // Navigate back after short delay
       setTimeout(() => {
         handleReturnToOrigin()
-        
-      }, 2000);
-      
-      // Close modal and reset
-      setShowRatingModal(false);
-      setSelectedRating(0);
-      
+      }, 1000)
     } catch (error) {
-      toast.error(error.message, { 
-        toastId: 'rating-api-error',
-        autoClose: 3000 
-      });
+      toast.error(error.message, {
+        toastId: "rating-api-error",
+        autoClose: 3000,
+      })
     } finally {
-      setIsSubmittingRating(false);
+      setIsSubmittingRating(false)
     }
-  };
+  }
 
   const handleRateLater = () => {
     setShowRatingModal(false)
@@ -289,7 +301,7 @@ function ActivityDetail() {
 
     setTimeout(() => {
       handleReturnToOrigin()
-    }, 500)
+    }, 300)
   }
 
   const getRatingRange = (index) => {
@@ -351,11 +363,10 @@ function ActivityDetail() {
                 <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Clock className="w-8 h-8 text-yellow-500" />
                 </div>
-                <h2 className="text-xl font-semibold inter-tight-700 text-gray-800 mb-3">
-                  Vergeet niet af te ronden!
-                </h2>
+                <h2 className="text-xl font-semibold inter-tight-700 text-gray-800 mb-3">Vergeet niet af te ronden!</h2>
                 <p className="text-gray-600 inter-tight-400 mb-6">
-                  Je bent al even bezig met deze activiteit. Vergeet niet om deze als voltooid te markeren om je vooruitgang bij te houden en badges te verdienen!
+                  Je bent al even bezig met deze activiteit. Vergeet niet om deze als voltooid te markeren om je
+                  vooruitgang bij te houden en badges te verdienen!
                 </p>
                 <div className="flex flex-col space-y-3">
                   <button
@@ -375,7 +386,7 @@ function ActivityDetail() {
             </div>
           </div>
         )}
-        
+
         {isMarkingComplete && <LoaderOverlay />}
 
         <div className="md:w-[90%] w-full mx-auto p-4 lg:p-6">
@@ -408,16 +419,13 @@ function ActivityDetail() {
                   )}
                 </div>
                 <div>
-                {
-                 activity.creatorName.toLowerCase() !== "floris"
-                 && 
-                 (
-                  <div className="flex justify-center items-center mt-1">
-                    <p className={`${newdomainColor} w-50  px-3 mt-2 py-1 rounded-full text-xs font-medium`}>
-                    Schepper: {activity.creatorName}
-                    </p>
-                  </div>
-                )}
+                  {activity.creatorName.toLowerCase() !== "floris" && (
+                    <div className="flex justify-center items-center mt-1">
+                      <p className={`${newdomainColor} w-50  px-3 mt-2 py-1 rounded-full text-xs font-medium`}>
+                        Schepper: {activity.creatorName}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -462,7 +470,7 @@ function ActivityDetail() {
               </div>
 
               <div className="rounded-2xl p-3">
-                <h2 className="text-lg poppins-700 font-semibold mb-3 flex items-center text-[#111827]">
+                <h2 className="text-lg poppins-700 font-semibold mb-3 flex items-center text-[#1F1F1F]">
                   <div className="w-6 h-6 rounded-full flex items-center justify-center mr-1">
                     <div>
                       <img src={DetailImage2 || "/placeholder.svg"} alt="" />
@@ -605,8 +613,8 @@ function ActivityDetail() {
                   </button>
                   <button
                     onClick={(e) => {
-                      e.stopPropagation(); // Prevent event bubbling
-                      handleSubmitRating();
+                      e.stopPropagation() // Prevent event bubbling
+                      handleSubmitRating()
                     }}
                     disabled={selectedRating === 0 || isSubmittingRating}
                     className={`flex-1 px-6 py-2 md:w-auto w-full rounded-xl inter-tight-400 text-sm font-medium transition-colors ${

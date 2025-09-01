@@ -1,89 +1,146 @@
-/* eslint-disable react-refresh/only-export-components */
-import React, { createContext, useContext, useState } from 'react';
+"use client"
 
-const NavigationContext = createContext();
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useContext, useState, useCallback } from "react"
+
+const NavigationContext = createContext()
 
 export const useNavigation = () => {
-  const context = useContext(NavigationContext);
+  const context = useContext(NavigationContext)
   if (!context) {
-    throw new Error('useNavigation must be used within a NavigationProvider');
+    throw new Error("useNavigation must be used within a NavigationProvider")
   }
-  
-  const saveNavigationState = (state) => {
-    // Save to both context and localStorage
-    context.saveNavigationState(state);
-    localStorage.setItem('activityNavigationState', JSON.stringify({
-      ...state,
-      _persisted: true // Add marker that this was persisted
-    }));
-  };
 
-  const getNavigationState = () => {
+  const saveNavigationState = useCallback(
+    (state) => {
+      const stateWithTimestamp = {
+        ...state,
+        timestamp: Date.now(),
+        _persisted: true,
+      }
+
+      // Save to both context and localStorage
+      context.saveNavigationState(stateWithTimestamp)
+      localStorage.setItem("activityNavigationState", JSON.stringify(stateWithTimestamp))
+      sessionStorage.setItem("activityNavigationState", JSON.stringify(stateWithTimestamp))
+
+      console.log("[Navigation] Saved state:", stateWithTimestamp)
+    },
+    [context],
+  )
+
+  const getNavigationState = useCallback(() => {
     // First try context
-    const ctxState = context.getNavigationState();
-    if (ctxState) return ctxState;
-    
-    // Then try localStorage
-    const saved = localStorage.getItem('activityNavigationState');
-    if (saved) {
+    const ctxState = context.getNavigationState()
+    if (ctxState && ctxState.timestamp && Date.now() - ctxState.timestamp < 300000) {
+      // 5 minutes
+      return ctxState
+    }
+
+    // Then try sessionStorage (preferred for tab-specific data)
+    const sessionSaved = sessionStorage.getItem("activityNavigationState")
+    if (sessionSaved) {
       try {
-        const parsed = JSON.parse(saved);
-        if (parsed._persisted) {
-          context.saveNavigationState(parsed);
-          return parsed;
+        const parsed = JSON.parse(sessionSaved)
+        if (parsed._persisted && parsed.timestamp && Date.now() - parsed.timestamp < 300000) {
+          context.saveNavigationState(parsed)
+          console.log("[Navigation] Restored from session:", parsed)
+          return parsed
         }
       } catch (e) {
-        console.error('Failed to parse navigation state', e);
+        console.error("Failed to parse session navigation state", e)
       }
     }
-    
-    return null;
-  };
+
+    // Finally try localStorage
+    const localSaved = localStorage.getItem("activityNavigationState")
+    if (localSaved) {
+      try {
+        const parsed = JSON.parse(localSaved)
+        if (parsed._persisted && parsed.timestamp && Date.now() - parsed.timestamp < 300000) {
+          context.saveNavigationState(parsed)
+          console.log("[Navigation] Restored from local:", parsed)
+          return parsed
+        }
+      } catch (e) {
+        console.error("Failed to parse local navigation state", e)
+      }
+    }
+
+    return null
+  }, [context])
+
+  const clearNavigationState = useCallback(() => {
+    context.clearNavigationState()
+    localStorage.removeItem("activityNavigationState")
+    sessionStorage.removeItem("activityNavigationState")
+    console.log("[Navigation] Cleared state")
+  }, [context])
 
   return {
     ...context,
     saveNavigationState,
-    getNavigationState
-  };
-};
+    getNavigationState,
+    clearNavigationState,
+  }
+}
 
 export const NavigationProvider = ({ children }) => {
-  const [navigationState, setNavigationState] = useState(null);
+  const [navigationState, setNavigationState] = useState(null)
 
-  const saveNavigationState = (state) => {
-    // Save to both context and localStorage for persistence
-    setNavigationState(state);
-    localStorage.setItem('activityNavigationState', JSON.stringify(state));
-  };
+  const saveNavigationState = useCallback((state) => {
+    setNavigationState(state)
+    localStorage.setItem("activityNavigationState", JSON.stringify(state))
+    sessionStorage.setItem("activityNavigationState", JSON.stringify(state))
+  }, [])
 
-  const getNavigationState = () => {
-    // Try context first, then localStorage
+  const getNavigationState = useCallback(() => {
     if (navigationState) {
-      return navigationState;
+      return navigationState
     }
-    
-    const saved = localStorage.getItem('activityNavigationState');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      setNavigationState(parsed);
-      return parsed;
-    }
-    
-    return null;
-  };
 
-  const clearNavigationState = () => {
-    setNavigationState(null);
-    localStorage.removeItem('activityNavigationState');
-  };
+    // Try sessionStorage first
+    const sessionSaved = sessionStorage.getItem("activityNavigationState")
+    if (sessionSaved) {
+      try {
+        const parsed = JSON.parse(sessionSaved)
+        setNavigationState(parsed)
+        return parsed
+      } catch (e) {
+        console.error("Failed to parse session state", e)
+      }
+    }
+
+    // Then localStorage
+    const localSaved = localStorage.getItem("activityNavigationState")
+    if (localSaved) {
+      try {
+        const parsed = JSON.parse(localSaved)
+        setNavigationState(parsed)
+        return parsed
+      } catch (e) {
+        console.error("Failed to parse local state", e)
+      }
+    }
+
+    return null
+  }, [navigationState])
+
+  const clearNavigationState = useCallback(() => {
+    setNavigationState(null)
+    localStorage.removeItem("activityNavigationState")
+    sessionStorage.removeItem("activityNavigationState")
+  }, [])
 
   return (
-    <NavigationContext.Provider value={{
-      saveNavigationState,
-      getNavigationState,
-      clearNavigationState
-    }}>
+    <NavigationContext.Provider
+      value={{
+        saveNavigationState,
+        getNavigationState,
+        clearNavigationState,
+      }}
+    >
       {children}
     </NavigationContext.Provider>
-  );
-};
+  )
+}

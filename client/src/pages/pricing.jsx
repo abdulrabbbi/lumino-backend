@@ -85,9 +85,9 @@ const Pricing = () => {
               )}
 
               <div className={`flex flex-col justify-between 
-  ${sub.name === 'Proefreis' || sub.name === 'Eeuwig Sterk' ? 'md:h-[500px] mt-6 h-full' : ''} 
+  ${sub.name === 'Proefreis' || sub.name === 'Eeuwig Sterk' ? 'md:h-[450px] mt-16 h-full' : ''} 
   bg-white 
-  ${sub.name === 'Jaaravontuur' ? 'mt-10 m-3 pb-20' : ''} 
+  ${sub.name === 'Jaaravontuur' ? 'mt-10 m-3 pb-24' : ''} 
   rounded-3xl p-8 shadow-lg border-2 border-gray-200 relative z-10`}>
                 <div className="flex flex-col items-start">
                   <div className="mb-4 mt-4">
@@ -120,10 +120,11 @@ const Pricing = () => {
                 </button>
 
                 <p className="text-xs text-gray-500 text-center mt-4">
-                  {sub.priceType === 'monthly' && `daarna €${sub.price}/maand`}
-                  {sub.priceType === 'yearly' && `€${sub.price}/jaar`}
-                  {sub.priceType === 'one-time' && `eenmalig €${sub.price}`}
-                </p>
+  {sub.priceType === 'monthly' && `€9,99 / maand`}
+  {sub.priceType === 'yearly' && `€99,99 / jaar`}
+  {sub.priceType === 'one-time' && `€199,99 eenmalig`}
+</p>
+
               </div>
             </div>
           ))}

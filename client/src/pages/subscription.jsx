@@ -121,32 +121,31 @@ export default function SubscriptionPage() {
     );
   }
 
-  // For test users with special subscription
   if (subscription.isTestUser) {
     return (
       <div className="h-full bg-[#FFFFFF] space-y-6">
         <div className="max-w-4xl mx-auto space-y-6">
           <div className="bg-white rounded-lg border border-[#E2E4E9] p-6 md:p-8">
-            <h2 className="text-xl text-gray-950 mb-6 inter-tight-400">Test Account Subscription</h2>
+            <h2 className="text-xl text-gray-950 mb-6 inter-tight-400">Test account Abonnement</h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div>
-                <div className="text-sm text-gray-600 mb-1 inter-tight-400">Subscription Status</div>
+                <div className="text-sm text-gray-600 mb-1 inter-tight-400">Abonnementsstatus</div>
                 <div className="text-base font-medium text-gray-900 inter-tight-400">
-                  {subscription.status || 'Active'}
+                  {subscription.status || 'Actief'}
                 </div>
               </div>
               <div>
-                <div className="text-sm text-gray-600 mb-1 inter-tight-400">Package</div>
+                <div className="text-sm text-gray-600 mb-1 inter-tight-400">Pakket</div>
                 <div className="text-base font-medium text-gray-900 inter-tight-400">
-                  {subscription.subscription?.name || 'Lifetime Access'}
+                  {subscription.subscription?.name || 'Levenslange Toegang'}
                 </div>
               </div>
             </div>
             
             <div className="bg-blue-50 p-4 rounded-lg mt-6">
               <p className="text-blue-700 text-sm inter-tight-400">
-                You're using a test account with special access privileges. This is not a purchased subscription.
+                Je gebruikt een testaccount met speciale toegangsrechten. Dit is geen aangekocht abonnement.
               </p>
             </div>
           </div>
@@ -163,6 +162,29 @@ export default function SubscriptionPage() {
       </div>
     );
   }
+  
+  // Determine if cancel button should be shown based on subscription type and trial status
+  // Determine if cancel button should be shown based on subscription type and trial status
+const shouldShowCancelButton = () => {
+  const subscriptionType = subscription.subscription?.priceType;
+  const isInTrial = subscription.status === 'trial'; // Check if status is 'trial'
+  
+  console.log('Subscription Type:', subscriptionType);
+  console.log('Is in Trial:', isInTrial);
+  console.log('Full subscription data:', subscription);
+  
+  // For monthly subscriptions, always show cancel button
+  if (subscriptionType === 'monthly') {
+    return true;
+  }
+  
+  // For one-time and yearly payments, only show during trial
+  if ((subscriptionType === 'one-time' || subscriptionType === 'yearly') && isInTrial) {
+    return true;
+  }
+  
+  return false;
+};
 
   // For regular users with active subscription
   return (
@@ -228,24 +250,27 @@ export default function SubscriptionPage() {
 
           <hr className="border-gray-200 mb-6" />
 
-          {subscription.subscription?.name.toLowerCase() === "proefreis" && (
-            <div className="space-y-3">
-              <button 
-                className={`px-6 py-2 border rounded-xl cursor-pointer ${
-                  cancelling 
-                    ? 'border-gray-400 text-gray-400 cursor-not-allowed' 
-                    : 'border-[#8F8F8F] text-[#8F8F8F] hover:bg-gray-50'
-                }`}
-                onClick={openCancelModal}
-                disabled={cancelling}
-              >
-                {cancelling ? 'Cancelling...' : 'Cancel Subscription'}
-              </button>
-              <p className="text-sm text-[#B5B5B5] inter-tight-400">
-                Your subscription will remain active until the end of the current billing period.
-              </p>
-            </div>
-          )}
+          {shouldShowCancelButton() && (
+  <div className="space-y-3">
+    <button 
+      className={`px-6 py-2 border rounded-xl cursor-pointer ${
+        cancelling 
+          ? 'border-gray-400 text-gray-400 cursor-not-allowed' 
+          : 'border-[#8F8F8F] text-[#8F8F8F] hover:bg-gray-50'
+      }`}
+      onClick={openCancelModal}
+      disabled={cancelling}
+    >
+      {cancelling ? 'Cancelling...' : 'Cancel Subscription'}
+    </button>
+    <p className="text-sm text-[#B5B5B5] inter-tight-400">
+      {subscription.subscription?.priceType === 'monthly' 
+        ? 'Your subscription will remain active until the end of the current billing period.'
+        : 'Your trial will end immediately upon cancellation.'
+      }
+    </p>
+  </div>
+)}
         </div>
 
         <div className="bg-white rounded-lg border border-gray-200 p-6 md:p-8">

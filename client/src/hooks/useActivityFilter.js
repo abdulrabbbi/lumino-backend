@@ -5,15 +5,20 @@ import axios from "axios"
 import { BASE_URL } from "../utils/api"
 import { toast } from "react-toastify"
 
-export const useActivitiesFilter = () => {
+export const useActivitiesFilter = (
+  initialSearchTerm = "",
+  initialCategory = "Alle Leergebieden",
+  initialAge = "alle-leeftijden",
+  initialSort = "hoogstgewaardeerde",
+) => {
   const [activities, setActivities] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [searchTerm, setSearchTerm] = useState("") // This updates on every keystroke
-  const [effectiveSearchTerm, setEffectiveSearchTerm] = useState("") // This triggers the API call
-  const [selectedCategory, setSelectedCategory] = useState("Alle Leergebieden")
-  const [selectedAge, setSelectedAge] = useState("alle-leeftijden")
-  const [selectedSort, setSelectedSort] = useState("hoogstgewaardeerde")
+  const [searchTerm, setSearchTerm] = useState(initialSearchTerm)
+  const [effectiveSearchTerm, setEffectiveSearchTerm] = useState(initialSearchTerm)
+  const [selectedCategory, setSelectedCategory] = useState(initialCategory)
+  const [selectedAge, setSelectedAge] = useState(initialAge)
+  const [selectedSort, setSelectedSort] = useState(initialSort)
 
   const fetchFilteredActivities = useCallback(async () => {
     setLoading(true)
@@ -24,7 +29,7 @@ export const useActivitiesFilter = () => {
 
       const response = await axios.get(`${BASE_URL}/filter-activities`, {
         params: {
-          searchTerm: effectiveSearchTerm, // Use effectiveSearchTerm for API call
+          searchTerm: effectiveSearchTerm,
           category: selectedCategory,
           age: selectedAge,
           sort: selectedSort,
@@ -43,15 +48,13 @@ export const useActivitiesFilter = () => {
     } finally {
       setLoading(false)
     }
-  }, [effectiveSearchTerm, selectedCategory, selectedAge, selectedSort]) // Dependencies for useCallback
+  }, [effectiveSearchTerm, selectedCategory, selectedAge, selectedSort])
 
   useEffect(() => {
-    // Only trigger fetch when non-search filters change, not on every effectiveSearchTerm change
     fetchFilteredActivities()
-  }, [selectedCategory, selectedAge, selectedSort]) // Removed effectiveSearchTerm from dependencies
+  }, [selectedCategory, selectedAge, selectedSort, fetchFilteredActivities])
 
   useEffect(() => {
-    // This will trigger when effectiveSearchTerm changes (via triggerSearch)
     if (
       effectiveSearchTerm !== "" ||
       selectedCategory !== "Alle Leergebieden" ||
@@ -62,14 +65,13 @@ export const useActivitiesFilter = () => {
     }
   }, [effectiveSearchTerm, fetchFilteredActivities])
 
-  // Function to explicitly trigger the search API call
   const triggerSearch = useCallback(() => {
-    setEffectiveSearchTerm(searchTerm) // Update effectiveSearchTerm to trigger fetch
+    setEffectiveSearchTerm(searchTerm)
   }, [searchTerm])
 
   const resetFilters = useCallback(() => {
     setSearchTerm("")
-    setEffectiveSearchTerm("") // Reset effective search term too
+    setEffectiveSearchTerm("")
     setSelectedCategory("Alle Leergebieden")
     setSelectedAge("alle-leeftijden")
     setSelectedSort("hoogstgewaardeerde")
@@ -79,7 +81,7 @@ export const useActivitiesFilter = () => {
     activities,
     loading,
     error,
-    searchTerm, // Return searchTerm for input value
+    searchTerm,
     selectedCategory,
     selectedAge,
     selectedSort,
@@ -88,6 +90,6 @@ export const useActivitiesFilter = () => {
     setSelectedAge,
     setSelectedSort,
     resetFilters,
-    triggerSearch, // Expose the triggerSearch function
+    triggerSearch,
   }
 }

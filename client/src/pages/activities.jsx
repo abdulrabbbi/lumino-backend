@@ -15,7 +15,7 @@ import { useActivitiesFilter } from "../hooks/useActivityFilter"
 import { usePlayweekActivities } from "../hooks/usePlayweekActivities"
 import { learningDomainImages, learningDomainColors } from "../utils/learningDomain"
 import EmailCollectionPopup from "../components/EmailCollectionPopup"
-import { useNavigate, useLocation } from "react-router-dom"
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom"
 import LoaderOverlay from "../components/LoaderOverlay"
 import { BASE_URL } from "../utils/api"
 import axios from "axios"
@@ -25,22 +25,45 @@ import { useScrollPosition } from "../hooks/useScrollPosition"
 export default function Activities() {
   const navigate = useNavigate()
   const location = useLocation()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { saveNavigationState, getNavigationState, clearNavigationState } = useNavigation()
-
-  const { saveScrollPosition, restoreScrollPosition } = useScrollPosition("activities")
+  const { saveScrollPosition, restoreScrollPosition, clearScrollPosition } = useScrollPosition("activities")
 
   const [activeTab, setActiveTab] = useState("speelweek")
-  const [totalCountActivities, settotalCountActivities] = useState(0)
   const [currentPage, setCurrentPage] = useState(1)
-  const activitiesPerPage = 30
   const [hasRestoredState, setHasRestoredState] = useState(false)
+  const [isRestoringFromActivity, setIsRestoringFromActivity] = useState(false)
+  const [totalCountActivities, settotalCountActivities] = useState(0)
 
+  const activitiesPerPage = 30
   const activityListRef = useRef(null)
 
-  // usePlayweekActivities is still used for 'speelweek' tab
-  const { playweekActivities, weekInfo, loading: playweekLoading, error: playweekError } = usePlayweekActivities()
+  const getInitialFilters = () => {
+    // If coming from activity detail, try to get saved state first
+    if (location.state?.fromActivity) {
+      const savedState = getNavigationState()
+      if (savedState && savedState.filters) {
+        console.log("[Activities] Using saved filters:", savedState.filters)
+        return {
+          searchTerm: savedState.filters.searchTerm || "",
+          category: savedState.filters.selectedCategory || "Alle Leergebieden",
+          age: savedState.filters.selectedAge || "alle-leeftijden",
+          sort: savedState.filters.selectedSort || "hoogstgewaardeerde",
+        }
+      }
+    }
 
-  // useActivitiesFilter now fetches its own data
+    // Otherwise use URL params
+    return {
+      searchTerm: searchParams.get("search") || "",
+      category: searchParams.get("category") || "Alle Leergebieden",
+      age: searchParams.get("age") || "alle-leeftijden",
+      sort: searchParams.get("sort") || "hoogstgewaardeerde",
+    }
+  }
+
+  const initialFilters = getInitialFilters()
+
   const {
     activities: filteredActivities,
     loading: filterLoading,
@@ -55,7 +78,9 @@ export default function Activities() {
     setSelectedSort,
     resetFilters,
     triggerSearch,
-  } = useActivitiesFilter()
+  } = useActivitiesFilter(initialFilters.searchTerm, initialFilters.category, initialFilters.age, initialFilters.sort)
+
+  const { playweekActivities, weekInfo, loading: playweekLoading, error: playweekError } = usePlayweekActivities()
 
   const [showEmailPopup, setShowEmailPopup] = useState(false)
   const [isGuest, setIsGuest] = useState(false)
@@ -63,24 +88,61 @@ export default function Activities() {
   useEffect(() => {
     if (!hasRestoredState) {
       const savedState = getNavigationState()
-      if (savedState && location.state?.fromActivity) {
-        // Reset filters when returning from activity page
-        resetFilters()
-        setActiveTab(savedState.activeTab || "speelweek")
-        setCurrentPage(1) // Reset to first page
 
+      if (savedState && location.state?.fromActivity) {
+        console.log("[Activities] Restoring from saved state:", savedState)
+        setIsRestoringFromActivity(true)
+
+        // Restore tab and page
+        setActiveTab(savedState.activeTab || "speelweek")
+        setCurrentPage(savedState.currentPage || 1)
+
+        // Mark as restored
         setHasRestoredState(true)
 
-        // Restore scroll position after a short delay to ensure content is loaded
-        setTimeout(() => {
-          restoreScrollPosition()
-          clearNavigationState() // Clear after successful restoration
-        }, 500)
+        // Restore scroll position with multiple attempts
+        const restoreScroll = () => {
+          setTimeout(() => restoreScrollPosition(), 100)
+          setTimeout(() => restoreScrollPosition(), 500)
+          setTimeout(() => restoreScrollPosition(), 1000)
+          setTimeout(() => {
+            restoreScrollPosition()
+            setIsRestoringFromActivity(false)
+            // Clear navigation state after successful restoration
+            clearNavigationState()
+          }, 1500)
+        }
+
+        restoreScroll()
       } else {
         setHasRestoredState(true)
+        setIsRestoringFromActivity(false)
       }
     }
-  }, [hasRestoredState, location.state, getNavigationState, clearNavigationState, restoreScrollPosition, resetFilters])
+  }, [hasRestoredState, location.state, getNavigationState, clearNavigationState, restoreScrollPosition])
+
+  useEffect(() => {
+    if (activeTab === "library" && hasRestoredState && !isRestoringFromActivity) {
+      const params = new URLSearchParams()
+
+      if (searchTerm) params.set("search", searchTerm)
+      if (selectedCategory !== "Alle Leergebieden") params.set("category", selectedCategory)
+      if (selectedAge !== "alle-leeftijden") params.set("age", selectedAge)
+      if (selectedSort !== "hoogstgewaardeerde") params.set("sort", selectedSort)
+
+      // Replace the current URL with updated params
+      setSearchParams(params, { replace: true })
+    }
+  }, [
+    searchTerm,
+    selectedCategory,
+    selectedAge,
+    selectedSort,
+    activeTab,
+    hasRestoredState,
+    isRestoringFromActivity,
+    setSearchParams,
+  ])
 
   useEffect(() => {
     const authToken = localStorage.getItem("authToken")
@@ -207,9 +269,9 @@ export default function Activities() {
       return
     }
 
+    // Save current scroll position
     saveScrollPosition()
 
-    // Save current navigation state before navigating
     const navigationState = {
       activeTab,
       currentPage,
@@ -217,31 +279,35 @@ export default function Activities() {
       filters:
         activeTab === "library"
           ? {
-              searchTerm,
-              selectedCategory,
-              selectedAge,
-              selectedSort,
+              searchTerm: searchTerm,
+              selectedCategory: selectedCategory,
+              selectedAge: selectedAge,
+              selectedSort: selectedSort,
             }
           : null,
       timestamp: Date.now(),
+      url: window.location.href,
+      pathname: location.pathname,
+      search: location.search,
     }
 
-    // Save both to context and localStorage for reliability
+    console.log("[Activities] Saving navigation state before activity click:", navigationState)
     saveNavigationState(navigationState)
-    localStorage.setItem("activityNavigationState", JSON.stringify(navigationState))
 
-    // Save scroll position
-    saveScrollPosition()
-
-    navigate(`/activity-detail/${activity.id}`)
+    navigate(`/activity-detail/${activity.id}`, {
+      state: {
+        fromActivities: true,
+        navigationState: navigationState,
+      },
+    })
   }
 
   const handleTabChange = (tab) => {
     setActiveTab(tab)
     if (tab === "library") {
-      resetFilters()
+      // Don't reset filters when switching to library tab
+      // Filters should persist from URL params
       setCurrentPage(1)
-      // Remove the scrollIntoView that was causing unwanted scrolling
     }
   }
 
@@ -339,7 +405,7 @@ export default function Activities() {
 
       window.scrollTo({
         top: offsetPosition,
-        behavior: "smooth"
+        behavior: "smooth",
       })
     }
   }
@@ -546,15 +612,15 @@ export default function Activities() {
                 <option value="Anders denken">Anders denken</option>
               </select>
               <select
-                value={selectedAge}
-                onChange={handleAgeChange}
-                className="w-full pl-10 pr-4 py-2 border-none outline-none text-[#707070] text-sm bg-[#FFFFFF] rounded-xl inter-tight-400"
-              >
-                <option value="alle-leeftijden">Alle Leeftijden</option>
-                <option value="3-4">3-4 jaar</option>
-                <option value="3-6">3-6 jaar</option>
-                <option value="5-6">5-6 jaar</option>
-              </select>
+  value={selectedAge}
+  onChange={handleAgeChange}
+  className="w-full pl-10 pr-4 py-2 border-none outline-none text-[#707070] text-sm bg-[#FFFFFF] rounded-xl inter-tight-400"
+>
+  <option value="alle-leeftijden">Alle Leeftijden</option>
+  <option value="3-4">3-4 jaar</option>
+  <option value="3-6">3-6 jaar</option>
+  <option value="5-6">5-6 jaar</option>
+</select>
               <select
                 value={selectedSort}
                 onChange={handleSortChange}

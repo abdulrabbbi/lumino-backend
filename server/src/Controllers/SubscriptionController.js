@@ -15,6 +15,7 @@ export const getAllSubscriptions = async (req, res) => {
     res.status(500).json({ error: "Server Error" });
   }
 }
+
 export const purchaseSubscription = async (req, res) => {
   try {
     const userId = req.user?.userId;
@@ -28,6 +29,18 @@ export const purchaseSubscription = async (req, res) => {
 
     const user = await User.findById(userId); 
     if (!user) return res.status(404).json({ error: "User not found" });
+
+    // Check if user already has an active subscription
+    const existingSubscription = await UserSubscription.findOne({
+      userId,
+      status: { $in: ['active', 'trial'] }
+    });
+    
+    if (existingSubscription) {
+      return res.status(400).json({ 
+        error: "You already have an active subscription. Please cancel it before purchasing a new one." 
+      });
+    }
 
     // Create or retrieve Stripe customer
     let stripeCustomerId = user.stripeCustomerId;
@@ -47,9 +60,9 @@ export const purchaseSubscription = async (req, res) => {
 
     const productName = `${subscription.name} (${subscription._id})`;
 
-    // Different checkout flow based on subscription type
+    // All subscription types will have a 7-day trial
     if (subscription.priceType === "monthly") {
-      // For Proefreis (monthly with trial)
+      // Monthly subscription with trial
       const session = await stripe.checkout.sessions.create({
         mode: "subscription",
         customer: stripeCustomerId,
@@ -73,7 +86,7 @@ export const purchaseSubscription = async (req, res) => {
           },
         ],
         subscription_data: {
-          trial_period_days: subscription.trialPeriodDays
+          trial_period_days: 7 // 7-day trial for all plans
         },
         success_url: `${process.env.CLIENT_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${process.env.CLIENT_URL}/cancel`,
@@ -84,10 +97,10 @@ export const purchaseSubscription = async (req, res) => {
       });
 
       res.json({ url: session.url });
-    } else {
-      // For yearly and one-time payments (simple payment)
+    } else if (subscription.priceType === "yearly") {
+      // Yearly subscription with trial
       const session = await stripe.checkout.sessions.create({
-        mode: "payment",
+        mode: "subscription",
         customer: stripeCustomerId,
         line_items: [
           {
@@ -101,15 +114,60 @@ export const purchaseSubscription = async (req, res) => {
                 }
               },
               unit_amount: Math.round(subscription.price * 100),
+              recurring: {
+                interval: "year",
+              },
             },
             quantity: 1,
           },
         ],
+        subscription_data: {
+          trial_period_days: 7 // 7-day trial for all plans
+        },
         success_url: `${process.env.CLIENT_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${process.env.CLIENT_URL}/cancel`,
         metadata: {
           userId: userId,
           dbSubscriptionId: subscription._id.toString()
+        }
+      });
+
+      res.json({ url: session.url });
+    } else {
+      // One-time payment with trial period simulation
+      // For one-time payments, we'll create a subscription with a 7-day trial
+      // and then cancel it after trial ends if not converted to paid
+      const session = await stripe.checkout.sessions.create({
+        mode: "subscription",
+        customer: stripeCustomerId,
+        line_items: [
+          {
+            price_data: {
+              currency: subscription.currency,
+              product_data: {
+                name: productName,
+                description: subscription.description,
+                metadata: {
+                  dbSubscriptionId: subscription._id.toString()
+                }
+              },
+              unit_amount: Math.round(subscription.price * 100),
+              recurring: {
+                interval: "month", // Using monthly as base
+              },
+            },
+            quantity: 1,
+          },
+        ],
+        subscription_data: {
+          trial_period_days: 7 // 7-day trial for all plans
+        },
+        success_url: `${process.env.CLIENT_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${process.env.CLIENT_URL}/cancel`,
+        metadata: {
+          userId: userId,
+          dbSubscriptionId: subscription._id.toString(),
+          isOneTimePayment: "true" // Flag to identify one-time payments
         }
       });
 
@@ -120,6 +178,7 @@ export const purchaseSubscription = async (req, res) => {
     res.status(500).json({ error: "Server Error" });
   }
 }
+
 export const verifySubscription = async (req, res) => {
   try {
     const userId = req.user?.userId;
@@ -154,21 +213,26 @@ export const verifySubscription = async (req, res) => {
 
     // Calculate dates based on subscription type
     if (dbSubscription.priceType === 'monthly') {
-      if (dbSubscription.trialPeriodDays > 0) {
-        trialEndDate = new Date();
-        trialEndDate.setDate(trialEndDate.getDate() + dbSubscription.trialPeriodDays);
+      // 7-day trial for all plans
+      trialEndDate = new Date();
+      trialEndDate.setDate(trialEndDate.getDate() + 7);
 
-        endDate = new Date(trialEndDate);
-        endDate.setMonth(endDate.getMonth() + 1);
-      } else {
-        endDate = new Date();
-        endDate.setMonth(endDate.getMonth() + 1);
-      }
+      endDate = new Date(trialEndDate);
+      endDate.setMonth(endDate.getMonth() + 1);
     } else if (dbSubscription.priceType === 'yearly') {
-      endDate = new Date();
+      // 7-day trial for all plans
+      trialEndDate = new Date();
+      trialEndDate.setDate(trialEndDate.getDate() + 7);
+
+      endDate = new Date(trialEndDate);
       endDate.setFullYear(endDate.getFullYear() + 1);
     } else if (dbSubscription.priceType === 'one-time') {
-      endDate = null; // Never expires
+      // 7-day trial for all plans
+      trialEndDate = new Date();
+      trialEndDate.setDate(trialEndDate.getDate() + 7);
+      
+      // For one-time payments, endDate is null (never expires) after trial
+      endDate = null;
     }
 
     if (session.mode === 'subscription' && session.subscription) {
@@ -177,17 +241,13 @@ export const verifySubscription = async (req, res) => {
         stripeSubscriptionId: subscription.id,
         currentPeriodEnd: new Date(subscription.current_period_end * 1000),
         status: subscription.status,
-        trialEnd: subscription.trial_end ? new Date(subscription.trial_end * 1000) : null
+        trialEnd: subscription.trial_end ? new Date(subscription.trial_end * 1000) : null,
+        isOneTimePayment: session.metadata.isOneTimePayment === "true"
       };
 
       if (subscription.trial_end) {
         trialEndDate = new Date(subscription.trial_end * 1000);
       }
-    } else if (session.mode === 'payment') {
-      subscriptionDetails = {
-        stripeSessionId: session.id,
-        status: 'paid'
-      };
     }
 
     let earnedBadges = [];
@@ -222,11 +282,8 @@ export const verifySubscription = async (req, res) => {
       existingActiveSubscription.trialEndDate = trialEndDate;
       existingActiveSubscription.stripeDetails = subscriptionDetails;
 
-      if (dbSubscription.priceType === 'monthly' && trialEndDate && new Date() < trialEndDate) {
-        existingActiveSubscription.status = 'trial';
-      } else {
-        existingActiveSubscription.status = 'active';
-      }
+      // All subscriptions start with trial status
+      existingActiveSubscription.status = 'trial';
 
       existingActiveSubscription.paymentHistory.push({
         amount: session.amount_total / 100,
@@ -235,7 +292,7 @@ export const verifySubscription = async (req, res) => {
         paymentDate: new Date(),
         stripeSessionId: session.id,
         stripePaymentIntentId: session.payment_intent,
-        isTrialPayment: dbSubscription.priceType === 'monthly' && trialEndDate && new Date() < trialEndDate
+        isTrialPayment: true // All initial payments are trial payments
       });
 
       await existingActiveSubscription.save();
@@ -244,7 +301,7 @@ export const verifySubscription = async (req, res) => {
         user.subscription = dbSubscription.key;
         user.subscriptionActive = true;
         user.subscriptionExpiresAt = endDate;
-        user.isInTrial = dbSubscription.priceType === 'monthly' && trialEndDate && new Date() < trialEndDate;
+        user.isInTrial = true; // All subscriptions start with trial
         user.trialEndDate = trialEndDate;
 
         await assignEarlyAdopterBadge();
@@ -259,7 +316,8 @@ export const verifySubscription = async (req, res) => {
           expiresAt: endDate,
           trialEndDate: trialEndDate,
           orderStatus: 'paid',
-          badges: earnedBadges
+          badges: earnedBadges,
+          isTrial: true
         });
       } else {
         res.status(400).json({
@@ -269,16 +327,11 @@ export const verifySubscription = async (req, res) => {
         });
       }
     } else {
-      // Create new user subscription
-      let status = 'active';
-      if (dbSubscription.priceType === 'monthly' && trialEndDate && new Date() < trialEndDate) {
-        status = 'trial';
-      }
-
+      // Create new user subscription with trial status
       const userSubscription = new UserSubscription({
         userId,
         subscriptionId: dbSubscription._id,
-        status: status,
+        status: 'trial', // All subscriptions start with trial
         orderStatus: isPaid ? 'paid' : 'failed',
         startDate: new Date(),
         endDate: isPaid ? endDate : null,
@@ -291,7 +344,7 @@ export const verifySubscription = async (req, res) => {
           paymentDate: new Date(),
           stripeSessionId: session.id,
           stripePaymentIntentId: session.payment_intent,
-          isTrialPayment: dbSubscription.priceType === 'monthly' && trialEndDate && new Date() < trialEndDate
+          isTrialPayment: true // All initial payments are trial payments
         }]
       });
       await userSubscription.save();
@@ -300,7 +353,7 @@ export const verifySubscription = async (req, res) => {
         user.subscription = dbSubscription.key;
         user.subscriptionActive = true;
         user.subscriptionExpiresAt = endDate;
-        user.isInTrial = dbSubscription.priceType === 'monthly' && trialEndDate && new Date() < trialEndDate;
+        user.isInTrial = true; // All subscriptions start with trial
         user.trialEndDate = trialEndDate;
         
         await assignEarlyAdopterBadge();
@@ -315,7 +368,8 @@ export const verifySubscription = async (req, res) => {
           expiresAt: endDate,
           trialEndDate: trialEndDate,
           orderStatus: 'paid',
-          badges: earnedBadges
+          badges: earnedBadges,
+          isTrial: true
         });
       } else {
         res.status(400).json({
@@ -342,7 +396,7 @@ export const getSubscriptionStatus = async (req, res) => {
     }).populate('subscriptionId');
 
     if (!userSubscription) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         message: "No active subscription found",
         hasSubscription: false
       });
@@ -368,7 +422,7 @@ export const getOrderStatus = async (req, res) => {
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
     const { session_id } = req.query;
-    
+
     if (!session_id) {
       return res.status(400).json({ error: "Session ID is required" });
     }
@@ -381,7 +435,7 @@ export const getOrderStatus = async (req, res) => {
     }).populate('subscriptionId');
 
     if (!userSubscription) {
-      return res.status(404).json({ 
+      return res.status(404).json({
         error: "Order not found",
         orderStatus: 'unknown'
       });
@@ -410,7 +464,7 @@ export const handleStripeWebhook = async (req, res) => {
       sig,
       process.env.STRIPE_WEBHOOK_SECRET
     );
-    
+
     console.log(`Webhook received: ${event.type}`);
   } catch (err) {
     console.error(`Webhook signature verification failed.`, err.message);
@@ -431,6 +485,10 @@ export const handleStripeWebhook = async (req, res) => {
         console.log('Handling customer.subscription.deleted event');
         await handleSubscriptionDeleted(event.data.object);
         break;
+      case 'customer.subscription.trial_will_end':
+        console.log('Handling customer.subscription.trial_will_end event');
+        await handleTrialWillEnd(event.data.object);
+        break;
       default:
         console.log(`Unhandled event type ${event.type}`);
     }
@@ -444,18 +502,23 @@ export const handleStripeWebhook = async (req, res) => {
 const handleInvoicePaymentSucceeded = async (invoice) => {
   try {
     const subscriptionId = invoice.subscription;
-    if (!subscriptionId) return; 
-    
+    if (!subscriptionId) return;
+
     const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-    
+
     const userSubscription = await UserSubscription.findOne({
       'stripeDetails.stripeSubscriptionId': subscriptionId
     }).populate('subscriptionId');
-    
-    if (!userSubscription || userSubscription.subscriptionId.priceType !== 'monthly') {
+
+    if (!userSubscription) {
       return;
     }
-    
+
+    // Check if this is the first payment after trial
+    const isFirstPaymentAfterTrial = invoice.billing_reason === 'subscription_create' &&
+      subscription.status === 'active' &&
+      !subscription.trial_end;
+
     userSubscription.paymentHistory.push({
       amount: invoice.amount_paid / 100,
       currency: invoice.currency,
@@ -464,21 +527,40 @@ const handleInvoicePaymentSucceeded = async (invoice) => {
       stripePaymentIntentId: invoice.payment_intent,
       isTrialPayment: false
     });
-    
-    // Update end date (extend by 1 month)
-    userSubscription.endDate = new Date();
-    userSubscription.endDate.setMonth(userSubscription.endDate.getMonth() + 1);
-    
+
+    // Update end date based on subscription type
+    if (userSubscription.subscriptionId.priceType === 'monthly') {
+      userSubscription.endDate = new Date();
+      userSubscription.endDate.setMonth(userSubscription.endDate.getMonth() + 1);
+    } else if (userSubscription.subscriptionId.priceType === 'yearly') {
+      userSubscription.endDate = new Date();
+      userSubscription.endDate.setFullYear(userSubscription.endDate.getFullYear() + 1);
+    }
+    // For one-time payments, endDate remains null
+
+    // If this is the first payment after trial, update status
+    if (isFirstPaymentAfterTrial) {
+      userSubscription.status = 'active';
+      userSubscription.trialEndDate = null;
+    }
+
     await userSubscription.save();
-    
+
     // Update user document
     const user = await User.findById(userSubscription.userId);
     if (user) {
       user.subscriptionExpiresAt = userSubscription.endDate;
+
+      // If this is the first payment after trial, update trial status
+      if (isFirstPaymentAfterTrial) {
+        user.isInTrial = false;
+        user.trialEndDate = null;
+      }
+
       await user.save();
     }
-    
-    console.log(`Monthly payment recorded for user ${userSubscription.userId}`);
+
+    console.log(`Payment recorded for user ${userSubscription.userId}`);
   } catch (error) {
     console.error('Error handling invoice payment:', error);
   }
@@ -488,23 +570,23 @@ const handleSubscriptionUpdated = async (subscription) => {
     const userSubscription = await UserSubscription.findOne({
       'stripeDetails.stripeSubscriptionId': subscription.id
     }).populate('subscriptionId');
-    
+
     if (!userSubscription || userSubscription.subscriptionId.priceType !== 'monthly') {
-      return; 
+      return;
     }
-    
+
     userSubscription.stripeDetails.currentPeriodEnd = new Date(subscription.current_period_end * 1000);
     userSubscription.stripeDetails.status = subscription.status;
-    
+
     if (subscription.status === 'active' && subscription.trial_end) {
       userSubscription.trialEndDate = new Date(subscription.trial_end * 1000);
       userSubscription.status = 'trial';
     } else if (subscription.status === 'active') {
       userSubscription.status = 'active';
     }
-    
+
     await userSubscription.save();
-    
+
     // Update user document
     const user = await User.findById(userSubscription.userId);
     if (user) {
@@ -523,16 +605,16 @@ const handleSubscriptionDeleted = async (subscription) => {
     const userSubscription = await UserSubscription.findOne({
       'stripeDetails.stripeSubscriptionId': subscription.id
     }).populate('subscriptionId');
-    
+
     if (!userSubscription || userSubscription.subscriptionId.priceType !== 'monthly') {
-      return; 
+      return;
     }
 
     if (userSubscription) {
       userSubscription.status = 'cancelled';
       userSubscription.stripeDetails.status = subscription.status;
       await userSubscription.save();
-      
+
       const user = await User.findById(userSubscription.userId);
       if (user) {
         user.subscriptionActive = false;
@@ -546,32 +628,81 @@ const handleSubscriptionDeleted = async (subscription) => {
     console.error('Error handling subscription deletion:', error);
   }
 }
+
+const handleTrialWillEnd = async (subscription) => {
+  try {
+    const userSubscription = await UserSubscription.findOne({
+      'stripeDetails.stripeSubscriptionId': subscription.id
+    }).populate('subscriptionId');
+
+    if (!userSubscription) {
+      return;
+    }
+
+    // Send notification to user about trial ending
+    console.log(`Trial will end for user ${userSubscription.userId}`);
+
+    // You can add email notification logic here
+
+  } catch (error) {
+    console.error('Error handling trial will end:', error);
+  }
+}
 export const checkTrialStatuses = async () => {
   try {
     const now = new Date();
-    
-    // Find all monthly subscriptions that are in trial and have passed their trial end date
+
+    // Find all subscriptions that are in trial and have passed their trial end date
     const expiredTrials = await UserSubscription.find({
       status: 'trial',
       trialEndDate: { $lte: now }
     }).populate('subscriptionId');
-    
+
     for (const subscription of expiredTrials) {
-      if (subscription.subscriptionId.priceType === 'monthly') {
-        // Update status from trial to active
+      // Update status from trial to active for paid subscriptions
+      if (subscription.subscriptionId.priceType !== 'one-time') {
         subscription.status = 'active';
-        await subscription.save();
-        
-        // Update user document
-        const user = await User.findById(subscription.userId);
-        if (user) {
+      } else {
+        // For one-time payments, check if payment was made
+        const hasSuccessfulPayment = subscription.paymentHistory.some(
+          payment => payment.status === 'paid' && !payment.isTrialPayment
+        );
+
+        if (hasSuccessfulPayment) {
+          subscription.status = 'active';
+        } else {
+          // If no payment was made after trial, cancel the subscription
+          subscription.status = 'expired';
+
+          // Also cancel the Stripe subscription if it exists
+          if (subscription.stripeDetails && subscription.stripeDetails.stripeSubscriptionId) {
+            try {
+              await stripe.subscriptions.cancel(subscription.stripeDetails.stripeSubscriptionId);
+            } catch (error) {
+              console.error("Error cancelling Stripe subscription:", error);
+            }
+          }
+        }
+      }
+
+      await subscription.save();
+
+      // Update user document
+      const user = await User.findById(subscription.userId);
+      if (user) {
+        if (subscription.status === 'active') {
           user.isInTrial = false;
           user.trialEndDate = null;
-          await user.save();
+        } else if (subscription.status === 'expired') {
+          user.subscriptionActive = false;
+          user.isInTrial = false;
+          user.trialEndDate = null;
+          user.subscriptionExpiresAt = null;
         }
-        
-        console.log(`Trial ended for user ${subscription.userId}`);
+        await user.save();
       }
+
+      console.log(`Trial ended for user ${subscription.userId}, new status: ${subscription.status}`);
     }
   } catch (error) {
     console.error('Error checking trial statuses:', error);
@@ -580,19 +711,19 @@ export const checkTrialStatuses = async () => {
 export const checkYearlySubscriptions = async () => {
   try {
     const now = new Date();
-    
+
     // Find all yearly subscriptions that have expired
     const expiredSubscriptions = await UserSubscription.find({
       status: 'active',
       endDate: { $lte: now }
     }).populate('subscriptionId');
-    
+
     for (const subscription of expiredSubscriptions) {
       if (subscription.subscriptionId.priceType === 'yearly') {
         // Update subscription status to expired
         subscription.status = 'expired';
         await subscription.save();
-        
+
         // Update user document
         const user = await User.findById(subscription.userId);
         if (user) {
@@ -600,7 +731,7 @@ export const checkYearlySubscriptions = async () => {
           user.subscriptionExpiresAt = null;
           await user.save();
         }
-        
+
         console.log(`Yearly subscription expired for user ${subscription.userId}`);
       }
     }
@@ -625,12 +756,7 @@ export const cancelSubscription = async (req, res) => {
       return res.status(404).json({ error: "No active subscription found" });
     }
 
-    if (userSubscription.subscriptionId.priceType !== 'monthly') {
-      return res.status(400).json({ 
-        error: "Only monthly subscriptions can be cancelled. Yearly and one-time subscriptions cannot be cancelled." 
-      });
-    }
-
+    // Allow cancellation during trial for all subscription types
     if (userSubscription.stripeDetails && userSubscription.stripeDetails.stripeSubscriptionId) {
       try {
         await stripe.subscriptions.cancel(userSubscription.stripeDetails.stripeSubscriptionId);
@@ -649,8 +775,8 @@ export const cancelSubscription = async (req, res) => {
 
     await UserSubscription.findByIdAndDelete(userSubscription._id);
 
-    res.status(200).json({ 
-      message: "Monthly subscription cancelled successfully" 
+    res.status(200).json({
+      message: "Subscription cancelled successfully"
     });
 
   } catch (error) {
