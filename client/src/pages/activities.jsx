@@ -1,14 +1,16 @@
+"use client"
+
 /* eslint-disable no-unused-vars */
-import { Plus } from 'lucide-react'
+import { Plus } from "lucide-react"
 import Specs from "../components/specs"
 import Faqs from "../components/faqs"
-import { Clock, Star } from 'lucide-react'
+import { Clock, Star } from "lucide-react"
 import { IoPlayCircleOutline } from "react-icons/io5"
 import { FiUsers } from "react-icons/fi"
 import { useEffect, useState, useRef } from "react"
 import EducationalQuotes from "../components/educational-quotes"
 import StarImage from "../../public/profile-images/Frame (11)-star.svg"
-import { ToastContainer, toast } from "react-toastify"
+import { toast } from "react-toastify"
 import { useActivitiesFilter } from "../hooks/useActivityFilter"
 import { usePlayweekActivities } from "../hooks/usePlayweekActivities"
 import { learningDomainImages, learningDomainColors } from "../utils/learningDomain"
@@ -25,8 +27,8 @@ export default function Activities() {
   const location = useLocation()
   const { saveNavigationState, getNavigationState, clearNavigationState } = useNavigation()
 
-  const { saveScrollPosition, restoreScrollPosition } = useScrollPosition('activities')
-  
+  const { saveScrollPosition, restoreScrollPosition } = useScrollPosition("activities")
+
   const [activeTab, setActiveTab] = useState("speelweek")
   const [totalCountActivities, settotalCountActivities] = useState(0)
   const [currentPage, setCurrentPage] = useState(1)
@@ -58,24 +60,17 @@ export default function Activities() {
   const [showEmailPopup, setShowEmailPopup] = useState(false)
   const [isGuest, setIsGuest] = useState(false)
 
-  // Restore navigation state when component mounts or when returning from activity
   useEffect(() => {
     if (!hasRestoredState) {
       const savedState = getNavigationState()
       if (savedState && location.state?.fromActivity) {
-        // Restore the exact state
-        setActiveTab(savedState.activeTab)
-        setCurrentPage(savedState.currentPage || 1)
-        
-        if (savedState.activeTab === 'library' && savedState.filters) {
-          setSearchTerm(savedState.filters.searchTerm || '')
-          setSelectedCategory(savedState.filters.selectedCategory || 'Alle Leergebieden')
-          setSelectedAge(savedState.filters.selectedAge || 'alle-leeftijden')
-          setSelectedSort(savedState.filters.selectedSort || 'hoogstgewaardeerde')
-        }
-        
+        // Reset filters when returning from activity page
+        resetFilters()
+        setActiveTab(savedState.activeTab || "speelweek")
+        setCurrentPage(1) // Reset to first page
+
         setHasRestoredState(true)
-        
+
         // Restore scroll position after a short delay to ensure content is loaded
         setTimeout(() => {
           restoreScrollPosition()
@@ -85,7 +80,7 @@ export default function Activities() {
         setHasRestoredState(true)
       }
     }
-  }, [hasRestoredState, location.state, getNavigationState, clearNavigationState, restoreScrollPosition, setSearchTerm, setSelectedCategory, setSelectedAge, setSelectedSort])
+  }, [hasRestoredState, location.state, getNavigationState, clearNavigationState, restoreScrollPosition, resetFilters])
 
   useEffect(() => {
     const authToken = localStorage.getItem("authToken")
@@ -211,28 +206,30 @@ export default function Activities() {
       toast.info("Deze activiteit is vergrendeld. Upgrade je account om toegang te krijgen.")
       return
     }
-  
-    saveScrollPosition();
 
+    saveScrollPosition()
 
     // Save current navigation state before navigating
-       const navigationState = {
+    const navigationState = {
       activeTab,
       currentPage,
       scrollPosition: window.scrollY,
-      filters: activeTab === 'library' ? {
-        searchTerm,
-        selectedCategory,
-        selectedAge,
-        selectedSort
-      } : null,
-      timestamp: Date.now()
-    };
-    
+      filters:
+        activeTab === "library"
+          ? {
+              searchTerm,
+              selectedCategory,
+              selectedAge,
+              selectedSort,
+            }
+          : null,
+      timestamp: Date.now(),
+    }
+
     // Save both to context and localStorage for reliability
     saveNavigationState(navigationState)
-    localStorage.setItem('activityNavigationState', JSON.stringify(navigationState))
-    
+    localStorage.setItem("activityNavigationState", JSON.stringify(navigationState))
+
     // Save scroll position
     saveScrollPosition()
 
@@ -244,21 +241,55 @@ export default function Activities() {
     if (tab === "library") {
       resetFilters()
       setCurrentPage(1)
-      if (activityListRef.current) {
-        activityListRef.current.scrollIntoView({ behavior: "smooth" })
-      }
+      // Remove the scrollIntoView that was causing unwanted scrolling
     }
+  }
+
+  // Handle search input change without triggering search
+  const handleSearchInputChange = (e) => {
+    setSearchTerm(e.target.value)
+    // Don't trigger search here - only update the input value
+  }
+
+  // Handle search button click
+  const handleSearchClick = () => {
+    triggerSearch()
+    setCurrentPage(1) // Reset to first page when searching
+  }
+
+  // Handle Enter key in search input
+  const handleSearchKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault()
+      handleSearchClick()
+    }
+  }
+
+  // Handle filter changes without auto-scrolling
+  const handleCategoryChange = (e) => {
+    setSelectedCategory(e.target.value)
+    setCurrentPage(1)
+  }
+
+  const handleAgeChange = (e) => {
+    setSelectedAge(e.target.value)
+    setCurrentPage(1)
+  }
+
+  const handleSortChange = (e) => {
+    setSelectedSort(e.target.value)
+    setCurrentPage(1)
   }
 
   useEffect(() => {
     if (location.state?.fromActivity) {
       const timer = setTimeout(() => {
-        restoreScrollPosition();
-      }, 100); // Small delay to ensure DOM is ready
-      
-      return () => clearTimeout(timer);
+        restoreScrollPosition()
+      }, 100) // Small delay to ensure DOM is ready
+
+      return () => clearTimeout(timer)
     }
-  }, [location.state, restoreScrollPosition]);
+  }, [location.state, restoreScrollPosition])
 
   // Calculate total pages for library tab
   const totalPages = Math.ceil(filteredActivities.length / activitiesPerPage)
@@ -300,8 +331,16 @@ export default function Activities() {
 
   const handlePageChange = (page) => {
     setCurrentPage(page)
+    // Smooth scroll to activity list without jarring movement
     if (activityListRef.current) {
-      activityListRef.current.scrollIntoView({ behavior: "smooth" })
+      const headerOffset = 100 // Adjust this value based on your header height
+      const elementPosition = activityListRef.current.getBoundingClientRect().top
+      const offsetPosition = elementPosition + window.pageYOffset - headerOffset
+
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: "smooth"
+      })
     }
   }
 
@@ -473,17 +512,13 @@ export default function Activities() {
                   type="text"
                   placeholder="Zoek Activiteiten"
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      triggerSearch()
-                    }
-                  }}
+                  onChange={handleSearchInputChange}
+                  onKeyDown={handleSearchKeyDown}
                   className="w-full pl-10 pr-4 py-2 border-none outline-none text-sm bg-[#FFFFFF] rounded-xl inter-tight-400 "
                 />
                 <button
-                  onClick={triggerSearch}
-                  className="absolute inset-y-0 left-0 bottom-0 pl-3 flex items-center cursor-pointer"
+                  onClick={handleSearchClick}
+                  className="absolute inset-y-0 left-0 bottom-0 pl-3 flex items-center cursor-pointer hover:opacity-70 transition-opacity"
                   aria-label="Search activities"
                 >
                   <svg className="h-5 w-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -498,7 +533,7 @@ export default function Activities() {
               </div>
               <select
                 value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
+                onChange={handleCategoryChange}
                 className="w-full pl-10 pr-4 py-2 border-none outline-none text-[#707070] text-sm bg-[#FFFFFF] rounded-xl inter-tight-400"
               >
                 <option value="Alle Leergebieden">Alle Leergebieden</option>
@@ -512,7 +547,7 @@ export default function Activities() {
               </select>
               <select
                 value={selectedAge}
-                onChange={(e) => setSelectedAge(e.target.value)}
+                onChange={handleAgeChange}
                 className="w-full pl-10 pr-4 py-2 border-none outline-none text-[#707070] text-sm bg-[#FFFFFF] rounded-xl inter-tight-400"
               >
                 <option value="alle-leeftijden">Alle Leeftijden</option>
@@ -522,7 +557,7 @@ export default function Activities() {
               </select>
               <select
                 value={selectedSort}
-                onChange={(e) => setSelectedSort(e.target.value)}
+                onChange={handleSortChange}
                 className="w-full pl-10 pr-4 py-2 border-none outline-none text-[#707070] text-sm bg-[#FFFFFF] rounded-xl inter-tight-400"
               >
                 <option value="hoogstgewaardeerde">Hoogst gewaardeerde</option>
@@ -580,7 +615,7 @@ export default function Activities() {
               {!filterLoading && !filterError && activeTab === "library" && filteredActivities.length === 0 && (
                 <div className="flex justify-center items-center py-8">
                   <div className="text-[#666666] inter-tight-400 text-[16px] text-center">
-                    <p>Geen activiteiten gevonden met the current filters.</p>
+                    <p>Geen activiteiten gevonden met de huidige filters.</p>
                   </div>
                 </div>
               )}

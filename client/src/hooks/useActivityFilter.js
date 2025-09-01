@@ -1,3 +1,5 @@
+"use client"
+
 import { useState, useEffect, useCallback } from "react"
 import axios from "axios"
 import { BASE_URL } from "../utils/api"
@@ -43,11 +45,22 @@ export const useActivitiesFilter = () => {
     }
   }, [effectiveSearchTerm, selectedCategory, selectedAge, selectedSort]) // Dependencies for useCallback
 
-  // Effect to trigger API call whenever filter parameters (excluding searchTerm) change
   useEffect(() => {
-    // This useEffect will trigger for category, age, sort, and effectiveSearchTerm
+    // Only trigger fetch when non-search filters change, not on every effectiveSearchTerm change
     fetchFilteredActivities()
-  }, [fetchFilteredActivities])
+  }, [selectedCategory, selectedAge, selectedSort]) // Removed effectiveSearchTerm from dependencies
+
+  useEffect(() => {
+    // This will trigger when effectiveSearchTerm changes (via triggerSearch)
+    if (
+      effectiveSearchTerm !== "" ||
+      selectedCategory !== "Alle Leergebieden" ||
+      selectedAge !== "alle-leeftijden" ||
+      selectedSort !== "hoogstgewaardeerde"
+    ) {
+      fetchFilteredActivities()
+    }
+  }, [effectiveSearchTerm, fetchFilteredActivities])
 
   // Function to explicitly trigger the search API call
   const triggerSearch = useCallback(() => {

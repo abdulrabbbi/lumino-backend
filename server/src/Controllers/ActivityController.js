@@ -394,20 +394,17 @@ export const filterActivities = async (req, res) => {
         return b.reviewCount - a.reviewCount;
       });
     } else if (sort === "meestgewaardeerde") {
-      // NEW: Sort by rating only (highest to lowest), ignore review count
+      // Sort by number of ratings (reviewCount), then by averageRating if counts are equal
       finalActivities.sort((a, b) => {
+        if (b.reviewCount !== a.reviewCount) {
+          return b.reviewCount - a.reviewCount; // More reviews first
+        }
         const aRating = a.averageRating || 0;
         const bRating = b.averageRating || 0;
-        return bRating - aRating;
-      });
-    } else {
-      // Default sorting: by rating only (highest to lowest)
-      finalActivities.sort((a, b) => {
-        const aRating = a.averageRating || 0;
-        const bRating = b.averageRating || 0;
-        return bRating - aRating;
+        return bRating - aRating; // Higher rating first if reviewCount is equal
       });
     }
+    
 
     // Default sorting: uncompleted activities first, then completed activities
     if (sort !== "voltooid") {
