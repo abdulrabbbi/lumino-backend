@@ -22,7 +22,7 @@ const Pricing = () => {
     }
 
     setIsProcessing(true);
-    
+
     try {
       const response = await fetch(`${BASE_URL}/purchase-subscription`, {
         method: 'POST',
@@ -39,7 +39,7 @@ const Pricing = () => {
       }
 
       const { url } = await response.json();
-      
+
       window.location.href = url;
     } catch (error) {
       console.error('Checkout error:', error);
@@ -85,9 +85,9 @@ const Pricing = () => {
               )}
 
               <div className={`flex flex-col justify-between 
-  ${sub.name === 'Proefreis' || sub.name === 'Eeuwig Sterk' ? 'md:h-[450px] mt-16 h-full' : ''} 
+  ${sub.name === 'Proefreis' || sub.name === 'Eeuwig Sterk' ? 'md:h-[510px] mt-16 h-full' : ''} 
   bg-white 
-  ${sub.name === 'Jaaravontuur' ? 'mt-10 m-3 pb-24' : ''} 
+  ${sub.name === 'Jaaravontuur' ? 'mt-10 m-3 pb-16' : ''} 
   rounded-3xl p-8 shadow-lg border-2 border-gray-200 relative z-10`}>
                 <div className="flex flex-col items-start">
                   <div className="mb-4 mt-4">
@@ -120,10 +120,10 @@ const Pricing = () => {
                 </button>
 
                 <p className="text-xs text-gray-500 text-center mt-4">
-  {sub.priceType === 'monthly' && `€9,99 / maand`}
-  {sub.priceType === 'yearly' && `€99,99 / jaar`}
-  {sub.priceType === 'one-time' && `€199,99 eenmalig`}
-</p>
+                  {sub.priceType === 'monthly' && `€9,99 / maand`}
+                  {sub.priceType === 'yearly' && `€99,99 / jaar`}
+                  {sub.priceType === 'one-time' && `€199,99 eenmalig`}
+                </p>
 
               </div>
             </div>
