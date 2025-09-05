@@ -86,40 +86,29 @@ export default function Activities() {
   const [isGuest, setIsGuest] = useState(false)
 
   useEffect(() => {
-    if (!hasRestoredState) {
-      const savedState = getNavigationState()
-
-      if (savedState && location.state?.fromActivity) {
-        console.log("[Activities] Restoring from saved state:", savedState)
-        setIsRestoringFromActivity(true)
-
-        // Restore tab and page
-        setActiveTab(savedState.activeTab || "speelweek")
-        setCurrentPage(savedState.currentPage || 1)
-
-        // Mark as restored
-        setHasRestoredState(true)
-
-        // Restore scroll position with multiple attempts
-        const restoreScroll = () => {
-          setTimeout(() => restoreScrollPosition(), 100)
-          setTimeout(() => restoreScrollPosition(), 500)
-          setTimeout(() => restoreScrollPosition(), 1000)
-          setTimeout(() => {
-            restoreScrollPosition()
-            setIsRestoringFromActivity(false)
-            // Clear navigation state after successful restoration
-            clearNavigationState()
-          }, 1500)
+    if (location.state?.fromActivity) {
+      const savedState = getNavigationState();
+      
+      if (savedState) {
+        // Restore filters and tab state first
+        if (savedState.filters) {
+          setSearchTerm(savedState.filters.searchTerm || "");
+          setSelectedCategory(savedState.filters.selectedCategory || "Alle Leergebieden");
+          setSelectedAge(savedState.filters.selectedAge || "alle-leeftijden");
+          setSelectedSort(savedState.filters.selectedSort || "hoogstgewaardeerde");
         }
-
-        restoreScroll()
-      } else {
-        setHasRestoredState(true)
-        setIsRestoringFromActivity(false)
+        
+        setActiveTab(savedState.activeTab || "speelweek");
+        setCurrentPage(savedState.currentPage || 1);
+        
+        // Wait for the next tick to ensure DOM is updated
+        setTimeout(() => {
+          restoreScrollPosition();
+          clearNavigationState(); // Clear after restoration
+        }, 100);
       }
     }
-  }, [hasRestoredState, location.state, getNavigationState, clearNavigationState, restoreScrollPosition])
+  }, [location.state]);
 
   useEffect(() => {
     if (activeTab === "library" && hasRestoredState && !isRestoringFromActivity) {
@@ -265,42 +254,30 @@ export default function Activities() {
 
   const handleActivityClick = (activity) => {
     if (activity.isLocked) {
-      toast.info("Deze activiteit is vergrendeld. Upgrade je account om toegang te krijgen.")
-      return
+      toast.info("Deze activiteit is vergrendeld. Upgrade je account om toegang te krijgen.");
+      return;
     }
-
+  
     // Save current scroll position
-    saveScrollPosition()
-
+    saveScrollPosition();
+  
     const navigationState = {
       activeTab,
       currentPage,
-      scrollPosition: window.scrollY,
-      filters:
-        activeTab === "library"
-          ? {
-              searchTerm: searchTerm,
-              selectedCategory: selectedCategory,
-              selectedAge: selectedAge,
-              selectedSort: selectedSort,
-            }
-          : null,
-      timestamp: Date.now(),
-      url: window.location.href,
-      pathname: location.pathname,
-      search: location.search,
-    }
-
-    console.log("[Activities] Saving navigation state before activity click:", navigationState)
-    saveNavigationState(navigationState)
-
+      filters: activeTab === "library" ? {
+        searchTerm,
+        selectedCategory,
+        selectedAge,
+        selectedSort,
+      } : null,
+    };
+  
+    saveNavigationState(navigationState);
+  
     navigate(`/activity-detail/${activity.id}`, {
-      state: {
-        fromActivities: true,
-        navigationState: navigationState,
-      },
-    })
-  }
+      state: { fromActivities: true },
+    });
+  };
 
   const handleTabChange = (tab) => {
     setActiveTab(tab)
@@ -351,7 +328,7 @@ export default function Activities() {
     if (location.state?.fromActivity) {
       const timer = setTimeout(() => {
         restoreScrollPosition()
-      }, 100) // Small delay to ensure DOM is ready
+      }, 2000) // Small delay to ensure DOM is ready
 
       return () => clearTimeout(timer)
     }
