@@ -235,3 +235,21 @@ export const guestUserEmail = async (req, res) => {
   }
 }
 
+export const getUserDetail = async (req,res) =>{
+  try{
+
+    const userId = req.user.userId
+    if(!userId){
+      res.status(401).json({message: 'Unauthorized'})
+    }
+    const details = await User.findById(userId)
+    res.status(200).json(details)
+
+  }
+  catch(error){
+    console.log(error);
+    res.status(500).json({message: 'Internal Server Error'})
+    
+  }
+}
+

@@ -10,7 +10,7 @@ export default function Preferences() {
   return (
     <div className="h-full bg-[#FFFFFF] space-y-6 relative">
       {loading && (
-      <LoaderOverlay/>
+        <LoaderOverlay/>
       )}
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="bg-white rounded-lg border border-[#E2E4E9] p-6 md:p-8">
@@ -23,13 +23,15 @@ export default function Preferences() {
             <div className="relative">
               <select
                 id="age-group"
-                value={ageGroup}
+                value={ageGroup || ''}
                 onChange={(e) => updateAgeGroup(e.target.value)}
                 className="w-full bg-[#F7FAFC] border border-gray-300 rounded-md py-2 px-3 text-left outline-none text-sm text-[#575757]"
+                disabled={loading} 
               >
-                <option value="Age 3 - 4">Age 3 - 4</option>
-                <option value="Age 3 - 6">Age 3 - 6</option>
-                <option value="Age 5 - 6">Age 5 - 6</option>
+                <option value="" disabled>Select Age Group</option>
+                <option value="3 - 4">Age 3 - 4</option>
+                <option value="3 - 6">Age 3 - 6</option>
+                <option value="5 - 6">Age 5 - 6</option>
               </select>
             </div>
             <p className="text-xs text-gray-400 mt-1 inter-tight-400">
@@ -37,6 +39,7 @@ export default function Preferences() {
             </p>
           </div>
         </div>
+
 
         <div className="bg-white rounded-lg border border-[#E2E4E9] p-6 md:p-8">
           <h2 className="text-xl text-gray-950 mb-6 inter-tight-400">Application Preferences</h2>
