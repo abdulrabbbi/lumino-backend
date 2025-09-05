@@ -14,8 +14,8 @@ import EarlyAccess from './pages/admin-dashboard-pages/earlyaccess'
 import Managebadge from './pages/admin-dashboard-pages/manage-badge'
 import ScrollToTop from './components/ScrollToTop'
 import MarketingUsers from './pages/admin-dashboard-pages/marketing-users'
+import Rewards from './pages/admin-dashboard-pages/reward'
 
-// Layout wrapper to optionally hide Navbar
 function AppLayout() {
   const location = useLocation()
   const hideNavbar = location.pathname === '/signin' || location.pathname === '/admin'
@@ -65,9 +65,9 @@ function App() {
             <Route path="earlyaccess" element={<EarlyAccess />} />
             <Route path="manage-badge" element={<Managebadge />} />
             <Route path="marketinggebruikers" element={<MarketingUsers />} />
+            <Route path="reward-settings" element={<Rewards />} />
           </Route>
 
-          {/* 404 catch-all */}
           <Route path="*" element={<Navigate to="/signin" replace />} />
         </Route>
       </Routes>

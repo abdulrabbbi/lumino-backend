@@ -6,7 +6,8 @@ const router = express.Router();
 router.get('/get-all-subscriptions', getAllSubscriptions);
 router.post('/purchase-subscription', authenticate, purchaseSubscription);
 router.post('/verify-subscription', authenticate, verifySubscription)
-router.get('/get-subscription-status', authenticate, getSubscriptionStatus)
 router.post('/cancel-subscription', authenticate, cancelSubscription);
+router.get('/subscription-status', authenticate, getSubscriptionStatus);
+
 
 export default router

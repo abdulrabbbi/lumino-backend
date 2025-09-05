@@ -9,6 +9,7 @@ import NavImage5 from '../../../public/nav-images/SVG (5).svg'
 import NavImage6 from '../../../public/nav-images/SVG.svg'
 import NavImage7 from '../../../public/nav-images/Vector (1).svg'
 import NavImage8 from '../../../public/library-images/Frame (6)-new.svg'
+import NavImage9 from '../../../public/rewards.png'
 
 const Sidebar = () => {
   const links = [
@@ -22,6 +23,8 @@ const Sidebar = () => {
     { to: "/admin-dashboard/earlyaccess", label: "Early Access", image: NavImage5 },
     { to: "/admin-dashboard/manage-badge", label: "Manage Badge", image: NavImage8 },
     { to: "/admin-dashboard/marketinggebruikers", label: "Marketing Gebruikers", image: NavImage2 },
+    { to: "/admin-dashboard/reward-settings", label: "Beloningen", image: NavImage9 },
+
 
   ];
 

@@ -7,6 +7,7 @@ import jwt from 'jsonwebtoken'
 import UserSubscription from "../Models/UserSubscription.js";
 import CompletedActivity from "../Models/CompletedActivity.js";
 import GuestEmail from "../Models/GuestEmail.js";
+import RewardSetting from "../Models/RewardSetting.js";
 
 export const adminLogin = async (req, res) => {
   try {
@@ -83,8 +84,6 @@ export const changeTestUserPassword = async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 };
-
-
 export const approveActivity = async (req, res) => {
   try {
     const admin = await User.findById(req.user?.userId);
@@ -488,3 +487,104 @@ export const getAllMarketingUsers = async (req,res) =>{
     
   }
 }
+
+// Rewards System APIS
+export const setRewardPool = async (req, res) => {
+  try {
+    const { month, rewardPool } = req.body; // "2025-09", 3000
+
+    const setting = await RewardSetting.findOneAndUpdate(
+      { month },
+      { rewardPool },
+      { new: true, upsert: true }
+    );
+
+    res.json({ success: true, setting });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+export const getRewardPool = async (req, res) => {
+  try {
+    const { month } = req.query;
+    const setting = await RewardSetting.findOne({ month });
+
+    res.json({ success: true, rewardPool: setting?.rewardPool });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+export const getTopContributors = async (req, res) => {
+  try {
+    const { month } = req.query;
+
+    // reward setting se pool nikaal lo warna default 2500
+    const rewardSetting = await RewardSetting.findOne({ month });
+    const rewardPool = rewardSetting?.rewardPool || 2500;
+
+    // sirf approved activities uthao with populated ratings
+    const activities = await Activity.find({ isApproved: true })
+      .populate("createdBy", "name profileImage")
+      .populate("ratings.user", "name"); // populate ratings users
+
+    let qualifying = [];
+
+    for (const activity of activities) {
+      // Count unique users who rated this activity (executions)
+      const uniqueRaters = new Set();
+      activity.ratings.forEach(rating => {
+        if (rating.user && rating.user._id) {
+          uniqueRaters.add(rating.user._id.toString());
+        }
+      });
+      const executions = uniqueRaters.size;
+      
+      const avgRating = activity.averageRating || 0;
+
+      if (executions >= 10 && avgRating >= 7.0) {
+        // simple score system
+        const score = executions * 0.6 + avgRating * 0.4;
+        qualifying.push({
+          creator: activity.createdBy,
+          activityId: activity._id,
+          title: activity.title,
+          executions,
+          avgRating,
+          score,
+        });
+      }
+    }
+
+    // group by creator
+    const grouped = qualifying.reduce((acc, item) => {
+      const creatorId = item.creator._id.toString();
+      if (!acc[creatorId]) {
+        acc[creatorId] = { creator: item.creator, activities: [] };
+      }
+      acc[creatorId].activities.push(item);
+      return acc;
+    }, {});
+
+    // har creator ki top 3 activities
+    let contributors = [];
+    for (const [creatorId, data] of Object.entries(grouped)) {
+      const top3 = data.activities.sort((a, b) => b.score - a.score).slice(0, 3);
+      const totalScore = top3.reduce((sum, a) => sum + a.score, 0);
+      contributors.push({ creator: data.creator, activities: top3, totalScore });
+    }
+
+    // reward distribution
+    const allScores = contributors.reduce((sum, c) => sum + c.totalScore, 0);
+    contributors = contributors.map((c) => ({
+      ...c,
+      estimatedReward: allScores > 0 ? (c.totalScore / allScores) * rewardPool : 0,
+    }));
+
+    // sort by total score
+    contributors.sort((a, b) => b.totalScore - a.totalScore);
+
+    res.json({ success: true, month, rewardPool, contributors });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};

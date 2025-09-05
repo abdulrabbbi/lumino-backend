@@ -385,37 +385,6 @@ export const verifySubscription = async (req, res) => {
     res.status(500).json({ error: "Failed to verify subscription" });
   }
 }
-export const getSubscriptionStatus = async (req, res) => {
-  try {
-    const userId = req.user?.userId;
-    if (!userId) return res.status(401).json({ error: "Unauthorized" });
-
-    const userSubscription = await UserSubscription.findOne({
-      userId,
-      status: { $in: ['active', 'trial'] }
-    }).populate('subscriptionId');
-
-    if (!userSubscription) {
-      return res.status(404).json({
-        message: "No active subscription found",
-        hasSubscription: false
-      });
-    }
-
-    res.status(200).json({
-      hasSubscription: true,
-      subscription: userSubscription.subscriptionId,
-      startDate: userSubscription.startDate,
-      endDate: userSubscription.endDate,
-      trialEndDate: userSubscription.trialEndDate,
-      status: userSubscription.status,
-      isInTrial: userSubscription.status === 'trial'
-    });
-  } catch (error) {
-    console.error("Subscription status error:", error);
-    res.status(500).json({ error: "Failed to get subscription status" });
-  }
-}
 export const getOrderStatus = async (req, res) => {
   try {
     const userId = req.user?.userId;
@@ -499,6 +468,50 @@ export const handleStripeWebhook = async (req, res) => {
     res.status(500).json({ error: 'Webhook handler failed' });
   }
 }
+
+
+const convertYearlyToMonthly = async (userSubscription) => {
+  try {
+    // Update the subscription to monthly pricing
+    const monthlyPrice = 9.99; // €9.99 monthly price
+    
+    // Update our database
+    userSubscription.yearlyConvertedToMonthly = true;
+    userSubscription.originalSubscriptionType = 'yearly';
+    
+    // Update end date to one month from now
+    userSubscription.endDate = new Date();
+    userSubscription.endDate.setMonth(userSubscription.endDate.getMonth() + 1);
+    
+    // Update the price in our records
+    userSubscription.subscriptionId.price = monthlyPrice;
+    userSubscription.subscriptionId.priceType = 'monthly';
+    
+    await userSubscription.save();
+
+    // Update user document
+    const user = await User.findById(userSubscription.userId);
+    if (user) {
+      user.subscriptionExpiresAt = userSubscription.endDate;
+      await user.save();
+    }
+
+    console.log(`Converted yearly subscription to monthly for user ${userSubscription.userId}`);
+    
+    // Send notification to user about the change
+    if (user.email) {
+      await sendSubscriptionChangeEmail(
+        user.email, 
+        user.name, 
+        "Yearly to Monthly", 
+        "Your yearly subscription has been converted to a monthly subscription as per regulatory requirements."
+      );
+    }
+  } catch (error) {
+    console.error('Error converting yearly to monthly:', error);
+  }
+}
+
 const handleInvoicePaymentSucceeded = async (invoice) => {
   try {
     const subscriptionId = invoice.subscription;
@@ -513,6 +526,22 @@ const handleInvoicePaymentSucceeded = async (invoice) => {
     if (!userSubscription) {
       return;
     }
+
+    // Check if this is a yearly subscription that needs conversion
+    if (userSubscription.subscriptionId.priceType === 'yearly' && 
+      userSubscription.yearlyConvertedToMonthly === false) {
+    
+    // Check if this is the renewal after the first year
+    const now = new Date();
+    const startDate = new Date(userSubscription.startDate);
+    const diffTime = Math.abs(now - startDate);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays > 365) {
+      await convertYearlyToMonthly(userSubscription, subscription);
+      return;
+    }
+  }
 
     // Check if this is the first payment after trial
     const isFirstPaymentAfterTrial = invoice.billing_reason === 'subscription_create' &&
@@ -652,11 +681,35 @@ export const checkTrialStatuses = async () => {
   try {
     const now = new Date();
 
-    // Find all subscriptions that are in trial and have passed their trial end date
-    const expiredTrials = await UserSubscription.find({
+  
+    const threeDaysFromNow = new Date(now.getTime() + (3 * 24 * 60 * 60 * 1000));
+
+    const endingTrials = await UserSubscription.find({
       status: 'trial',
-      trialEndDate: { $lte: now }
-    }).populate('subscriptionId');
+      trialEndDate: { 
+        $lte: threeDaysFromNow,
+        $gt: now
+      }
+    }).populate('subscriptionId').populate('userId');
+
+    for (const subscription of endingTrials) {
+      const user = await User.findById(subscription.userId);
+      if (user && user.email) {
+        await sendTrialEndingEmail(
+          user.email, 
+          user.name, 
+          subscription.trialEndDate, 
+          subscription.subscriptionId.name
+        );
+      }
+    }
+
+      // Find all subscriptions that are in trial and have passed their trial end date
+      const expiredTrials = await UserSubscription.find({
+        status: 'trial',
+        trialEndDate: { $lte: now }
+      }).populate('subscriptionId');
+  
 
     for (const subscription of expiredTrials) {
       // Update status from trial to active for paid subscriptions
@@ -713,27 +766,16 @@ export const checkYearlySubscriptions = async () => {
     const now = new Date();
 
     // Find all yearly subscriptions that have expired
-    const expiredSubscriptions = await UserSubscription.find({
+    const expiredYearlySubscriptions = await UserSubscription.find({
       status: 'active',
-      endDate: { $lte: now }
+      endDate: { $lte: now },
+      'subscriptionId.priceType': 'yearly',
+      yearlyConvertedToMonthly: false
     }).populate('subscriptionId');
 
-    for (const subscription of expiredSubscriptions) {
-      if (subscription.subscriptionId.priceType === 'yearly') {
-        // Update subscription status to expired
-        subscription.status = 'expired';
-        await subscription.save();
-
-        // Update user document
-        const user = await User.findById(subscription.userId);
-        if (user) {
-          user.subscriptionActive = false;
-          user.subscriptionExpiresAt = null;
-          await user.save();
-        }
-
-        console.log(`Yearly subscription expired for user ${subscription.userId}`);
-      }
+    for (const subscription of expiredYearlySubscriptions) {
+      // Convert to monthly plan
+      await convertYearlyToMonthly(subscription);
     }
   } catch (error) {
     console.error('Error checking yearly subscriptions:', error);
@@ -756,31 +798,114 @@ export const cancelSubscription = async (req, res) => {
       return res.status(404).json({ error: "No active subscription found" });
     }
 
-    // Allow cancellation during trial for all subscription types
-    if (userSubscription.stripeDetails && userSubscription.stripeDetails.stripeSubscriptionId) {
-      try {
-        await stripe.subscriptions.cancel(userSubscription.stripeDetails.stripeSubscriptionId);
-        console.log(`Stripe subscription cancelled: ${userSubscription.stripeDetails.stripeSubscriptionId}`);
-      } catch (stripeError) {
-        console.error("Error cancelling Stripe subscription:", stripeError);
+    const subscriptionType = userSubscription.subscriptionId.priceType;
+    const isInTrial = userSubscription.status === 'trial';
+    const now = new Date();
+    const trialEnded = userSubscription.trialEndDate && userSubscription.trialEndDate < now;
+
+    // 1. Allow cancellation during trial period for ALL subscription types
+    if (isInTrial && !trialEnded) {
+      if (userSubscription.stripeDetails && userSubscription.stripeDetails.stripeSubscriptionId) {
+        try {
+          // Cancel the Stripe subscription immediately for trial period
+          await stripe.subscriptions.cancel(userSubscription.stripeDetails.stripeSubscriptionId);
+          console.log(`Stripe subscription cancelled during trial: ${userSubscription.stripeDetails.stripeSubscriptionId}`);
+        } catch (stripeError) {
+          console.error("Error cancelling Stripe subscription:", stripeError);
+          // Continue with our database update even if Stripe fails
+        }
       }
+
+      userSubscription.status = 'cancelled';
+      await userSubscription.save();
+
+      // Update user document
+      user.subscriptionActive = false;
+      user.isInTrial = false;
+      user.trialEndDate = null;
+      user.subscriptionExpiresAt = null;
+      await user.save();
+
+      return res.status(200).json({
+        message: "Subscription cancelled successfully during trial period",
+        cancelled: true
+      });
     }
 
-    user.subscription = null;
-    user.subscriptionActive = false;
-    user.subscriptionExpiresAt = null;
-    user.isInTrial = false;
-    user.trialEndDate = null;
-    await user.save();
+    // 2. After trial period ended
+    if (subscriptionType === 'monthly') {
+      if (userSubscription.stripeDetails && userSubscription.stripeDetails.stripeSubscriptionId) {
+        try {
+          // Cancel at period end instead of immediately
+          await stripe.subscriptions.update(
+            userSubscription.stripeDetails.stripeSubscriptionId,
+            { cancel_at_period_end: true }
+          );
+          console.log(`Stripe subscription set to cancel at period end: ${userSubscription.stripeDetails.stripeSubscriptionId}`);
+        } catch (stripeError) {
+          console.error("Error updating Stripe subscription:", stripeError);
+          return res.status(500).json({ error: "Failed to cancel subscription with payment provider" });
+        }
+      }
 
-    await UserSubscription.findByIdAndDelete(userSubscription._id);
+      userSubscription.status = 'cancelling';
+      await userSubscription.save();
 
-    res.status(200).json({
-      message: "Subscription cancelled successfully"
-    });
+      return res.status(200).json({
+        message: "Subscription will be cancelled at the end of the billing period",
+        cancelDate: userSubscription.endDate
+      });
+    } 
+    else if (subscriptionType === 'yearly') {
+      return res.status(400).json({
+        error: "Yearly subscriptions cannot be cancelled after trial period"
+      });
+    }
+    else if (subscriptionType === 'one-time') {
+      return res.status(400).json({
+        error: "Lifetime subscriptions cannot be cancelled after trial period"
+      });
+    }
+    else {
+      return res.status(400).json({
+        error: "Unknown subscription type"
+      });
+    }
 
   } catch (error) {
     console.error("Subscription cancellation error:", error);
     res.status(500).json({ error: "Failed to cancel subscription" });
+  }
+}
+
+export const getSubscriptionStatus = async (req, res) => {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+    const userSubscription = await UserSubscription.findOne({
+      userId,
+      status: { $in: ['active', 'trial'] }
+    }).populate('subscriptionId');
+
+    if (!userSubscription) {
+      return res.status(404).json({
+        message: "No active subscription found",
+        hasSubscription: false
+      });
+    }
+
+    res.status(200).json({
+      hasSubscription: true,
+      subscription: userSubscription.subscriptionId,
+      startDate: userSubscription.startDate,
+      endDate: userSubscription.endDate,
+      trialEndDate: userSubscription.trialEndDate,
+      status: userSubscription.status,
+      isInTrial: userSubscription.status === 'trial'
+    });
+  } catch (error) {
+    console.error("Subscription status error:", error);
+    res.status(500).json({ error: "Failed to get subscription status" });
   }
 }
