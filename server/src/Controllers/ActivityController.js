@@ -1057,33 +1057,66 @@ const getTop5ActivitiesExcluding = async (excludeIds = [], userAgeGroup = null, 
       }
     }).filter(id => id !== null);
 
-    const query = {
+    // Base filter
+    const baseFilter = {
       isApproved: true,
       _id: { $nin: excludeObjectIds },
-      "ratings.2": { $exists: true }
     };
 
-    // Sort by averageRating descending first, then by ratings.length descending
-    const activities = await Activity.find(query)
+    // First: activities with ≥3 ratings
+    const highRatedQuery = {
+      ...baseFilter,
+      "ratings.2": { $exists: true }  // requires at least 3 ratings
+    };
+
+    let activities = await Activity.find(highRatedQuery)
       .sort({
-        averageRating: -1,
-        "ratings.length": -1,
+        averageRating: -1,     // Highest rated first
+        "ratings.length": -1,  // Then most rated
         createdAt: -1
       })
       .limit(5);
 
+    // If not enough, fill remaining with activities having <3 ratings
+    if (activities.length < 5) {
+      const alreadyPickedIds = activities.map(a => a._id);
+
+      const fallbackQuery = {
+        ...baseFilter,
+        _id: { $nin: [...excludeObjectIds, ...alreadyPickedIds] },
+        $or: [
+          { ratings: { $exists: false } },   // no ratings
+          { "ratings.0": { $exists: true }, "ratings.2": { $exists: false } } // 1–2 ratings
+        ]
+      };
+
+      const fallbackActivities = await Activity.find(fallbackQuery)
+        .sort({
+          averageRating: -1,
+          "ratings.length": -1,
+          createdAt: -1
+        })
+        .limit(5 - activities.length);
+
+      activities = [...activities, ...fallbackActivities];
+    }
+
+    // Debug log
     activities.forEach((activity, index) => {
       const reviewCount = activity.ratings?.length || 0;
-      console.log(`  ${index + 1}. ${activity.title} (Rating: ${activity.averageRating || 0}, Reviews: ${reviewCount})`);
+      // console.log(
+      //   `  ${index + 1}. ${activity.title} (Rating: ${activity.averageRating || 0}, Reviews: ${reviewCount})`
+      // );
     });
 
     return activities;
-
   } catch (error) {
-    console.error('Error in getTop5ActivitiesExcluding:', error);
+    console.error("Error in getTop5ActivitiesExcluding:", error);
     return [];
   }
 };
+
+
 
 
 export const getTotalActivitiesCount = async (req, res) => {
