@@ -463,7 +463,7 @@ export default function Activities() {
             </div>
           </div>
           <div className="space-y-4">
-            <h1 className="lg:leading-tighter text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl xl:text-[3.4rem] 2xl:text-[3.75rem] inter-tight-700  bg-clip-text text-transparent  bg-gradient-to-b to-[#9333EA] from-[#DB2777]">
+            <h1 className="lg:leading-tighter pb-5 text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl xl:text-[3.4rem] 2xl:text-[3.75rem] inter-tight-700  bg-clip-text text-transparent  bg-gradient-to-b to-[#9333EA] from-[#DB2777]">
               Samen groeien met elke activiteit
             </h1>
             <p className="text-sm text-[#4B5563] inter-tight-400 font-medium">

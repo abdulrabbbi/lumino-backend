@@ -4,6 +4,7 @@ import Image1 from '../../public/images/SVG.svg'
 import Image2 from '../../public/images/SVG (1).svg'
 import Image3 from '../../public/images/SVG (2).svg'
 import Image4 from '../../public/images/SVG (3).svg'
+import { Link } from 'react-router-dom';
 
 const Footer = () => {
     return (
@@ -27,21 +28,18 @@ const Footer = () => {
                         <div>
                             <h3 className="text-[#000000] inter-tight-700 mb-4">Bedrijf</h3>
                             <ul className="space-y-3">
-                            <li><a href="/" className="text-[#000000] cursor-pointer text-sm">Over Ons</a></li>
-                                <li><a href="/" className="text-[#000000] cursor-pointer text-sm">Vacatures</a></li>
-                                <li><a href="/" className="text-[#000000] cursor-pointer text-sm">Zelfzorg</a></li>
-                                <li><a href="/" className="text-[#000000] cursor-pointer text-sm">Blog</a></li>
-                                <li><a href="/" className="text-[#000000] cursor-pointer text-sm">Pers</a></li>
+                            <li><Link to={"/about-us"} className="text-[#000000] cursor-pointer text-sm">Over Ons</Link></li>
+                                <li><Link to={"/"} className="text-[#000000] cursor-pointer text-sm">Vacatures</Link></li>
+                                <li><Link to={"/"} className="text-[#000000] cursor-pointer text-sm">Pers</Link></li>
                             </ul>
                         </div>
 
                         <div>
                             <h3 className="text-[#000000] inter-tight-700 mb-4">Ondersteuning</h3>
                             <ul className="space-y-3">
-                                <li><a href="/" className="text-[#000000] cursor-pointer text-sm">Veelgestelde Vragen</a></li>
-                                <li><a href="/" className="text-[#000000] cursor-pointer text-sm">Privacybeleid</a></li>
-                                <li><a href="/" className="text-[#000000] cursor-pointer text-sm">Servicevoorwaarden</a></li>
-                                <li><a href="/" className="text-[#000000] cursor-pointer text-sm">Contact</a></li>
+                                <li><Link to={"/faqs"} className="text-[#000000] cursor-pointer text-sm">Veelgestelde Vragen</Link></li>
+                                <li><Link to={"/"} className="text-[#000000] cursor-pointer text-sm">Privacybeleid</Link></li>
+                                <li><Link to={"/"} className="text-[#000000] cursor-pointer text-sm">Contact</Link></li>
                             </ul>
                         </div>
                     </div>

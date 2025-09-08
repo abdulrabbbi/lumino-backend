@@ -294,9 +294,9 @@ const Pricing = () => {
                 )}
 
                 <div className={`flex flex-col justify-between 
-                  ${sub.name === 'Proefreis' || sub.name === 'Eeuwig Sterk' ? 'md:h-[520px] mt-13 h-full' : ''} 
+                  ${sub.name === 'Proefreis' || sub.name === 'Eeuwig Sterk' ? 'md:h-[510px] mt-13 h-full' : ''} 
                   bg-white 
-                  ${sub.name === 'Jaaravontuur' ? 'mt-10 m-3 pb-16' : ''} 
+                  ${sub.name === 'Jaaravontuur' ? 'mt-10 m-3 pb-20' : ''} 
                   rounded-3xl p-8 shadow-lg border-2 border-gray-200 relative z-10`}>
                   
                   {isCurrent && (
@@ -356,11 +356,11 @@ const Pricing = () => {
                     </button>
                   )}
 
-                  <p className="text-xs text-gray-500 text-center mt-4">
+                  {/* <p className="text-xs text-gray-500 text-center mt-4">
                     {sub.priceType === 'monthly' && `€9,99 / maand`}
                     {sub.priceType === 'yearly' && `€99,99 / jaar`}
                     {sub.priceType === 'one-time' && `€199,99 eenmalig`}
-                  </p>
+                  </p> */}
                 </div>
               </div>
             );

@@ -2,6 +2,7 @@ import Activity from "../Models/Activity.js";
 import Badge from "../Models/Badge.js";
 import CompletedActivity from "../Models/CompletedActivity.js";
 import User from "../Models/User.js";
+import { areConsecutiveWeeks, getWeekOfYear, parseWeekKey } from "./ActivityHelper.js";
 
 export const checkAndAwardAreaBadges = async (userId) => {
     try {

@@ -32,6 +32,7 @@ import { ToastContainer } from 'react-toastify'
 
 import Success from './pages/subscription-modes/success'
 import Cancel from './pages/subscription-modes/cancel'
+import Faqs from './pages/faqs'
 
 
 function AppWrapper() {
@@ -61,6 +62,7 @@ function AppWrapper() {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/success" element={<Success />} />
         <Route path="/cancel" element={<Cancel />} />
+        <Route path="/faqs" element={<Faqs />} />
 
         {/* User Profile Routes */}
 

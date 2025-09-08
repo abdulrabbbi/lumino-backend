@@ -739,6 +739,8 @@ export const getProgressStats = async (req, res) => {
       })
     );
 
+     weekPercentage = weekPercentage ? weekPercentage : 0
+
     res.status(200).json({
       success: true,
       stats: {
