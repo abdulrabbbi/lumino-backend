@@ -16,8 +16,15 @@ const userSchema = new mongoose.Schema({
   notificationsEnabled: { type: Boolean, default: false },
   weeklyProgressEnabled: { type: Boolean, default: false },
 
-  referralCode: { type: String, unique: true, sparse: true }, 
-  referredBy: { type: String }, 
+  referralCode: { type: String, unique: true, sparse: true },
+  referredBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  referralCount: { type: Number, default: 0 },
+  referralRewards: [{
+    type: { type: String, enum: ['free_month', 'other'] },
+    awardedAt: { type: Date, default: Date.now },
+    reason: String,
+    expiresAt: Date
+  }],
 
   resetPasswordOTP: {
     type: String,

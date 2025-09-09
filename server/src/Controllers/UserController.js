@@ -6,42 +6,87 @@ import nodemailer from "nodemailer";
 import Subscription from "../Models/Subscription.js";
 import UserSubscription from "../Models/UserSubscription.js";
 import GuestEmail from "../Models/GuestEmail.js";
+import { awardFreeMonth } from "./referralController.js";
+import Referral from "../Models/Referral.js";
 
 export const register = async (req, res) => {
   try {
-    const { username, email, password } = req.body;
+    const { username, email, password, referralCode: referredByCode } = req.body; 
 
+    // Check if user already exists
     const userExists = await User.findOne({ email });
-    if (userExists)
+    if (userExists) {
       return res.status(400).json({ message: "User already exists" });
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    if (["admin"].includes(req.body.role)) {
-      req.body.role = "admin";
-    } else {
-      req.body.role = "user";
+    // Generate referral code for the new user
+    let userReferralCode;
+    let isUnique = false;
+    while (!isUnique) {
+      userReferralCode = generateReferralCode();
+      const existingUser = await User.findOne({ referralCode: userReferralCode });
+      if (!existingUser) {
+        isUnique = true;
+      }
     }
 
-    const referralCode = generateReferralCode();
+    // Check if referred by someone
+    let referredBy = null;
+    let referralApplied = false;
+    let referrer = null;
+    
+    if (referredByCode) {
+      referrer = await User.findOne({ referralCode: referredByCode });
+      if (referrer && referrer.email !== email) { // Prevent self-referral
+        referredBy = referrer._id;
+        referralApplied = true;
+      }
+    }
 
-    const totalUsers = await User.countDocuments();
-
+    // Create the user
     const user = new User({
       username,
       email,
       password: hashedPassword,
-      role: req.body.role,
-      referralCode,
-      referredBy: req.body.referredBy || null,
+      role: "user",
+      referralCode: userReferralCode,
+      referredBy,
       badges: []
     });
 
     await user.save();
 
-    res.status(201).json({ success: true, message: "User registered successfully" });
+    // Process referral after user is created
+    if (referralApplied && referrer) {
+      // Create referral record
+      const referral = new Referral({
+        referrerId: referrer._id,
+        refereeId: user._id,
+        referralCode: referredByCode,
+        status: 'completed',
+        completedAt: new Date()
+      });
+      await referral.save();
+      
+      // Award free months to both users
+      await awardFreeMonth(referrer._id, `Referral reward for referring ${email}`);
+      await awardFreeMonth(user._id, `Referral reward for using code from ${referrer.email}`);
+      
+      // Update referral count for referrer
+      referrer.referralCount += 1;
+      await referrer.save();
+    }
+
+    res.status(201).json({ 
+      success: true, 
+      message: "User registered successfully",
+      referralApplied,
+      referrer: referrer ? referrer.email : null
+    });
   } catch (error) {
-    console.log(error);
+    console.log("Registration error:", error);
     res.status(500).json({ success: false, message: "Server Error" });
   }
 };
@@ -169,6 +214,8 @@ export const checkUserSubscription = async (req, res) => {
 
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ error: 'User not found' });
+
+
 
     let subscriptionInfo = null;
 

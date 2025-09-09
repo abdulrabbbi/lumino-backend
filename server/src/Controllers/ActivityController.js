@@ -8,9 +8,13 @@ import { isPastMondayRefresh, getCurrentMondayAt6AM, getNextMondayAt6AM } from "
 import mongoose from "mongoose";
 import { checkAndAwardAreaBadges, checkAndAwardBounceBack, checkAndAwardCategoriesMaster, checkAndAwardChampion, checkAndAwardConsistencyChamp, checkAndAwardFiveInARow, checkAndAwardFocusFinisher, checkAndAwardGratitudeGiver, checkAndAwardMasterParent, checkAndAwardMobileExplorer, checkAndAwardStreakBuilder, checkAndAwardSurprisePlayer, checkAndAwardSurpriseStreak } from "../Helper/BadgeHelper.js";
 import UserSubscription from "../Models/UserSubscription.js";
+import { checkReferralReward } from "./referralController.js";
 
 const checkUserSubscription = async (userId) => {
   if (!userId) return false;
+
+  const hasReferralReward = await checkReferralReward(userId);
+  if (hasReferralReward) return true;
 
   const userSubscription = await UserSubscription.findOne({
     userId,

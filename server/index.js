@@ -18,6 +18,8 @@ import SubscriptionRoutes from './src/Routes/SubscriptionRoutes.js'
 import session from "express-session";
 import { checkTrialStatuses, handleStripeWebhook } from "./src/Controllers/SubscriptionController.js";
 
+import ReferralRoutes from './src/Routes/ReferralRoutes.js'
+
 import cron from 'node-cron';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -63,6 +65,7 @@ app.use('/api', ProfileRoutes);
 app.use('/api', TesterRoutes);
 app.use('/api', AdminRoutes);
 app.use('/api', SubscriptionRoutes);
+app.use('/api', ReferralRoutes);
 
 const PORT = process.env.PORT || 4008;
 app.listen(PORT, '0.0.0.0', () => {

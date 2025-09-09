@@ -1,7 +1,7 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Logo from '../../public/images/logo.svg'
 import { MdOutlineMail } from "react-icons/md";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { MdLockOutline } from "react-icons/md";
 import { MdDriveFileRenameOutline } from "react-icons/md";
 import { toast, ToastContainer } from "react-toastify";
@@ -9,17 +9,32 @@ import "react-toastify/dist/ReactToastify.css";
 import axios from "axios";
 import { BASE_URL } from "../utils/api.js";    
 
-console.log("VITE_BACKEND_API_URL:", import.meta.env.VITE_BACKEND_API_URL);
-
-console.log(BASE_URL);
-
 export default function SignUpPage() {
     const navigate = useNavigate()
+    const [searchParams] = useSearchParams()
     
     const [email, setEmail] = useState("")
     const [username, setUsername] = useState("")
     const [password, setPassword] = useState("")
+    const [referralCode, setReferralCode] = useState("")
     const [isLoading, setIsLoading] = useState(false)
+    const [showReferralSuccess, setShowReferralSuccess] = useState(false)
+
+    useEffect(() => {
+        const refCode = searchParams.get('ref')
+        if (refCode) {
+            setReferralCode(refCode)
+            setShowReferralSuccess(true)
+            toast.success(`Referral applied`)
+            
+            // Auto-hide the success message after 5 seconds
+            const timer = setTimeout(() => {
+                setShowReferralSuccess(false)
+            }, 5000)
+            
+            return () => clearTimeout(timer)
+        }
+    }, [searchParams])
 
     const handleRegister = async () => {
         if (!email || !username || !password) {
@@ -40,48 +55,47 @@ export default function SignUpPage() {
 
         setIsLoading(true);
 
-        try {
-            const response = await axios.post(`${BASE_URL}/register`, {
-                username,
-                email,
-                password
-            });
+     
+  try {
+    const response = await axios.post(`${BASE_URL}/register`, {
+      username,
+      email,
+      password,
+      referralCode: referralCode || undefined
+    });
 
-            if (response.data.success === true) {
-                toast.success("Registration successful! Redirecting to sign in...");
-                setTimeout(() => {
-                    navigate("/signin");
-                }, 2000);
-            } else {
-                toast.error("Registration failed, Try Again!");
-            }
-        } catch (error) {
-            console.error("Registration error:", error);
-            if (axios.isAxiosError(error)) {
-                toast.error(error.response?.data?.message || "An error occurred during registration");
-            } else {
-                toast.error("An unexpected error occurred");
-            }
-        } finally {
-            setIsLoading(false);
-        }
+    if (response.data.success === true) {
+      if (response.data.referralApplied) {
+        toast.success(`Registration successful! You and ${response.data.referrer} both received 1 month free!`);
+      } else {
+        toast.success("Registration successful! Redirecting to sign in...");
+      }
+      
+      setTimeout(() => {
+        navigate("/signin");
+      }, 2000);
+    } else {
+      toast.error("Registration failed, Try Again!");
     }
+  } catch (error) {
+    console.error("Registration error:", error);
+    if (axios.isAxiosError(error)) {
+      // Handle specific referral errors
+      if (error.response?.status === 400 && error.response?.data?.error?.includes("referral")) {
+        toast.error(error.response.data.error);
+      } else {
+        toast.error(error.response?.data?.error || "An error occurred during registration");
+      }
+    } else {
+      toast.error("An unexpected error occurred");
+    }
+  } finally {
+    setIsLoading(false);
+  }
+}
 
     return (
         <div className="min-h-screen flex relative">
-            {/* <ToastContainer 
-                position="top-right"
-                autoClose={2000}
-                hideProgressBar={false}
-                newestOnTop={false}
-                closeOnClick
-                rtl={false}
-                pauseOnFocusLoss
-                draggable
-                pauseOnHover
-                theme="light"
-            /> */}
-            
             <div className="hidden lg:flex lg:w-[25%] bg-gradient-to-br from-purple-100 to-purple-200 items-center justify-center p-8">
                 <div className="text-center">
                     <div className="flex items-center justify-center space-x-1 mb-4">
@@ -103,6 +117,13 @@ export default function SignUpPage() {
                             <h1 className="text-4xl poppins-700 text-[#000000] mb-2">Sign Up</h1>
                             <p className="text-[#000000] text-sm inter-tight-400">Sign up with Open account</p>
                         </div>
+
+                        {/* Referral Success Banner */}
+                        {showReferralSuccess && (
+                            <div className="bg-green-100 border inter-tight-400 text-sm border-green-400 text-green-700 px-4 py-3 rounded-lg relative">
+                                <span className="block sm:inline mr-2">🎉 Referral applied! You'll receive 1 month free after signing up.</span>
+                            </div>
+                        )}
 
                         <div className=" flex items-center gap-2">
                             <button className="w-full h-12 border border-[#D4D4D4] rounded-xl transition-all duration-500 ease-in-out hover:bg-gray-50 flex items-center justify-center space-x-3">

@@ -253,8 +253,16 @@ export default function Activities() {
   }
 
   const handleActivityClick = (activity) => {
+    // Check if user is not logged in
+    const userLoggedIn = localStorage.getItem("authToken")
+    if (!userLoggedIn) {
+      navigate("/signup");
+      return;
+    }
+    
+    // Check if activity is locked (only for logged-in users)
     if (activity.isLocked) {
-      navigate("/signup")
+      navigate("/pricing");
       return;
     }
   
