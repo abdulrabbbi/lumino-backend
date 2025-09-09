@@ -238,7 +238,7 @@ const Pricing = () => {
   ].filter(Boolean);
 
   return (
-    <section className="py-16 px-4 mt-10 sm:px-6 lg:px-8 h-auto max-w-7xl m-auto">
+    <section className="py-16 px-4 md:mt-10 mt-3 sm:px-6 lg:px-8 h-auto max-w-7xl m-auto">
       <ToastContainer style={{ zIndex: 100000000 }} />
       
       {/* Cancel Confirmation Modal */}
@@ -283,7 +283,7 @@ const Pricing = () => {
             const isLifetimeUser = userSubscription && userSubscription.subscription.priceType === 'one-time';
             
             return (
-              <div key={sub._id} className={`relative ${sub.name === 'Jaaravontuur' ? 'lg:col-span-1' : ''}`}>
+              <div key={sub._id} className={`relative ${sub.name === 'Jaaravontuur' ? 'md:mt-0 mt-8' : ''}`}>
                 {sub.name === 'Jaaravontuur' && (
                   <>
                     <div className="absolute inset-0 bg-gradient-to-br from-[#DB297A] to-[#7940EA] rounded-3xl z-0"></div>
@@ -294,7 +294,7 @@ const Pricing = () => {
                 )}
 
                 <div className={`flex flex-col justify-between 
-                  ${sub.name === 'Proefreis' || sub.name === 'Eeuwig Sterk' ? 'md:h-[510px] mt-13 h-full' : ''} 
+                  ${sub.name === 'Proefreis' || sub.name === 'Eeuwig Sterk' ? 'md:h-[510px] md:mt-13 mt-4 h-full' : ''} 
                   bg-white 
                   ${sub.name === 'Jaaravontuur' ? 'mt-10 m-3 pb-20' : ''} 
                   rounded-3xl p-8 shadow-lg border-2 border-gray-200 relative z-10`}>

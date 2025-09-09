@@ -33,6 +33,8 @@ import { ToastContainer } from 'react-toastify'
 import Success from './pages/subscription-modes/success'
 import Cancel from './pages/subscription-modes/cancel'
 import Faqs from './pages/faqs'
+import PrivacyPolicy from './pages/privacy-policy'
+import ContactUs from './pages/contact-us'
 
 
 function AppWrapper() {
@@ -63,6 +65,8 @@ function AppWrapper() {
         <Route path="/success" element={<Success />} />
         <Route path="/cancel" element={<Cancel />} />
         <Route path="/faqs" element={<Faqs />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/contact-us" element={<ContactUs />} />
 
         {/* User Profile Routes */}
 

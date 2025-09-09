@@ -91,13 +91,13 @@ export default function SignUpPage() {
             </div>
 
             <div className="w-full lg:w-[55%] flex items-center justify-center lg:justify-end md:p-8 p-4 bg-white max-lg:relative">
-                <div className="absolute lg:right-10 top-6 text-sm inter-tight-400 text-gray-600">
+                <div className="absolute lg:right-10 top-6 right-4 text-sm inter-tight-400 text-gray-600">
                     Already a Member?{" "}
                     <Link to="/signin" className="text-gray-900 font-medium hover:underline">
                         Sign in
                     </Link>
                 </div>
-                <div className="w-full max-w-md space-y-6">
+                <div className="w-full max-w-md space-y-6 pt-16 lg:pt-0">
                     <div className="space-y-6">
                         <div className="text-left">
                             <h1 className="text-4xl poppins-700 text-[#000000] mb-2">Sign Up</h1>

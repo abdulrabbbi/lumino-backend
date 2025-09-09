@@ -38,8 +38,8 @@ const Footer = () => {
                             <h3 className="text-[#000000] inter-tight-700 mb-4">Ondersteuning</h3>
                             <ul className="space-y-3">
                                 <li><Link to={"/faqs"} className="text-[#000000] cursor-pointer text-sm">Veelgestelde Vragen</Link></li>
-                                <li><Link to={"/"} className="text-[#000000] cursor-pointer text-sm">Privacybeleid</Link></li>
-                                <li><Link to={"/"} className="text-[#000000] cursor-pointer text-sm">Contact</Link></li>
+                                <li><Link to={"/privacy-policy"} className="text-[#000000] cursor-pointer text-sm">Privacybeleid</Link></li>
+                                <li><Link to={"/contact-us"} className="text-[#000000] cursor-pointer text-sm">Contact</Link></li>
                             </ul>
                         </div>
                     </div>

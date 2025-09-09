@@ -254,7 +254,7 @@ export default function Activities() {
 
   const handleActivityClick = (activity) => {
     if (activity.isLocked) {
-      toast.info("Deze activiteit is vergrendeld. Upgrade je account om toegang te krijgen.");
+      navigate("/signup")
       return;
     }
   
@@ -463,7 +463,7 @@ export default function Activities() {
             </div>
           </div>
           <div className="space-y-4">
-            <h1 className="lg:leading-tighter pb-5 text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl xl:text-[3.4rem] 2xl:text-[3.75rem] inter-tight-700  bg-clip-text text-transparent  bg-gradient-to-b to-[#9333EA] from-[#DB2777]">
+            <h1 className="lg:leading-tighter pb-7 text-3xl font-bold tracking-tighter sm:text-4xl md:text-5xl xl:text-[3.4rem] 2xl:text-[3.75rem] inter-tight-700  bg-clip-text text-transparent  bg-gradient-to-b to-[#9333EA] from-[#DB2777]">
               Samen groeien met elke activiteit
             </h1>
             <p className="text-sm text-[#4B5563] inter-tight-400 font-medium">
@@ -679,77 +679,81 @@ export default function Activities() {
                       </div>
                       <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-[#DB297A] to-[#7940EA] z-0 opacity-0 group-hover:opacity-100 transition duration-500"></div>
                       <div
-                        className={`relative z-10 md:h-[550px] h-auto  bg-white rounded-2xl overflow-hidden transition-shadow duration-300 ease-in-out group-hover:shadow-lg ${activity.isLocked ? "opacity-80" : ""}`}
-                      >
-                        <div className="p-3">
-                          <div className="bg-[#F3F4F6] rounded-2xl h-48 flex items-center justify-center">
-                            <div className="h-18 w-18 shadow-3xl bg-[#f1e7e7] rounded-full flex items-center justify-center mx-auto mb-4">
-                              <img src={activity.image || "/placeholder.svg"} className="h-10 w-10" alt="" />
-                            </div>
-                          </div>
-                        </div>
-                        <div className="p-4 space-y-4">
-                          <div>
-                            <h3 className="text-lg text-[#0F2137] poppins-700 mb-1">{activity.title}</h3>
-                            <p className="text-[#666666] space-grotesk-400 text-[16px] leading-relaxed">
-                              {activity.description.slice(0, 40)}...
-                            </p>
-                          </div>
-                          <div className="flex items-center inter-tight-400 justify-between text-sm mt-8 text-[#838383]">
-                            <div className="flex items-center gap-1 sora-400">
-                              <Clock className="w-4 h-4" />
-                              <span>{activity.progress}</span>
-                            </div>
-                            <div className="flex items-center gap-1 sora-400">
-                              <FiUsers className="w-4 h-4" />
-                              <span>{activity.ageRange}</span>
-                            </div>
-                          </div>
-                          {!activity.isCompleted && (
-                            <>
-                              <div className="rounded-lg bg-[#FFFCE6] border border-yellow-200 p-3 flex items-center justify-center gap-2">
-                                <Star className="w-4 h-4 text-[#FACC15] fill-current" />
-                                <span className="text-sm inter-tight-400 font-medium text-gray-700">
-                                  <span className="font-bold text-black inter-tight-700">{activity.rating}</span> (
-                                  {activity.reviews})
-                                </span>
-                              </div>
-                              <div className="flex justify-center mt-2">
-                                <span className={`${activity.tagColor} px-3 py-1 rounded-full text-xs font-medium`}>
-                                  {activity.tag}
-                                </span>
-                              </div>
-                            </>
-                          )}
-                          {!activity.isCompleted ? (
-                            <button
-                              className={`w-full bg-gradient-to-br from-[#C42E8B] to-[#6650C7] text-white inter-tight-700 cursor-pointer py-2.5 px-4 rounded-2xl hover:opacity-90 transition-opacity text-sm flex items-center justify-center gap-2 ${activity.isLocked ? "opacity-50 cursor-not-allowed" : ""}`}
-                              disabled={activity.isLocked}
-                            >
-                              <IoPlayCircleOutline className="w-6 h-6" />
-                              Start Activiteit
-                            </button>
-                          ) : (
-                            <div className="bg-[#FEFCE8] flex-col flex justify-center items-center p-10 rounded-3xl">
-                              <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium text-orange-600">
-                                <svg
-                                  className="w-4 h-4 mr-1 bg-orange-600 text-white rounded-full"
-                                  fill="currentColor"
-                                  viewBox="0 0 20 20"
-                                >
-                                  <path
-                                    fillRule="evenodd"
-                                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                    clipRule="evenodd"
-                                  />
-                                </svg>
-                                Voltooid
-                              </div>
-                              <span className="text-[#F59E0B] inter-tight-400 mt-2 text-sm">Fantastisch gedaan!</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+  className={`relative z-10 md:h-[570px] h-auto bg-white rounded-2xl overflow-hidden transition-shadow duration-300 ease-in-out group-hover:shadow-lg flex flex-col ${activity.isLocked ? "opacity-80" : ""}`}
+>
+  <div className="p-3">
+    <div className="bg-[#F3F4F6] rounded-2xl h-48 flex items-center justify-center">
+      <div className="h-18 w-18 shadow-3xl bg-[#f1e7e7] rounded-full flex items-center justify-center mx-auto mb-4">
+        <img src={activity.image || "/placeholder.svg"} className="h-10 w-10" alt="" />
+      </div>
+    </div>
+  </div>
+  <div className="p-4 flex flex-col flex-1">
+    <div className="flex-1">
+      <div>
+        <h3 className="text-lg text-[#0F2137] poppins-700 mb-1">{activity.title}</h3>
+        <p className="text-[#666666] space-grotesk-400 text-[16px] leading-relaxed">
+          {activity.description.slice(0, 120)}...
+        </p>
+      </div>
+      <div className="flex items-center inter-tight-400 justify-between text-sm mt-8 text-[#838383]">
+        <div className="flex items-center gap-1 sora-400">
+          <Clock className="w-4 h-4" />
+          <span>{activity.progress}</span>
+        </div>
+        <div className="flex items-center gap-1 sora-400">
+          <FiUsers className="w-4 h-4" />
+          <span>{activity.ageRange}</span>
+        </div>
+      </div>
+    </div>
+    <div className="mt-4">
+      {!activity.isCompleted && (
+        <>
+          <div className="rounded-lg bg-[#FFFCE6] border border-yellow-200 p-3 flex items-center justify-center gap-2">
+            <Star className="w-4 h-4 text-[#FACC15] fill-current" />
+            <span className="text-sm inter-tight-400 font-medium text-gray-700">
+              <span className="font-bold text-black inter-tight-700">{activity.rating}</span> (
+              {activity.reviews})
+            </span>
+          </div>
+          <div className="flex justify-center mt-2">
+            <span className={`${activity.tagColor} px-3 py-1 rounded-full text-xs font-medium`}>
+              {activity.tag}
+            </span>
+          </div>
+        </>
+      )}
+      {!activity.isCompleted ? (
+        <button
+          className={`w-full bg-gradient-to-br from-[#C42E8B] to-[#6650C7] text-white inter-tight-700 cursor-pointer py-2.5 px-4 rounded-2xl hover:opacity-90 transition-opacity text-sm flex items-center justify-center gap-2 mt-4 ${activity.isLocked ? "opacity-50 cursor-not-allowed" : ""}`}
+          disabled={activity.isLocked}
+        >
+          <IoPlayCircleOutline className="w-6 h-6" />
+          Start Activiteit
+        </button>
+      ) : (
+        <div className="bg-[#FEFCE8] flex-col flex justify-center items-center p-10 rounded-3xl mt-4">
+          <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium text-orange-600">
+            <svg
+              className="w-4 h-4 mr-1 bg-orange-600 text-white rounded-full"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fillRule="evenodd"
+                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                clipRule="evenodd"
+              />
+            </svg>
+            Voltooid
+          </div>
+          <span className="text-[#F59E0B] inter-tight-400 mt-2 text-sm">Fantastisch gedaan!</span>
+        </div>
+      )}
+    </div>
+  </div>
+</div>
                     </div>
                   ))}
                 </div>
