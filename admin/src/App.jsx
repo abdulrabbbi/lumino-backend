@@ -15,6 +15,7 @@ import Managebadge from './pages/admin-dashboard-pages/manage-badge'
 import ScrollToTop from './components/ScrollToTop'
 import MarketingUsers from './pages/admin-dashboard-pages/marketing-users'
 import Rewards from './pages/admin-dashboard-pages/reward'
+import TopContributors from './pages/admin-dashboard-pages/top-contributers'
 
 function AppLayout() {
   const location = useLocation()
@@ -66,6 +67,7 @@ function App() {
             <Route path="manage-badge" element={<Managebadge />} />
             <Route path="marketinggebruikers" element={<MarketingUsers />} />
             <Route path="reward-settings" element={<Rewards />} />
+            <Route path="top-contributors" element={<TopContributors />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/signin" replace />} />
