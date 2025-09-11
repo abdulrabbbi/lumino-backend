@@ -1119,10 +1119,6 @@ const getTop5ActivitiesExcluding = async (excludeIds = [], userAgeGroup = null, 
     return [];
   }
 };
-
-
-
-
 export const getTotalActivitiesCount = async (req, res) => {
   try {
 

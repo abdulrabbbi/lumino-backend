@@ -4,15 +4,15 @@ import Activity from '../Models/Activity.js';
 import RewardSetting from '../Models/RewardSetting.js';
 import User from '../Models/User.js';
 
-
 export const getTopContributors = async (req, res) => {
   try {
     const { month } = req.query;
-    const yearMonth = month || new Date().toISOString().slice(0, 7); // Default to current month
+    const yearMonth = month || new Date().toISOString().slice(0, 7);
 
     // Get reward pool for the month
     const rewardSetting = await RewardSetting.findOne({ month: yearMonth });
-    const totalRewardPool = rewardSetting?.rewardPool || 2500;
+    const totalRewardPool = rewardSetting?.rewardPool;
+    const rewardPoolText = rewardSetting ? `€${totalRewardPool}` : 'Pool price not set';
 
     // Get start and end dates for the month
     const startDate = new Date(`${yearMonth}-01`);
@@ -28,13 +28,19 @@ export const getTopContributors = async (req, res) => {
       activityCompletions[ca.activityId] = (activityCompletions[ca.activityId] || 0) + 1;
     });
 
-    const activities = await Activity.find({ isApproved: true })
-      .populate('userId', 'firstName surname');
+    // Get only parent activities (non-admin users)
+    const parentActivities = await Activity.find({ 
+      isApproved: true,
+      'userId.role': { $ne: 'admin' }
+    }).populate({
+      path: 'userId',
+      select: 'firstName surname email role'
+    });
 
     const qualifyingActivities = [];
     const creatorScores = {};
 
-    for (const activity of activities) {
+    for (const activity of parentActivities) {
       const completions = activityCompletions[activity._id] || 0;
       const avgRating = activity.averageRating || 0;
 
@@ -52,7 +58,6 @@ export const getTopContributors = async (req, res) => {
           score: parseFloat(score.toFixed(2))
         });
 
-        // Aggregate scores per creator (max 3 activities)
         if (!creatorScores[activity.userId._id]) {
           creatorScores[activity.userId._id] = {
             creatorId: activity.userId._id,
@@ -81,18 +86,14 @@ export const getTopContributors = async (req, res) => {
         creatorName: creator.creatorName,
         qualifyingActivitiesCount: creator.scores.length,
         totalScore: parseFloat(creator.totalScore.toFixed(2)),
-        estimatedEarnings: parseFloat(
-          ((creator.totalScore / totalCombinedScore) * totalRewardPool).toFixed(2)
-        )
+        estimatedEarnings: totalRewardPool && totalCombinedScore > 0 
+          ? parseFloat(((creator.totalScore / totalCombinedScore) * totalRewardPool).toFixed(2))
+          : rewardPoolText
       }))
       .sort((a, b) => b.totalScore - a.totalScore);
 
-    const topActivities = qualifyingActivities
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 50); // Limit to top 50 activities
-
     const summary = {
-      totalRewardPool,
+      totalRewardPool: rewardPoolText,
       qualifyingActivitiesCount: qualifyingActivities.length,
       totalCreatorsEarning: topCreators.length
     };
@@ -102,7 +103,81 @@ export const getTopContributors = async (req, res) => {
       data: {
         summary,
         topCreators,
-        topActivities
+        qualifyingActivities
+      }
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message
+    });
+  }
+};
+export const getTopActivitiesLeaderboard = async (req, res) => {
+  try {
+    const { month, limit = 50 } = req.query;
+    const yearMonth = month || new Date().toISOString().slice(0, 7);
+
+    // Get start and end dates for the month
+    const startDate = new Date(`${yearMonth}-01`);
+    const endDate = new Date(startDate);
+    endDate.setMonth(endDate.getMonth() + 1);
+
+    const completedActivities = await CompletedActivity.find({
+      completedAt: { $gte: startDate, $lt: endDate }
+    });
+
+    const activityCompletions = {};
+    completedActivities.forEach(ca => {
+      activityCompletions[ca.activityId] = (activityCompletions[ca.activityId] || 0) + 1;
+    });
+
+    // Get all approved activities (both parent and system)
+    const activities = await Activity.find({ isApproved: true })
+      .populate({
+        path: 'userId',
+        select: 'firstName surname email role'
+      });
+
+    const leaderboardActivities = [];
+
+    for (const activity of activities) {
+      const completions = activityCompletions[activity._id] || 0;
+      const avgRating = activity.averageRating || 0;
+
+      // Only include activities that meet the minimum criteria
+      if (completions >= 10 && avgRating >= 7.0) {
+        const score = (completions * 0.6) + (avgRating * 0.4);
+        
+        // Determine creator type
+        const creatorType = activity.userId?.role === 'admin' ? 'system' : 'parent';
+
+        leaderboardActivities.push({
+          activityId: activity._id,
+          activityName: activity.title,
+          creatorId: activity.userId._id,
+          creatorName: `${activity.userId.firstName} ${activity.userId.surname}`,
+          creatorType: creatorType,
+          executions: completions,
+          averageRating: avgRating,
+          score: parseFloat(score.toFixed(2)),
+          isSystemActivity: creatorType === 'system'
+        });
+      }
+    }
+
+    // Sort by score and limit results
+    const topActivities = leaderboardActivities
+      .sort((a, b) => b.score - a.score)
+      .slice(0, parseInt(limit));
+
+    res.status(200).json({
+      success: true,
+      data: {
+        topActivities,
+        totalActivities: leaderboardActivities.length
       }
     });
 

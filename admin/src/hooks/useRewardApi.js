@@ -58,10 +58,27 @@ export const useRewardAPI = () => {
     }
   }
 
+  const getTopActivitiesLeaderboard = async (month) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const response = await fetch(`${BASE_URL}/get-top-activities-leaderboard?month=${month}`)
+      const data = await response.json()
+      if (!data.success) throw new Error(data.message)
+      return data
+    } catch (err) {
+      setError(err.message)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return {
     setRewardPool,
     getRewardPool,
     getTopContributors,
+    getTopActivitiesLeaderboard,
     loading,
     error,
   }
