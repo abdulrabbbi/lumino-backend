@@ -100,7 +100,7 @@ export default function ReferralPage() {
 
   return (
     <div className="">
-      <div className="border border-[#E2E4E9] rounded-xl p-6 md:p-8">
+      <div className="border border-[#E2E4E9] rounded-xl p-5 md:p-8">
         <div className="mb-8">
           <h1 className="text-2xl font-semibold text-gray-900 mb-3">
             Refer a Friend & Earn Rewards!
@@ -110,7 +110,7 @@ export default function ReferralPage() {
           </p>
         </div>
 
-        <div className="mb-6 grid grid-cols-2 gap-4">
+        <div className="mb-6 grid md:grid-cols-2  grid-cols-1 gap-4">
           <div className="bg-gray-50 p-4 rounded-lg">
             <p className="text-sm text-gray-600">Total Referrals</p>
             <p className="text-2xl font-bold text-gray-900">{referralData.totalReferrals}</p>

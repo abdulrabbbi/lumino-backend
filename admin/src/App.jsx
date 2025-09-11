@@ -17,6 +17,8 @@ import MarketingUsers from './pages/admin-dashboard-pages/marketing-users'
 import Rewards from './pages/admin-dashboard-pages/reward'
 import TopContributors from './pages/admin-dashboard-pages/top-contributers'
 
+import { SidebarProvider } from './context/SidebarContext'
+
 function AppLayout() {
   const location = useLocation()
   const hideNavbar = location.pathname === '/signin' || location.pathname === '/admin'
@@ -36,44 +38,47 @@ function PrivateRoute({ children }) {
 
 function App() {
   return (
-    <BrowserRouter basename="/admin">
-      <ScrollToTop />
-      <Routes>
-        {/* Redirect /admin to /admin/signin */}
-        <Route path="/" element={<Navigate to="/signin" replace />} />
+    <SidebarProvider>
 
-        {/* Public Signin Route */}
-        <Route path="/signin" element={<AdminSignin />} />
+      <BrowserRouter basename="/admin">
+        <ScrollToTop />
+        <Routes>
+          {/* Redirect /admin to /admin/signin */}
+          <Route path="/" element={<Navigate to="/signin" replace />} />
 
-        {/* Protected Routes */}
-        <Route element={<AppLayout />}>
-          <Route
-            path="admin-dashboard"
-            element={
-              <PrivateRoute>
-                <AdminDashboardLayout />
-              </PrivateRoute>
-            }
-          >
-            <Route index element={<Navigate to="dashboard" replace />} />
-            <Route path="dashboard" element={<Dashboard />} />
-            <Route path="activiteitenbeheer" element={<ActiviteitenBeheer />} />
-            <Route path="ingezondenactiviteiten" element={<IngezondenActiviteiten />} />
-            <Route path="gebruikersbeheer" element={<GebruikersBeheren />} />
-            <Route path="contactberichten" element={<ContactBerichten />} />
-            <Route path="testgroepaanmeldingen" element={<TestgroepAanmeldingen />} />
-            <Route path="kwaliteitsaudit" element={<Kwaliteitsaudit />} />
-            <Route path="earlyaccess" element={<EarlyAccess />} />
-            <Route path="manage-badge" element={<Managebadge />} />
-            <Route path="marketinggebruikers" element={<MarketingUsers />} />
-            <Route path="reward-settings" element={<Rewards />} />
-            <Route path="top-contributors" element={<TopContributors />} />
+          {/* Public Signin Route */}
+          <Route path="/signin" element={<AdminSignin />} />
+
+          {/* Protected Routes */}
+          <Route element={<AppLayout />}>
+            <Route
+              path="admin-dashboard"
+              element={
+                <PrivateRoute>
+                  <AdminDashboardLayout />
+                </PrivateRoute>
+              }
+            >
+              <Route index element={<Navigate to="dashboard" replace />} />
+              <Route path="dashboard" element={<Dashboard />} />
+              <Route path="activiteitenbeheer" element={<ActiviteitenBeheer />} />
+              <Route path="ingezondenactiviteiten" element={<IngezondenActiviteiten />} />
+              <Route path="gebruikersbeheer" element={<GebruikersBeheren />} />
+              <Route path="contactberichten" element={<ContactBerichten />} />
+              <Route path="testgroepaanmeldingen" element={<TestgroepAanmeldingen />} />
+              <Route path="kwaliteitsaudit" element={<Kwaliteitsaudit />} />
+              <Route path="earlyaccess" element={<EarlyAccess />} />
+              <Route path="manage-badge" element={<Managebadge />} />
+              <Route path="marketinggebruikers" element={<MarketingUsers />} />
+              <Route path="reward-settings" element={<Rewards />} />
+              <Route path="top-contributors" element={<TopContributors />} />
+            </Route>
+
+            <Route path="*" element={<Navigate to="/signin" replace />} />
           </Route>
-
-          <Route path="*" element={<Navigate to="/signin" replace />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+        </Routes>
+      </BrowserRouter>
+    </SidebarProvider>
   )
 }
 

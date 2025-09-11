@@ -253,39 +253,64 @@ export default function Activities() {
   }
 
   const handleActivityClick = (activity) => {
-    // Check if user is not logged in
-    const userLoggedIn = localStorage.getItem("authToken")
+    const userLoggedIn = localStorage.getItem("authToken");
+  
+    // Guest user (not logged in)
     if (!userLoggedIn) {
-      navigate("/signup");
-      return;
+      if (activity.isLocked) {
+        // Guest cannot access locked activities → go to signup
+        navigate("/signup");
+        return;
+      } else {
+        // Guest can access free activity
+        saveScrollPosition();
+        saveNavigationState({
+          activeTab,
+          currentPage,
+          filters:
+            activeTab === "library"
+              ? {
+                  searchTerm,
+                  selectedCategory,
+                  selectedAge,
+                  selectedSort,
+                }
+              : null,
+        });
+        navigate(`/activity-detail/${activity.id}`, {
+          state: { fromActivities: true },
+        });
+        return;
+      }
     }
-    
-    // Check if activity is locked (only for logged-in users)
+  
+    // Logged-in user
     if (activity.isLocked) {
+      // Logged-in user must pay for locked activities
       navigate("/pricing");
       return;
     }
   
-    // Save current scroll position
+    // Logged-in user accessing free activity
     saveScrollPosition();
-  
-    const navigationState = {
+    saveNavigationState({
       activeTab,
       currentPage,
-      filters: activeTab === "library" ? {
-        searchTerm,
-        selectedCategory,
-        selectedAge,
-        selectedSort,
-      } : null,
-    };
-  
-    saveNavigationState(navigationState);
-  
+      filters:
+        activeTab === "library"
+          ? {
+              searchTerm,
+              selectedCategory,
+              selectedAge,
+              selectedSort,
+            }
+          : null,
+    });
     navigate(`/activity-detail/${activity.id}`, {
       state: { fromActivities: true },
     });
   };
+  
 
   const handleTabChange = (tab) => {
     setActiveTab(tab)

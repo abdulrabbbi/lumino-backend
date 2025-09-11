@@ -35,6 +35,7 @@ import Cancel from './pages/subscription-modes/cancel'
 import Faqs from './pages/faqs'
 import PrivacyPolicy from './pages/privacy-policy'
 import ContactUs from './pages/contact-us'
+import { SidebarProvider } from './context/SidebarContext'
 
 
 function AppWrapper() {
@@ -87,6 +88,8 @@ function AppWrapper() {
 
 function App() {
   return (
+    <SidebarProvider>
+
     <BrowserRouter>
       <ScrollToTop />
       <ToastContainer
@@ -101,9 +104,10 @@ function App() {
         pauseOnHover
         limit={1} // Ensures only one toast shows at a time
         style={{ zIndex: 100000000 }} // Ensures the toast is on top of other elements
-      />
+        />
       <AppWrapper />
     </BrowserRouter>
+        </SidebarProvider>
   )
 }
 

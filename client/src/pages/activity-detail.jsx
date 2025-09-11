@@ -418,7 +418,7 @@ function ActivityDetail() {
                     </p>
                   )}
                 </div>
-                <div>
+                {/* <div>
                   {activity.creatorName.toLowerCase() !== "floris" && (
                     <div className="flex justify-center items-center mt-1">
                       <p className={`${newdomainColor} w-50  px-3 mt-2 py-1 rounded-full text-xs font-medium`}>
@@ -426,7 +426,7 @@ function ActivityDetail() {
                       </p>
                     </div>
                   )}
-                </div>
+                </div> */}
               </div>
 
               <div className="rounded-2xl p-3">
