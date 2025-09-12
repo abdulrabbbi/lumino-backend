@@ -28,49 +28,60 @@ export const getTopContributors = async (req, res) => {
       activityCompletions[ca.activityId] = (activityCompletions[ca.activityId] || 0) + 1;
     });
 
-    // Get only parent activities (non-admin users)
+    // Get only parent activities (non-admin users) with proper population
     const parentActivities = await Activity.find({ 
-      isApproved: true,
-      'userId.role': { $ne: 'admin' }
+      isApproved: true
     }).populate({
       path: 'userId',
-      select: 'firstName surname email role'
+      select: 'firstName surname email role',
+      match: { role: { $ne: 'admin' } } // Only include users with role not equal to 'admin'
     });
 
     const qualifyingActivities = [];
     const creatorScores = {};
 
     for (const activity of parentActivities) {
+      // Skip activities where user is admin or user data is not properly populated
+      if (!activity.userId || activity.userId.role === 'admin') {
+        continue;
+      }
+
       const completions = activityCompletions[activity._id] || 0;
       const avgRating = activity.averageRating || 0;
 
       // Check qualification criteria
-      if (completions >= 10 && avgRating >= 7.0) {
+      if (completions >= 4 && avgRating >= 7.0) {
         const score = (completions * 0.6) + (avgRating * 0.4);
+        
+        // Use creatorName from activity document instead of populated user
+        const creatorName = activity.creatorName || 
+                           (activity.userId ? `${activity.userId.firstName || ''} ${activity.userId.surname || ''}`.trim() : 'Unknown Creator');
         
         qualifyingActivities.push({
           activityId: activity._id,
           activityName: activity.title,
           creatorId: activity.userId._id,
-          creatorName: `${activity.userId.firstName} ${activity.userId.surname}`,
+          creatorName: creatorName,
           executions: completions,
           averageRating: avgRating,
           score: parseFloat(score.toFixed(2))
         });
 
-        if (!creatorScores[activity.userId._id]) {
-          creatorScores[activity.userId._id] = {
-            creatorId: activity.userId._id,
-            creatorName: `${activity.userId.firstName} ${activity.userId.surname}`,
+        const creatorId = activity.userId._id.toString();
+        
+        if (!creatorScores[creatorId]) {
+          creatorScores[creatorId] = {
+            creatorId: creatorId,
+            creatorName: creatorName,
             scores: [],
             totalScore: 0
           };
         }
 
         // Apply max 3 activities rule
-        if (creatorScores[activity.userId._id].scores.length < 3) {
-          creatorScores[activity.userId._id].scores.push(score);
-          creatorScores[activity.userId._id].totalScore += score;
+        if (creatorScores[creatorId].scores.length < 3) {
+          creatorScores[creatorId].scores.push(score);
+          creatorScores[creatorId].totalScore += score;
         }
       }
     }
@@ -115,6 +126,7 @@ export const getTopContributors = async (req, res) => {
     });
   }
 };
+
 export const getTopActivitiesLeaderboard = async (req, res) => {
   try {
     const { month, limit = 50 } = req.query;
@@ -148,8 +160,12 @@ export const getTopActivitiesLeaderboard = async (req, res) => {
       const avgRating = activity.averageRating || 0;
 
       // Only include activities that meet the minimum criteria
-      if (completions >= 10 && avgRating >= 7.0) {
+      if (completions >= 4 && avgRating >= 7.0) {
         const score = (completions * 0.6) + (avgRating * 0.4);
+        
+        // Use creatorName from activity document
+        const creatorName = activity.creatorName || 
+                           (activity.userId ? `${activity.userId.firstName || ''} ${activity.userId.surname || ''}`.trim() : 'Unknown Creator');
         
         // Determine creator type
         const creatorType = activity.userId?.role === 'admin' ? 'system' : 'parent';
@@ -157,8 +173,8 @@ export const getTopActivitiesLeaderboard = async (req, res) => {
         leaderboardActivities.push({
           activityId: activity._id,
           activityName: activity.title,
-          creatorId: activity.userId._id,
-          creatorName: `${activity.userId.firstName} ${activity.userId.surname}`,
+          creatorId: activity.userId?._id || activity.createdBy,
+          creatorName: creatorName,
           creatorType: creatorType,
           executions: completions,
           averageRating: avgRating,
