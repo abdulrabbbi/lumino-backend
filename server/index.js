@@ -25,7 +25,7 @@ import cron from 'node-cron';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-configDotenv(); 
+configDotenv();
 
 connectToDatabase(process.env.MONGODB_URL);
 
@@ -34,11 +34,18 @@ const app = express();
 app.use(prerender.set("prerenderToken", process.env.PRERENDER_TOKEN));
 
 
-app.post('/api/webhook', express.raw({type: 'application/json'}), handleStripeWebhook);
+app.post('/api/webhook', express.raw({ type: 'application/json' }), handleStripeWebhook);
 
-app.use(cors());
-app.use(bodyParser.json());
-app.use(express.json()); 
+app.use(cors({
+    origin: ["http://admin.eensterkestart.nl",
+        "http://eensterkestart.nl",
+        "https://eensterkestart.nl",
+        "https://admin.eensterkestart.nl",
+        "http://localhost:5173",],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    credentials: true
+})); app.use(bodyParser.json());
+app.use(express.json());
 
 // Serve static files from 'uploads' directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -46,14 +53,14 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 cron.schedule('0 0 * * *', () => {
     console.log('Checking trial statuses...');
     checkTrialStatuses();
-  });
+});
 
 app.use(session({
     secret: process.env.EXPRESS_SESSION_KEY,
     resave: false,
-    saveUninitialized: true,    
+    saveUninitialized: true,
     cookie: { secure: false } // change to true if using https
-  }));
+}));
 
 app.get('/api/test', (req, res) => {
     res.status(200).json({ message: 'Server is running!' });
