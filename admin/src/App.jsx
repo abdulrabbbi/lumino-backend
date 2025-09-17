@@ -16,11 +16,12 @@ import ScrollToTop from './components/ScrollToTop'
 import MarketingUsers from './pages/admin-dashboard-pages/marketing-users'
 import Rewards from './pages/admin-dashboard-pages/reward'
 import TopContributors from './pages/admin-dashboard-pages/top-contributers'
+
 import { SidebarProvider } from './context/SidebarContext'
 
 function AppLayout() {
   const location = useLocation()
-  const hideNavbar = location.pathname === '/admin/signin' || location.pathname === '/admin'
+  const hideNavbar = location.pathname === '/signin' || location.pathname === '/admin'
 
   return (
     <>
@@ -32,24 +33,32 @@ function AppLayout() {
 
 function PrivateRoute({ children }) {
   const token = localStorage.getItem('adminAuthToken')
-  return token ? children : <Navigate to="/admin/signin" replace />
+  return token ? children : <Navigate to="/signin" replace />
 }
 
 function App() {
   return (
     <SidebarProvider>
-      <BrowserRouter basename="/admin">
+
+      <BrowserRouter>
         <ScrollToTop />
         <Routes>
-          {/* Redirect root to signin */}
+          {/* Redirect /admin to /admin/signin */}
           <Route path="/" element={<Navigate to="/signin" replace />} />
-          
+
           {/* Public Signin Route */}
           <Route path="/signin" element={<AdminSignin />} />
 
           {/* Protected Routes */}
-          <Route element={<PrivateRoute><AppLayout /></PrivateRoute>}>
-            <Route path="admin-dashboard" element={<AdminDashboardLayout />}>
+          <Route element={<AppLayout />}>
+            <Route
+              path="admin-dashboard"
+              element={
+                <PrivateRoute>
+                  <AdminDashboardLayout />
+                </PrivateRoute>
+              }
+            >
               <Route index element={<Navigate to="dashboard" replace />} />
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="activiteitenbeheer" element={<ActiviteitenBeheer />} />
@@ -64,10 +73,9 @@ function App() {
               <Route path="reward-settings" element={<Rewards />} />
               <Route path="top-contributors" element={<TopContributors />} />
             </Route>
-          </Route>
 
-          {/* Catch all route */}
-          <Route path="*" element={<Navigate to="/signin" replace />} />
+            <Route path="*" element={<Navigate to="/signin" replace />} />
+          </Route>
         </Routes>
       </BrowserRouter>
     </SidebarProvider>
