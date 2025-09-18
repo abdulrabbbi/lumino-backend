@@ -10,6 +10,7 @@ export const useActivitiesFilter = (
   initialCategory = "Alle Leergebieden",
   initialAge = "alle-leeftijden",
   initialSort = "hoogstgewaardeerde",
+  initialPage = 1,
 ) => {
   const [activities, setActivities] = useState([])
   const [loading, setLoading] = useState(false)
@@ -20,35 +21,51 @@ export const useActivitiesFilter = (
   const [selectedAge, setSelectedAge] = useState(initialAge)
   const [selectedSort, setSelectedSort] = useState(initialSort)
 
-  const fetchFilteredActivities = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const authToken = localStorage.getItem("authToken")
-      const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {}
+  const [currentPage, setCurrentPage] = useState(initialPage)
+  const [totalPages, setTotalPages] = useState(0)
+  const [totalCount, setTotalCount] = useState(0)
+  const [limit] = useState(30)
 
-      const response = await axios.get(`${BASE_URL}/filter-activities`, {
-        params: {
-          searchTerm: effectiveSearchTerm,
-          category: selectedCategory,
-          age: selectedAge,
-          sort: selectedSort,
-        },
-        headers,
-      })
-      setActivities(response.data.activities)
-    } catch (err) {
-      console.error("Error fetching filtered activities:", err)
-      const errorMessage = err.response?.data?.message || "Failed to fetch activities."
-      setError(errorMessage)
-      setActivities([])
-      if (errorMessage === "Login required to view completed activities.") {
-        toast.info(errorMessage)
+  const fetchFilteredActivities = useCallback(
+    async (page = currentPage) => {
+      setLoading(true)
+      setError(null)
+      try {
+        const authToken = localStorage.getItem("authToken")
+        const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {}
+
+        const response = await axios.get(`${BASE_URL}/filter-activities`, {
+          params: {
+            searchTerm: effectiveSearchTerm,
+            category: selectedCategory,
+            age: selectedAge,
+            sort: selectedSort,
+            page: page,
+            limit: limit,
+          },
+          headers,
+        })
+
+        setActivities(response.data.activities)
+        setTotalPages(response.data.totalPages)
+        setCurrentPage(response.data.currentPage)
+        setTotalCount(response.data.totalCount)
+      } catch (err) {
+        console.error("Error fetching filtered activities:", err)
+        const errorMessage = err.response?.data?.message || "Failed to fetch activities."
+        setError(errorMessage)
+        setActivities([])
+        setTotalPages(0)
+        setTotalCount(0)
+        if (errorMessage === "Login required to view completed activities.") {
+          toast.info(errorMessage)
+        }
+      } finally {
+        setLoading(false)
       }
-    } finally {
-      setLoading(false)
-    }
-  }, [effectiveSearchTerm, selectedCategory, selectedAge, selectedSort])
+    },
+    [effectiveSearchTerm, selectedCategory, selectedAge, selectedSort, currentPage, limit],
+  )
 
   useEffect(() => {
     fetchFilteredActivities()
@@ -67,6 +84,7 @@ export const useActivitiesFilter = (
 
   const triggerSearch = useCallback(() => {
     setEffectiveSearchTerm(searchTerm)
+    setCurrentPage(1)
   }, [searchTerm])
 
   const resetFilters = useCallback(() => {
@@ -75,6 +93,30 @@ export const useActivitiesFilter = (
     setSelectedCategory("Alle Leergebieden")
     setSelectedAge("alle-leeftijden")
     setSelectedSort("hoogstgewaardeerde")
+    setCurrentPage(1)
+  }, [])
+
+  const changePage = useCallback(
+    (page) => {
+      setCurrentPage(page)
+      fetchFilteredActivities(page)
+    },
+    [fetchFilteredActivities],
+  )
+
+  const setSelectedCategoryWithReset = useCallback((category) => {
+    setSelectedCategory(category)
+    setCurrentPage(1) // Reset to page 1 when filter changes
+  }, [])
+
+  const setSelectedAgeWithReset = useCallback((age) => {
+    setSelectedAge(age)
+    setCurrentPage(1) // Reset to page 1 when filter changes
+  }, [])
+
+  const setSelectedSortWithReset = useCallback((sort) => {
+    setSelectedSort(sort)
+    setCurrentPage(1) // Reset to page 1 when filter changes
   }, [])
 
   return {
@@ -85,11 +127,15 @@ export const useActivitiesFilter = (
     selectedCategory,
     selectedAge,
     selectedSort,
+    currentPage,
+    totalPages,
+    totalCount,
     setSearchTerm,
-    setSelectedCategory,
-    setSelectedAge,
-    setSelectedSort,
+    setSelectedCategory: setSelectedCategoryWithReset, // Use enhanced setter
+    setSelectedAge: setSelectedAgeWithReset, // Use enhanced setter
+    setSelectedSort: setSelectedSortWithReset, // Use enhanced setter
     resetFilters,
     triggerSearch,
+    changePage,
   }
 }

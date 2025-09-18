@@ -30,25 +30,23 @@ export default function Activities() {
   const { saveScrollPosition, restoreScrollPosition, clearScrollPosition } = useScrollPosition("activities")
 
   const [activeTab, setActiveTab] = useState("speelweek")
-  const [currentPage, setCurrentPage] = useState(1)
   const [hasRestoredState, setHasRestoredState] = useState(false)
   const [isRestoringFromActivity, setIsRestoringFromActivity] = useState(false)
   const [totalCountActivities, settotalCountActivities] = useState(0)
 
-  const activitiesPerPage = 30
   const activityListRef = useRef(null)
 
   const getInitialFilters = () => {
-    // If coming from activity detail, try to get saved state first
     if (location.state?.fromActivity) {
       const savedState = getNavigationState()
       if (savedState && savedState.filters) {
-        console.log("[Activities] Using saved filters:", savedState.filters)
+        console.log("[Activities] Restoring saved state for back navigation:", savedState)
         return {
           searchTerm: savedState.filters.searchTerm || "",
           category: savedState.filters.selectedCategory || "Alle Leergebieden",
           age: savedState.filters.selectedAge || "alle-leeftijden",
           sort: savedState.filters.selectedSort || "hoogstgewaardeerde",
+          page: savedState.currentPage || 1, // Maintain the same page (Scenario 1)
         }
       }
     }
@@ -59,6 +57,7 @@ export default function Activities() {
       category: searchParams.get("category") || "Alle Leergebieden",
       age: searchParams.get("age") || "alle-leeftijden",
       sort: searchParams.get("sort") || "hoogstgewaardeerde",
+      page: Number.parseInt(searchParams.get("page")) || 1,
     }
   }
 
@@ -72,13 +71,23 @@ export default function Activities() {
     selectedCategory,
     selectedAge,
     selectedSort,
+    currentPage,
+    totalPages,
+    totalCount,
     setSearchTerm,
     setSelectedCategory,
     setSelectedAge,
     setSelectedSort,
     resetFilters,
     triggerSearch,
-  } = useActivitiesFilter(initialFilters.searchTerm, initialFilters.category, initialFilters.age, initialFilters.sort)
+    changePage,
+  } = useActivitiesFilter(
+    initialFilters.searchTerm,
+    initialFilters.category,
+    initialFilters.age,
+    initialFilters.sort,
+    initialFilters.page,
+  )
 
   const { playweekActivities, weekInfo, loading: playweekLoading, error: playweekError } = usePlayweekActivities()
 
@@ -87,28 +96,30 @@ export default function Activities() {
 
   useEffect(() => {
     if (location.state?.fromActivity) {
-      const savedState = getNavigationState();
-      
+      console.log("[Activities] Detected return from activity detail")
+      const savedState = getNavigationState()
+
       if (savedState) {
-        // Restore filters and tab state first
-        if (savedState.filters) {
-          setSearchTerm(savedState.filters.searchTerm || "");
-          setSelectedCategory(savedState.filters.selectedCategory || "Alle Leergebieden");
-          setSelectedAge(savedState.filters.selectedAge || "alle-leeftijden");
-          setSelectedSort(savedState.filters.selectedSort || "hoogstgewaardeerde");
-        }
-        
-        setActiveTab(savedState.activeTab || "speelweek");
-        setCurrentPage(savedState.currentPage || 1);
-        
-        // Wait for the next tick to ensure DOM is updated
+        console.log("[Activities] Restoring saved state:", savedState)
+        setIsRestoringFromActivity(true)
+
+        // Restore tab state
+        setActiveTab(savedState.activeTab || "speelweek")
+
+        // Mark that we've restored state
+        setHasRestoredState(true)
+
+        // Wait for the next tick to ensure DOM is updated, then restore scroll
         setTimeout(() => {
-          restoreScrollPosition();
-          clearNavigationState(); // Clear after restoration
-        }, 100);
+          restoreScrollPosition()
+          setIsRestoringFromActivity(false)
+          clearNavigationState() // Clear after restoration
+        }, 300)
       }
+    } else {
+      setHasRestoredState(true)
     }
-  }, [location.state]);
+  }, [location.state])
 
   useEffect(() => {
     if (activeTab === "library" && hasRestoredState && !isRestoringFromActivity) {
@@ -118,6 +129,7 @@ export default function Activities() {
       if (selectedCategory !== "Alle Leergebieden") params.set("category", selectedCategory)
       if (selectedAge !== "alle-leeftijden") params.set("age", selectedAge)
       if (selectedSort !== "hoogstgewaardeerde") params.set("sort", selectedSort)
+      if (currentPage > 1) params.set("page", currentPage.toString())
 
       // Replace the current URL with updated params
       setSearchParams(params, { replace: true })
@@ -127,6 +139,7 @@ export default function Activities() {
     selectedCategory,
     selectedAge,
     selectedSort,
+    currentPage,
     activeTab,
     hasRestoredState,
     isRestoringFromActivity,
@@ -158,18 +171,6 @@ export default function Activities() {
     }
     fetchTotalCountActivites()
   }, [])
-
-  // Effect to adjust currentPage if filters change and current page becomes invalid
-  useEffect(() => {
-    if (activeTab === "library") {
-      const newTotalPages = Math.ceil(filteredActivities.length / activitiesPerPage)
-      if (currentPage > newTotalPages && newTotalPages > 0) {
-        setCurrentPage(newTotalPages)
-      } else if (newTotalPages === 0 && currentPage !== 1) {
-        setCurrentPage(1)
-      }
-    }
-  }, [filteredActivities.length, activeTab, activitiesPerPage, currentPage])
 
   const handleSubmitEmail = async (email) => {
     try {
@@ -218,12 +219,7 @@ export default function Activities() {
       })
     }
 
-    // Pagination logic for 'library' tab
-    const indexOfLastActivity = currentPage * activitiesPerPage
-    const indexOfFirstActivity = indexOfLastActivity - activitiesPerPage
-    const currentActivities = filteredActivities.slice(indexOfFirstActivity, indexOfLastActivity)
-
-    return currentActivities.map((activity) => {
+    return filteredActivities.map((activity) => {
       const domain = (activity.learningDomain || "").trim()
       return {
         id: activity._id,
@@ -253,20 +249,18 @@ export default function Activities() {
   }
 
   const handleActivityClick = (activity) => {
-    const userLoggedIn = localStorage.getItem("authToken");
-  
+    const userLoggedIn = localStorage.getItem("authToken")
+
     // Guest user (not logged in)
     if (!userLoggedIn) {
       if (activity.isLocked) {
-        // Guest cannot access locked activities → go to signup
-        navigate("/signup");
-        return;
+        navigate("/signup")
+        return
       } else {
-        // Guest can access free activity
-        saveScrollPosition();
+        saveScrollPosition()
         saveNavigationState({
           activeTab,
-          currentPage,
+          currentPage, // Save current page for Scenario 1
           filters:
             activeTab === "library"
               ? {
@@ -276,26 +270,24 @@ export default function Activities() {
                   selectedSort,
                 }
               : null,
-        });
+        })
         navigate(`/activity-detail/${activity.id}`, {
           state: { fromActivities: true },
-        });
-        return;
+        })
+        return
       }
     }
-  
+
     // Logged-in user
     if (activity.isLocked) {
-      // Logged-in user must pay for locked activities
-      navigate("/pricing");
-      return;
+      navigate("/pricing")
+      return
     }
-  
-    // Logged-in user accessing free activity
-    saveScrollPosition();
+
+    saveScrollPosition()
     saveNavigationState({
       activeTab,
-      currentPage,
+      currentPage, // Save current page for Scenario 1
       filters:
         activeTab === "library"
           ? {
@@ -305,35 +297,25 @@ export default function Activities() {
               selectedSort,
             }
           : null,
-    });
+    })
     navigate(`/activity-detail/${activity.id}`, {
       state: { fromActivities: true },
-    });
-  };
-  
+    })
+  }
 
   const handleTabChange = (tab) => {
     setActiveTab(tab)
-    if (tab === "library") {
-      // Don't reset filters when switching to library tab
-      // Filters should persist from URL params
-      setCurrentPage(1)
-    }
   }
 
-  // Handle search input change without triggering search
   const handleSearchInputChange = (e) => {
     setSearchTerm(e.target.value)
-    // Don't trigger search here - only update the input value
   }
 
-  // Handle search button click
   const handleSearchClick = () => {
-    triggerSearch()
-    setCurrentPage(1) // Reset to first page when searching
+    console.log("[Activities] Search triggered - resetting to page 1")
+    triggerSearch() // This will reset to page 1 due to Scenario 2
   }
 
-  // Handle Enter key in search input
   const handleSearchKeyDown = (e) => {
     if (e.key === "Enter") {
       e.preventDefault()
@@ -341,36 +323,31 @@ export default function Activities() {
     }
   }
 
-  // Handle filter changes without auto-scrolling
   const handleCategoryChange = (e) => {
-    setSelectedCategory(e.target.value)
-    setCurrentPage(1)
+    console.log("[Activities] Category filter changed - resetting to page 1")
+    setSelectedCategory(e.target.value) // This will reset to page 1 due to enhanced setter
   }
 
   const handleAgeChange = (e) => {
-    setSelectedAge(e.target.value)
-    setCurrentPage(1)
+    console.log("[Activities] Age filter changed - resetting to page 1")
+    setSelectedAge(e.target.value) // This will reset to page 1 due to enhanced setter
   }
 
   const handleSortChange = (e) => {
-    setSelectedSort(e.target.value)
-    setCurrentPage(1)
+    console.log("[Activities] Sort filter changed - resetting to page 1")
+    setSelectedSort(e.target.value) // This will reset to page 1 due to enhanced setter
   }
 
   useEffect(() => {
     if (location.state?.fromActivity) {
       const timer = setTimeout(() => {
         restoreScrollPosition()
-      }, 2000) // Small delay to ensure DOM is ready
+      }, 3000)
 
       return () => clearTimeout(timer)
     }
   }, [location.state, restoreScrollPosition])
 
-  // Calculate total pages for library tab
-  const totalPages = Math.ceil(filteredActivities.length / activitiesPerPage)
-
-  // Helper function to generate pagination range
   const getPaginationRange = (currentPage, totalPages) => {
     const pageNumbers = []
     const maxPagesToShow = 5
@@ -406,10 +383,11 @@ export default function Activities() {
   }
 
   const handlePageChange = (page) => {
-    setCurrentPage(page)
+    console.log(`[Activities] Changing to page ${page}`)
+    changePage(page)
     // Smooth scroll to activity list without jarring movement
     if (activityListRef.current) {
-      const headerOffset = 100 // Adjust this value based on your header height
+      const headerOffset = 100
       const elementPosition = activityListRef.current.getBoundingClientRect().top
       const offsetPosition = elementPosition + window.pageYOffset - headerOffset
 
@@ -622,15 +600,15 @@ export default function Activities() {
                 <option value="Anders denken">Anders denken</option>
               </select>
               <select
-  value={selectedAge}
-  onChange={handleAgeChange}
-  className="w-full pl-10 pr-4 py-2 border-none outline-none text-[#707070] text-sm bg-[#FFFFFF] rounded-xl inter-tight-400"
->
-  <option value="alle-leeftijden">Alle Leeftijden</option>
-  <option value="3-4">3-4 jaar</option>
-  <option value="3-6">3-6 jaar</option>
-  <option value="5-6">5-6 jaar</option>
-</select>
+                value={selectedAge}
+                onChange={handleAgeChange}
+                className="w-full pl-10 pr-4 py-2 border-none outline-none text-[#707070] text-sm bg-[#FFFFFF] rounded-xl inter-tight-400"
+              >
+                <option value="alle-leeftijden">Alle Leeftijden</option>
+                <option value="3-4">3-4 jaar</option>
+                <option value="3-6">3-6 jaar</option>
+                <option value="5-6">5-6 jaar</option>
+              </select>
               <select
                 value={selectedSort}
                 onChange={handleSortChange}
@@ -712,81 +690,81 @@ export default function Activities() {
                       </div>
                       <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-[#DB297A] to-[#7940EA] z-0 opacity-0 group-hover:opacity-100 transition duration-500"></div>
                       <div
-  className={`relative z-10 md:h-[570px] h-auto bg-white rounded-2xl overflow-hidden transition-shadow duration-300 ease-in-out group-hover:shadow-lg flex flex-col ${activity.isLocked ? "opacity-80" : ""}`}
->
-  <div className="p-3">
-    <div className="bg-[#F3F4F6] rounded-2xl h-48 flex items-center justify-center">
-      <div className="h-18 w-18 shadow-3xl bg-[#f1e7e7] rounded-full flex items-center justify-center mx-auto mb-4">
-        <img src={activity.image || "/placeholder.svg"} className="h-10 w-10" alt="" />
-      </div>
-    </div>
-  </div>
-  <div className="p-4 flex flex-col flex-1">
-    <div className="flex-1">
-      <div>
-        <h3 className="text-lg text-[#0F2137] poppins-700 mb-1">{activity.title}</h3>
-        <p className="text-[#666666] space-grotesk-400 text-[16px] leading-relaxed">
-          {activity.description.slice(0, 120)}...
-        </p>
-      </div>
-      <div className="flex items-center inter-tight-400 justify-between text-sm mt-8 text-[#838383]">
-        <div className="flex items-center gap-1 sora-400">
-          <Clock className="w-4 h-4" />
-          <span>{activity.progress}</span>
-        </div>
-        <div className="flex items-center gap-1 sora-400">
-          <FiUsers className="w-4 h-4" />
-          <span>{activity.ageRange}</span>
-        </div>
-      </div>
-    </div>
-    <div className="mt-4">
-      {!activity.isCompleted && (
-        <>
-          <div className="rounded-lg bg-[#FFFCE6] border border-yellow-200 p-3 flex items-center justify-center gap-2">
-            <Star className="w-4 h-4 text-[#FACC15] fill-current" />
-            <span className="text-sm inter-tight-400 font-medium text-gray-700">
-              <span className="font-bold text-black inter-tight-700">{activity.rating}</span> (
-              {activity.reviews})
-            </span>
-          </div>
-          <div className="flex justify-center mt-2">
-            <span className={`${activity.tagColor} px-3 py-1 rounded-full text-xs font-medium`}>
-              {activity.tag}
-            </span>
-          </div>
-        </>
-      )}
-      {!activity.isCompleted ? (
-        <button
-          className={`w-full bg-gradient-to-br from-[#C42E8B] to-[#6650C7] text-white inter-tight-700 cursor-pointer py-2.5 px-4 rounded-2xl hover:opacity-90 transition-opacity text-sm flex items-center justify-center gap-2 mt-4 ${activity.isLocked ? "opacity-50 cursor-not-allowed" : ""}`}
-          disabled={activity.isLocked}
-        >
-          <IoPlayCircleOutline className="w-6 h-6" />
-          Start Activiteit
-        </button>
-      ) : (
-        <div className="bg-[#FEFCE8] flex-col flex justify-center items-center p-10 rounded-3xl mt-4">
-          <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium text-orange-600">
-            <svg
-              className="w-4 h-4 mr-1 bg-orange-600 text-white rounded-full"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path
-                fillRule="evenodd"
-                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                clipRule="evenodd"
-              />
-            </svg>
-            Voltooid
-          </div>
-          <span className="text-[#F59E0B] inter-tight-400 mt-2 text-sm">Fantastisch gedaan!</span>
-        </div>
-      )}
-    </div>
-  </div>
-</div>
+                        className={`relative z-10 md:h-[570px] h-auto bg-white rounded-2xl overflow-hidden transition-shadow duration-300 ease-in-out group-hover:shadow-lg flex flex-col ${activity.isLocked ? "opacity-80" : ""}`}
+                      >
+                        <div className="p-3">
+                          <div className="bg-[#F3F4F6] rounded-2xl h-48 flex items-center justify-center">
+                            <div className="h-18 w-18 shadow-3xl bg-[#f1e7e7] rounded-full flex items-center justify-center mx-auto mb-4">
+                              <img src={activity.image || "/placeholder.svg"} className="h-10 w-10" alt="" />
+                            </div>
+                          </div>
+                        </div>
+                        <div className="p-4 flex flex-col flex-1">
+                          <div className="flex-1">
+                            <div>
+                              <h3 className="text-lg text-[#0F2137] poppins-700 mb-1">{activity.title}</h3>
+                              <p className="text-[#666666] space-grotesk-400 text-[16px] leading-relaxed">
+                                {activity.description.slice(0, 120)}...
+                              </p>
+                            </div>
+                            <div className="flex items-center inter-tight-400 justify-between text-sm mt-8 text-[#838383]">
+                              <div className="flex items-center gap-1 sora-400">
+                                <Clock className="w-4 h-4" />
+                                <span>{activity.progress}</span>
+                              </div>
+                              <div className="flex items-center gap-1 sora-400">
+                                <FiUsers className="w-4 h-4" />
+                                <span>{activity.ageRange}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="mt-4">
+                            {!activity.isCompleted && (
+                              <>
+                                <div className="rounded-lg bg-[#FFFCE6] border border-yellow-200 p-3 flex items-center justify-center gap-2">
+                                  <Star className="w-4 h-4 text-[#FACC15] fill-current" />
+                                  <span className="text-sm inter-tight-400 font-medium text-gray-700">
+                                    <span className="font-bold text-black inter-tight-700">{activity.rating}</span> (
+                                    {activity.reviews})
+                                  </span>
+                                </div>
+                                <div className="flex justify-center mt-2">
+                                  <span className={`${activity.tagColor} px-3 py-1 rounded-full text-xs font-medium`}>
+                                    {activity.tag}
+                                  </span>
+                                </div>
+                              </>
+                            )}
+                            {!activity.isCompleted ? (
+                              <button
+                                className={`w-full bg-gradient-to-br from-[#C42E8B] to-[#6650C7] text-white inter-tight-700 cursor-pointer py-2.5 px-4 rounded-2xl hover:opacity-90 transition-opacity text-sm flex items-center justify-center gap-2 mt-4 ${activity.isLocked ? "opacity-50 cursor-not-allowed" : ""}`}
+                                disabled={activity.isLocked}
+                              >
+                                <IoPlayCircleOutline className="w-6 h-6" />
+                                Start Activiteit
+                              </button>
+                            ) : (
+                              <div className="bg-[#FEFCE8] flex-col flex justify-center items-center p-10 rounded-3xl mt-4">
+                                <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium text-orange-600">
+                                  <svg
+                                    className="w-4 h-4 mr-1 bg-orange-600 text-white rounded-full"
+                                    fill="currentColor"
+                                    viewBox="0 0 20 20"
+                                  >
+                                    <path
+                                      fillRule="evenodd"
+                                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                      clipRule="evenodd"
+                                    />
+                                  </svg>
+                                  Voltooid
+                                </div>
+                                <span className="text-[#F59E0B] inter-tight-400 mt-2 text-sm">Fantastisch gedaan!</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>

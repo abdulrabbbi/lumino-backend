@@ -311,7 +311,7 @@ export const getSingleActivity = async (req, res) => {
 };
 export const filterActivities = async (req, res) => {
   try {
-    const { searchTerm, category, age, sort } = req.query
+    const { searchTerm, category, age, sort, page = 1, limit = 20 } = req.query
     const query = {}
 
     // Keyword search
@@ -324,32 +324,28 @@ export const filterActivities = async (req, res) => {
       query.learningDomain = category
     }
 
-
-    if (age && age !== 'alle-leeftijden') {
+    // Age filter
+    if (age && age !== "alle-leeftijden") {
       const ageMap = {
-        '3-4': '3 - 4',
-        '3-6': '3 - 6', 
-        '5-6': '5 - 6'
-      };
-    
-      query.ageGroup = ageMap[age] || age;
-      
-      // console.log("Age filter applied:", age, "->", query.ageGroup); // Debug log
+        "3-4": "3 - 4",
+        "3-6": "3 - 6",
+        "5-6": "5 - 6",
+      }
+      query.ageGroup = ageMap[age] || age
     }
-
 
     const userId = req.user?.userId
     let isTestFamily = false
     let isLoggedIn = false
     let completedActivityIds = new Set()
-    let hasSubscription = false;
+    let hasSubscription = false
 
     if (userId) {
       const user = await User.findById(userId)
       if (user) {
         isLoggedIn = true
         isTestFamily = user.isTestFamily
-        hasSubscription = await checkUserSubscription(userId);
+        hasSubscription = await checkUserSubscription(userId)
         const completedActivities = await CompletedActivity.find({ userId }).select("activityId")
         completedActivityIds = new Set(completedActivities.map((c) => c.activityId.toString()))
       }
@@ -367,64 +363,52 @@ export const filterActivities = async (req, res) => {
       query._id = { $in: Array.from(completedActivityIds).map((id) => new mongoose.Types.ObjectId(id)) }
     }
 
-    const activities = await Activity.find(query).exec()
+    // Fetch ALL activities matching the query (without pagination)
+    const allActivities = await Activity.find(query).exec()
 
-    const finalActivities = activities.map((activity) => {
+    // Process all activities to add metadata
+    const finalActivities = allActivities.map((activity) => {
       const activityObject = activity.toObject()
       let isLocked = true
       if (isLoggedIn && isTestFamily) {
-        isLocked = false;
-      }
-      else if (isLoggedIn && hasSubscription) {
-        isLocked = false;
-      }
-      else if (isLoggedIn && !hasSubscription) {
-        isLocked = true;
-      }
-      else {
-        isLocked = true;
+        isLocked = false
+      } else if (isLoggedIn && hasSubscription) {
+        isLocked = false
+      } else if (isLoggedIn && !hasSubscription) {
+        isLocked = true
+      } else {
+        isLocked = true
       }
       const isCompleted = completedActivityIds.has(activityObject._id.toString())
 
-      // Calculate review count for sorting
-      const reviewCount = activityObject.ratings?.length || 0;
+      const reviewCount = activityObject.ratings?.length || 0
 
       return {
         ...activityObject,
         isLocked,
         isCompleted,
-        reviewCount
+        reviewCount,
       }
     })
 
-    // Apply NEW sorting logic
+    // Sorting
     if (sort === "hoogstgewaardeerde") {
-      // NEW: Sort by rating first, then by review count if ratings are equal
       finalActivities.sort((a, b) => {
-        const aRating = a.averageRating || 0;
-        const bRating = b.averageRating || 0;
-
-        // First by rating (highest to lowest)
-        if (bRating !== aRating) {
-          return bRating - aRating;
-        }
-        // Then by review count if ratings are equal (more reviews first)
-        return b.reviewCount - a.reviewCount;
-      });
+        const aRating = a.averageRating || 0
+        const bRating = b.averageRating || 0
+        if (bRating !== aRating) return bRating - aRating
+        return b.reviewCount - a.reviewCount
+      })
     } else if (sort === "meestgewaardeerde") {
-      // Sort by number of ratings (reviewCount), then by averageRating if counts are equal
       finalActivities.sort((a, b) => {
-        if (b.reviewCount !== a.reviewCount) {
-          return b.reviewCount - a.reviewCount; // More reviews first
-        }
-        const aRating = a.averageRating || 0;
-        const bRating = b.averageRating || 0;
-        return bRating - aRating; // Higher rating first if reviewCount is equal
-      });
+        if (b.reviewCount !== a.reviewCount) return b.reviewCount - a.reviewCount
+        const aRating = a.averageRating || 0
+        const bRating = b.averageRating || 0
+        return bRating - aRating
+      })
     }
 
-
-    // Default sorting: uncompleted activities first, then completed activities
+    // Move completed activities to the end for all sort options except 'voltooid'
     if (sort !== "voltooid") {
       finalActivities.sort((a, b) => {
         if (a.isCompleted && !b.isCompleted) return 1
@@ -433,18 +417,29 @@ export const filterActivities = async (req, res) => {
       })
     }
 
-    // Remove the reviewCount from final response (it's just for sorting)
-    const responseActivities = finalActivities.map(activity => {
-      const { reviewCount, ...activityWithoutCount } = activity;
-      return activityWithoutCount;
-    });
+    // Apply pagination after all sorting is done
+    const totalCount = finalActivities.length
+    const skip = (Number(page) - 1) * Number(limit)
+    const paginatedActivities = finalActivities.slice(skip, skip + Number(limit))
 
-    res.status(200).json({ success: true, activities: responseActivities })
+    const responseActivities = paginatedActivities.map((activity) => {
+      const { reviewCount, ...activityWithoutCount } = activity
+      return activityWithoutCount
+    })
+
+    res.status(200).json({
+      success: true,
+      activities: responseActivities,
+      totalPages: Math.ceil(totalCount / limit),
+      currentPage: Number(page),
+      totalCount,
+    })
   } catch (error) {
     console.error("Error filtering activities:", error)
     res.status(500).json({ message: "Server error" })
   }
 }
+
 export const markActivityCompleted = async (req, res) => {
   try {
     const { id } = req.params;

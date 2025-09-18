@@ -41,7 +41,7 @@ app.use(cors({
         "http://eensterkestart.nl",
         "https://eensterkestart.nl",
         "https://admin.eensterkestart.nl",
-        "http://localhost:5173",],
+        "http://localhost:4001",],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
     credentials: true
 })); app.use(bodyParser.json());
@@ -61,6 +61,7 @@ app.use(session({
     saveUninitialized: true,
     cookie: { secure: false } // change to true if using https
 }));
+
 
 app.get('/api/test', (req, res) => {
     res.status(200).json({ message: 'Server is running!' });
