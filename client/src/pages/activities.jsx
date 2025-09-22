@@ -452,7 +452,7 @@ export default function Activities() {
     <>
       {/* <ToastContainer style={{ zIndex: 1000000000 }} /> */}
       {isGuest && showEmailPopup && <EmailCollectionPopup onClose={handleClosePopup} onSubmit={handleSubmitEmail} />}
-      <div className="h-full flex flex-col items-center justify-center px-4 py-8">
+      <div className="h-full flex flex-col items-center justify-center lg:px-4 lg:py-8 p-4">
         <div className="md:w-[90%] mx-auto w-full  text-center space-y-8">
           <div className="flex justify-center items-center space-x-4 mb-8">
             <div className="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center">
@@ -559,7 +559,7 @@ export default function Activities() {
           </div>
         </div>
         {activeTab === "library" && (
-          <div className="bg-gradient-to-br md:w-[90%] mx-auto w-full rounded-xl from-[#EFF6FF] via-[#FAF5FF] to-[#FDF2F8] p-6 mb-8 shadow-sm">
+          <div className="bg-gradient-to-br md:w-[90%] mx-auto w-full rounded-xl from-[#EFF6FF] via-[#FAF5FF] to-[#FDF2F8] md:p-6 p-3 mb-8 shadow-sm">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="relative">
                 <input

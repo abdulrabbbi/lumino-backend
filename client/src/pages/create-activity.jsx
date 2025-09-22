@@ -266,17 +266,16 @@ const CreateActivity = () => {
   };
 
   return (
-    <div className="h-full bg-gradient-to-br from-[#EFF6FF] via-[#FAF5FF] to-[#FDF2F8] px-4 py-6">
+    <div className="h-full bg-gradient-to-br from-[#EFF6FF] via-[#FAF5FF] to-[#FDF2F8] lg:px-4 lg:py-6 p-3">
       {/* <ToastContainer style={{ zIndex: 1000000000 }} /> */}
 
-      {/* Badge Modal */}
       <BadgeModal
         isVisible={showBadgeModal}
         onClose={handleBadgeModalClose}
         badges={awardedBadge}
       />
 
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-4xl mx-auto w-full">
         <div className="mb-8">
           <button
             onClick={handleBack}
@@ -360,12 +359,12 @@ const CreateActivity = () => {
           </div>
         )}
 
-        <div className="bg-white rounded-2xl shadow-sm p-6 md:p-8">
+        <div className="bg-white rounded-2xl shadow-sm p-4 md:p-8">
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Lightbulb className="w-5 h-5 text-[#F59E0B]" />
-                <h2 className="text-2xl inter-tight-600 font-semibold text-[#000000]">Jouw Activiteit Details</h2>
+                <h2 className="md:text-2xl text-xl inter-tight-600 font-semibold text-[#000000]">Jouw Activiteit Details</h2>
               </div>
               
               <button
@@ -373,7 +372,7 @@ const CreateActivity = () => {
                 className="flex items-center gap-2 bg-gradient-to-r from-purple-100 to-blue-100 text-purple-700 hover:from-purple-200 hover:to-blue-200 px-4 py-2 rounded-lg transition-all"
               >
                 <Sparkles className="w-4 h-4" />
-                <span className="text-sm font-medium">AI Hulp</span>
+                <span className="text-sm font-medium lg:inline md:inline hidden">AI Hulp</span>
               </button>
             </div>
           </div>
