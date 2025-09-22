@@ -1,11 +1,12 @@
 /* eslint-disable no-unused-vars */
-import { ArrowLeft, Lightbulb, Send, Users, Clock } from "lucide-react";
+import { ArrowLeft, Lightbulb, Send, Users, Clock, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ToastContainer, toast } from "react-toastify";
 
 import useCreateActivity from "../hooks/useCreateActivity";
 import BadgeModal from "../components/badge-modal";
+import { generateActivitySuggestion } from "../utils/aiService";
 
 const CreateActivity = () => {
   const [formData, setFormData] = useState({
@@ -28,6 +29,11 @@ const CreateActivity = () => {
   // Badge modal state
   const [showBadgeModal, setShowBadgeModal] = useState(false);
   const [awardedBadge, setAwardedBadge] = useState(null);
+
+  // AI Suggestion state
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [showAiPanel, setShowAiPanel] = useState(false);
 
   const { createActivity, loading } = useCreateActivity();
   const navigate = useNavigate();
@@ -207,6 +213,53 @@ const CreateActivity = () => {
     }, 500);
   };
 
+  // AI Suggestion functionality
+  const handleGenerateSuggestion = async () => {
+    if (!aiPrompt.trim()) {
+      toast.error('Voer een beschrijving in voor de AI');
+      return;
+    }
+
+    setIsGenerating(true);
+    try {
+      const suggestion = await generateActivitySuggestion(
+        aiPrompt, 
+        formData.ageGroup, 
+        formData.learningDomain
+      );
+
+      // Apply the AI suggestion to the form
+      setFormData(prev => ({
+        ...prev,
+        title: suggestion.title || prev.title,
+        description: suggestion.description || prev.description,
+        instructions: suggestion.instructions ? suggestion.instructions.join('\n') : prev.instructions,
+        materials: suggestion.materials || prev.materials,
+        time: suggestion.time || prev.time,
+        effect: suggestion.effect || prev.effect,
+        // Only update ageGroup and learningDomain if they're not already set
+        ageGroup: prev.ageGroup || suggestion.ageGroup || '',
+        learningDomain: prev.learningDomain || suggestion.learningDomain || ''
+      }));
+
+      toast.success('AI suggestie succesvol toegepast!');
+      setShowAiPanel(false);
+      
+    } catch (error) {
+      console.error('AI generation error:', error);
+      toast.error('Kon geen suggestie genereren. Probeer het opnieuw.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const applyAiSuggestionField = (field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
   // Helper function to get input border color based on validation
   const getInputBorderColor = (field) => {
     return validationErrors[field] ? 'border-red-500' : 'border-[#E5E7EB]';
@@ -250,11 +303,78 @@ const CreateActivity = () => {
           </div>
         </div>
 
+        {/* AI Suggestion Panel */}
+        {showAiPanel && (
+          <div className="mb-6 bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-6 border-2 border-purple-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-purple-800 flex items-center gap-2">
+                <Sparkles className="w-5 h-5" />
+                AI Activiteit Suggestie
+              </h3>
+              <button
+                onClick={() => setShowAiPanel(false)}
+                className="text-purple-600 hover:text-purple-800"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-purple-700 mb-2">
+                  Beschrijf je ideale activiteit:
+                </label>
+                <textarea
+                  value={aiPrompt}
+                  onChange={(e) => setAiPrompt(e.target.value)}
+                  placeholder="Bijvoorbeeld: 'Een buitenactiviteit voor 4-jarigen over natuur ontdekken' of 'Een knutselactiviteit over emoties'"
+                  className="w-full px-4 py-3 bg-white border border-purple-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm resize-none"
+                  rows="3"
+                />
+              </div>
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={handleGenerateSuggestion}
+                  disabled={isGenerating}
+                  className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:from-purple-700 hover:to-blue-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isGenerating ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Genereren...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4" />
+                      Suggestie Genereren
+                    </>
+                  )}
+                </button>
+              </div>
+              
+              <p className="text-xs text-purple-600">
+                Tip: Hoe specifieker je beschrijving, hoe beter de suggestie!
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="bg-white rounded-2xl shadow-sm p-6 md:p-8">
           <div className="mb-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Lightbulb className="w-5 h-5 text-[#F59E0B]" />
-              <h2 className="text-2xl inter-tight-600 font-semibold text-[#000000]">Jouw Activiteit Details</h2>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Lightbulb className="w-5 h-5 text-[#F59E0B]" />
+                <h2 className="text-2xl inter-tight-600 font-semibold text-[#000000]">Jouw Activiteit Details</h2>
+              </div>
+              
+              <button
+                onClick={() => setShowAiPanel(!showAiPanel)}
+                className="flex items-center gap-2 bg-gradient-to-r from-purple-100 to-blue-100 text-purple-700 hover:from-purple-200 hover:to-blue-200 px-4 py-2 rounded-lg transition-all"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span className="text-sm font-medium">AI Hulp</span>
+              </button>
             </div>
           </div>
 

@@ -20,6 +20,7 @@ import { checkTrialStatuses, handleStripeWebhook } from "./src/Controllers/Subsc
 
 import ReferralRoutes from './src/Routes/ReferralRoutes.js'
 import RewardRoutes from './src/Routes/RewardRoutes.js'
+import OpenAIRoutes from './src/Routes/OpenAIRoutes.js'
 
 import cron from 'node-cron';
 const __filename = fileURLToPath(import.meta.url);
@@ -76,6 +77,7 @@ app.use('/api', AdminRoutes);
 app.use('/api', SubscriptionRoutes);
 app.use('/api', ReferralRoutes);
 app.use('/api', RewardRoutes);
+app.use('/api', OpenAIRoutes);
 
 const PORT = process.env.PORT || 4008;
 app.listen(PORT, '0.0.0.0', () => {
