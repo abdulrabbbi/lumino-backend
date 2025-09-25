@@ -23,6 +23,7 @@ import RewardRoutes from './src/Routes/RewardRoutes.js'
 import OpenAIRoutes from './src/Routes/OpenAIRoutes.js'
 
 import cron from 'node-cron';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -32,23 +33,37 @@ connectToDatabase(process.env.MONGODB_URL);
 
 const app = express();
 
-app.use(prerender.set("prerenderToken", process.env.PRERENDER_TOKEN));
+if (process.env.NODE_ENV === 'production') {
+    app.set('trust proxy', 1);
+}
 
+app.use(prerender.set("prerenderToken", process.env.PRERENDER_TOKEN));
 
 app.post('/api/webhook', express.raw({ type: 'application/json' }), handleStripeWebhook);
 
 app.use(cors({
-    origin: ["http://admin.eensterkestart.nl",
-        "http://eensterkestart.nl",
-        "https://eensterkestart.nl",
-        "https://admin.eensterkestart.nl",
-        "http://localhost:4001",],
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-    credentials: true
-})); app.use(bodyParser.json());
+    origin: [
+        "https://eensterkestart.nl/",
+        "https://admin.eensterkestart.nl/",
+        "http://localhost:4001",
+        "http://localhost:4002",
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    credentials: true,
+    optionsSuccessStatus: 200, // For legacy browser support
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+    exposedHeaders: ['Set-Cookie']
+}));
+
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Origin', req.headers.origin);
+    next();
+});
+
+app.use(bodyParser.json());
 app.use(express.json());
 
-// Serve static files from 'uploads' directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 cron.schedule('0 0 * * *', () => {
@@ -56,16 +71,38 @@ cron.schedule('0 0 * * *', () => {
     checkTrialStatuses();
 });
 
+// Session Configuration - Fixed for international users
 app.use(session({
     secret: process.env.EXPRESS_SESSION_KEY,
     resave: false,
-    saveUninitialized: true,
-    cookie: { secure: false } // change to true if using https
+    saveUninitialized: false, 
+    name: 'sessionId',
+    cookie: {
+        secure: process.env.NODE_ENV === 'production', // true for HTTPS in production
+        httpOnly: true, // Prevent XSS attacks
+        maxAge: 24 * 60 * 60 * 1000,
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        domain: process.env.NODE_ENV === 'production' ? '.eensterkestart.nl' : undefined 
+    },
+    proxy: process.env.NODE_ENV === 'production' // Trust proxy in production
 }));
 
-
 app.get('/api/test', (req, res) => {
-    res.status(200).json({ message: 'Server is running!' });
+    res.status(200).json({ 
+        message: 'Server is running!',
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV || 'development'
+    });
+});
+
+app.get('/api/health', (req, res) => {
+    res.status(200).json({
+        status: 'healthy',
+        server: 'online',
+        database: 'connected',
+        cors: 'enabled',
+        session: 'configured'
+    });
 });
 
 app.use('/api', UserRoutes);
@@ -79,7 +116,17 @@ app.use('/api', ReferralRoutes);
 app.use('/api', RewardRoutes);
 app.use('/api', OpenAIRoutes);
 
+app.use((err, req, res, next) => {
+    console.error('Error:', err);
+    res.status(500).json({
+        error: 'Internal Server Error',
+        message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
+    });
+});
+
+
 const PORT = process.env.PORT || 4008;
+
 app.listen(PORT, '0.0.0.0', () => {
     function getServerIp() {
         const networkInterf = networkInterfaces();
@@ -93,5 +140,9 @@ app.listen(PORT, '0.0.0.0', () => {
         }
         return 'Unknown IP';
     }
+    
     console.log(`Server is running on http://${getServerIp()}:${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`CORS enabled for international users`);
+    console.log(`Session security: ${process.env.NODE_ENV === 'production' ? 'Production (Secure)' : 'Development'}`);
 });
