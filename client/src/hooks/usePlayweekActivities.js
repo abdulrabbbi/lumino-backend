@@ -22,11 +22,10 @@ export function usePlayweekActivities() {
     const fetchPlayweekActivities = async () => {
       try {
         const token = localStorage.getItem("authToken");
-        const response = await axios.get(`${BASE_URL}/get-playweek-activities`, {withCredentials: true}, {
+        const response = await axios.get(`${BASE_URL}/get-playweek-activities`, {
           headers: {
            'User-Timezone': userTimezone,
             Authorization: `Bearer ${token}`,
-            
           },
         });
 

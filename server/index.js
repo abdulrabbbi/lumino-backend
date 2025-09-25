@@ -15,7 +15,6 @@ import ProfileRoutes from './src/Routes/ProfileRoutes.js'
 import TesterRoutes from './src/Routes/TesterRoutes.js'
 import AdminRoutes from './src/Routes/AdminRoutes.js'
 import SubscriptionRoutes from './src/Routes/SubscriptionRoutes.js'
-import session from "express-session";
 import { checkTrialStatuses, handleStripeWebhook } from "./src/Controllers/SubscriptionController.js";
 
 import ReferralRoutes from './src/Routes/ReferralRoutes.js'
@@ -39,8 +38,7 @@ if (process.env.NODE_ENV === 'production') {
 
 app.use(prerender.set("prerenderToken", process.env.PRERENDER_TOKEN));
 
-app.post('/api/webhook', express.raw({ type: 'application/json' }), handleStripeWebhook);
-
+// CORS Configuration - Simplified for JWT only
 app.use(cors({
     origin: [
         "https://eensterkestart.nl",
@@ -50,17 +48,13 @@ app.use(cors({
         "http://localhost:4002",
     ],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    credentials: true,
-    optionsSuccessStatus: 200, // For legacy browser support
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
-    exposedHeaders: ['Set-Cookie']
+    credentials: false,
+    optionsSuccessStatus: 200,
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'User-Timezone'],
 }));
 
-app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Allow-Origin', req.headers.origin);
-    next();
-});
+// Stripe webhook - needs raw body
+app.post('/api/webhook', express.raw({ type: 'application/json' }), handleStripeWebhook);
 
 app.use(bodyParser.json());
 app.use(express.json());
@@ -72,21 +66,7 @@ cron.schedule('0 0 * * *', () => {
     checkTrialStatuses();
 });
 
-// Session Configuration - Fixed for international users
-app.use(session({
-    secret: process.env.EXPRESS_SESSION_KEY,
-    resave: false,
-    saveUninitialized: false, 
-    name: 'sessionId',
-    cookie: {
-        secure: process.env.NODE_ENV === 'production', // true for HTTPS in production
-        httpOnly: true, // Prevent XSS attacks
-        maxAge: 24 * 60 * 60 * 1000,
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-        domain: process.env.NODE_ENV === 'production' ? '.eensterkestart.nl' : undefined 
-    },
-    proxy: process.env.NODE_ENV === 'production' // Trust proxy in production
-}));
+// Remove session middleware since we're only using JWT
 
 app.get('/api/test', (req, res) => {
     res.status(200).json({ 
@@ -102,7 +82,7 @@ app.get('/api/health', (req, res) => {
         server: 'online',
         database: 'connected',
         cors: 'enabled',
-        session: 'configured'
+        auth: 'JWT Bearer tokens only'
     });
 });
 
@@ -125,7 +105,6 @@ app.use((err, req, res, next) => {
     });
 });
 
-
 const PORT = process.env.PORT || 4008;
 
 app.listen(PORT, '0.0.0.0', () => {
@@ -144,6 +123,6 @@ app.listen(PORT, '0.0.0.0', () => {
     
     console.log(`Server is running on http://${getServerIp()}:${PORT}`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`CORS enabled for international users`);
-    console.log(`Session security: ${process.env.NODE_ENV === 'production' ? 'Production (Secure)' : 'Development'}`);
+    console.log(`CORS enabled - JWT Bearer tokens only`);
+    console.log(`Authentication: JWT only - No sessions/cookies`);
 });

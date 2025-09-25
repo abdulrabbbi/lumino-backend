@@ -766,7 +766,6 @@ export const getPlayWeekActivities = async (req, res) => {
 
     let userTimezone = req.headers['user-timezone'];
 
-
     try {
       Intl.DateTimeFormat(undefined, { timeZone: userTimezone });
     } catch (e) {
@@ -787,10 +786,10 @@ export const getPlayWeekActivities = async (req, res) => {
     let weekNumber = 1;
 
     if (userId) {
+      // EXISTING USER LOGIC - SAME
       activitySet = await WeekPlaySet.findOne({ userId }).sort({ weekNumber: -1 });
 
       if (!activitySet) {
-        // Create first week
         const currentMondayAt6AM = getCurrentMondayAt6AM(userTimezone);
         const freshActivities = await getTop5ActivitiesExcluding([], userAgeGroup, 1);
 
@@ -827,35 +826,20 @@ export const getPlayWeekActivities = async (req, res) => {
 
       weekNumber = activitySet.weekNumber;
     } else {
-      // GUEST LOGIC
-      activitySet = req.session?.weeklyActivities;
-      const lastRefresh = req.session?.lastMondayRefresh;
+      // ✅ FIXED GUEST LOGIC - NO SESSIONS
+      // For guests, always return fresh activities (simplified approach)
+      const currentMondayAt6AM = getCurrentMondayAt6AM(userTimezone);
+      
+      // Generate new activities for guest each time (or implement guest-specific storage)
+      const freshActivities = await getTop5ActivitiesExcluding([], null, 1);
 
-      const shouldRefresh = !activitySet || isPastMondayRefresh(lastRefresh, userTimezone);
-
-      if (shouldRefresh) {
-        const currentMondayAt6AM = getCurrentMondayAt6AM(userTimezone);
-        const newWeekNumber = activitySet ? activitySet.weekNumber + 1 : 1;
-
-
-        const previouslyUsedActivities = activitySet?.activities || [];
-        const freshActivities = await getTop5ActivitiesExcluding(previouslyUsedActivities, null, newWeekNumber);
-
-        activitySet = {
-          activities: freshActivities.map(a => a._id),
-          weekNumber: newWeekNumber,
-          generatedAt: currentMondayAt6AM,
-          nextRefreshAt: getNextMondayAt6AM(userTimezone),
-          completedActivitiesInWeek: []
-        };
-
-        req.session.weeklyActivities = activitySet;
-        req.session.weekNumber = newWeekNumber;
-        req.session.completedActivitiesInWeek = [];
-        req.session.lastMondayRefresh = currentMondayAt6AM.toISOString();
-      } else {
-        // console.log(`⏳ Guest week still active until next Monday 6 AM`);
-      }
+      activitySet = {
+        activities: freshActivities.map(a => a._id),
+        weekNumber: 1,
+        generatedAt: currentMondayAt6AM,
+        nextRefreshAt: getNextMondayAt6AM(userTimezone),
+        completedActivitiesInWeek: [] // Guests can't persist completions
+      };
 
       weekNumber = activitySet.weekNumber;
     }
@@ -881,6 +865,7 @@ export const getPlayWeekActivities = async (req, res) => {
     let currentWeekCompletedIds = [];
 
     if (userId) {
+      // ✅ EXISTING USER LOGIC
       const allCompleted = await CompletedActivity.find({ userId });
       allTimeCompletedIds = allCompleted.map(a => a.activityId.toString());
 
@@ -892,8 +877,10 @@ export const getPlayWeekActivities = async (req, res) => {
 
       currentWeekCompletedIds = currentWeekCompleted.map(a => a.activityId.toString());
     } else {
-      currentWeekCompletedIds = req.session?.completedActivitiesInWeek || [];
-      allTimeCompletedIds = req.session?.allTimeCompleted || [];
+      // ✅ FIXED GUEST LOGIC - No session storage
+      // Guests can't persist completions, so always empty
+      currentWeekCompletedIds = [];
+      allTimeCompletedIds = [];
     }
 
     // Create activity list - use orderedActivities instead of activityDocs
@@ -916,7 +903,7 @@ export const getPlayWeekActivities = async (req, res) => {
       else if (userId && !hasSubscription) {
         isLocked = index >= 3 && !isCompletedInCurrentWeek;
       }
-      // Guest users - existing logic
+      // ✅ FIXED GUEST LOGIC - Only first activity unlocked
       else if (isGuest) {
         isLocked = index !== 0 && !isCompletedInCurrentWeek;
       }
@@ -980,7 +967,11 @@ export const getPlayWeekActivities = async (req, res) => {
     });
   } catch (err) {
     console.error('❌ Error in getPlayWeekActivities:', err);
-    res.status(500).json({ error: "Server Error" });
+    res.status(500).json({ 
+      success: false,
+      error: "Server Error",
+      message: err.message 
+    });
   }
 };
 const createNewMondayWeek = async (userId, currentWeekSet, userAgeGroup, userTimezone) => {
