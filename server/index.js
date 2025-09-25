@@ -43,8 +43,9 @@ app.post('/api/webhook', express.raw({ type: 'application/json' }), handleStripe
 
 app.use(cors({
     origin: [
-        "https://eensterkestart.nl/",
-        "https://admin.eensterkestart.nl/",
+        "https://eensterkestart.nl",
+        "https://admin.eensterkestart.nl",
+        "https://api.eensterkestart.nl",
         "http://localhost:4001",
         "http://localhost:4002",
     ],
