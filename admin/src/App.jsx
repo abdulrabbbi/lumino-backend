@@ -21,7 +21,8 @@ import { SidebarProvider } from './context/SidebarContext'
 
 function AppLayout() {
   const location = useLocation()
-  const hideNavbar = location.pathname === '/signin' || location.pathname === '/admin'
+  // Update paths to include /admin prefix
+  const hideNavbar = location.pathname === '/admin/signin' || location.pathname === '/admin'
 
   return (
     <>
@@ -33,20 +34,21 @@ function AppLayout() {
 
 function PrivateRoute({ children }) {
   const token = localStorage.getItem('adminAuthToken')
-  return token ? children : <Navigate to="/signin" replace />
+  // Redirect to /admin/signin instead of /signin
+  return token ? children : <Navigate to="/admin/signin" replace />
 }
 
 function App() {
   return (
     <SidebarProvider>
-
-      <BrowserRouter>
+      {/* Add basename="/admin" to BrowserRouter */}
+      <BrowserRouter basename="/admin">
         <ScrollToTop />
         <Routes>
           {/* Redirect /admin to /admin/signin */}
           <Route path="/" element={<Navigate to="/signin" replace />} />
 
-          {/* Public Signin Route */}
+          {/* Public Signin Route - now at /admin/signin */}
           <Route path="/signin" element={<AdminSignin />} />
 
           {/* Protected Routes */}
@@ -74,6 +76,7 @@ function App() {
               <Route path="top-contributors" element={<TopContributors />} />
             </Route>
 
+            {/* Update 404 redirect to /admin/signin */}
             <Route path="*" element={<Navigate to="/signin" replace />} />
           </Route>
         </Routes>
