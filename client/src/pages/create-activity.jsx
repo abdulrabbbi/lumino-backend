@@ -371,7 +371,7 @@ const CreateActivity = () => {
                 onClick={() => setShowAiPanel(!showAiPanel)}
                 className="flex items-center gap-2 bg-gradient-to-r from-purple-100 to-blue-100 text-purple-700 hover:from-purple-200 hover:to-blue-200 px-4 py-2 rounded-lg transition-all"
               >
-                <Sparkles className="w-4 h-4" />
+                <Sparkles className="md:w-4 md:h-4 h-6 w-6" />
                 <span className="text-sm font-medium lg:inline md:inline hidden">AI Hulp</span>
               </button>
             </div>

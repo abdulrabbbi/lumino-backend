@@ -281,7 +281,6 @@ export const guestUserEmail = async (req, res) => {
     res.status(500).json({ message: 'Error saving email' });
   }
 }
-
 export const getUserDetail = async (req,res) =>{
   try{
 
