@@ -11,6 +11,7 @@ dotenv.config();
 
 let ACTIVITIES = [];
 const ACTIVITIES_PATH = path.join(process.cwd(), "src", "Luumilo_Activiteitenlijst.json");
+const LUUMILO_PROMPT_ID = "pmpt_68deb3eb56c88197a764f5d9ecf909c6023134dcf4b55982";
 
 async function loadActivities() {
   if (!ACTIVITIES.length) {
@@ -40,36 +41,19 @@ function findActivities(userQuestion, max = 2) {
   return filtered.slice(0, max);
 }
 
-// System instructions (developer message)
-function buildSystemInstruction() {
-  return `
-You are the Luumilo Parent Coach. Use ONLY the Luumilo activities from activities.json.
-Do NOT invent new ones.
-
-Rules:
-- Write in natural Dutch, short sentences, warm tone.
-- Start with compassionate acknowledgement.
-- Keep answers 2–4 sentences, unless multi-step plan requested.
-- Use line breaks, never dashes.
-- When suggesting activities: titles must be in quotes, then end with: Voltooi de oefening in de app …
-- If no relevant activity: kindly say so and give supportive wisdom.
-- Never give medical advice. Never invent activities.
-`;
-}
-
 function buildUserPrompt(question, activities) {
   let context = "";
   if (activities.length) {
     context =
-      "Gevonden activiteiten:\n" +
+      "Relevante activiteiten gevonden in de Luumilo Activity List:\n" +
       activities
         .map(
           (a) =>
-            `Titel: "${a.Titel}"\nKorte uitleg: ${a["Korte uitleg"]}\nStappen: ${(a.Stappen || "").replace(/\s+/g, " ").trim()}`
+            `Titel: "${a.Titel}"\nKorte uitleg: ${a["Korte uitleg"] || "Geen uitleg beschikbaar"}\nStappen: ${(a.Stappen || "").replace(/\s+/g, " ").trim().substring(0, 200)}`
         )
         .join("\n\n");
   } else {
-    context = "Geen activiteiten gevonden.";
+    context = "Geen direct passende activiteiten gevonden in de Luumilo Activity List.";
   }
 
   return `${context}
@@ -77,28 +61,32 @@ function buildUserPrompt(question, activities) {
 Vraag van ouder:
 ${question}
 
-Antwoordregels:
-- Volg strikt de systeemregels.
-- Houd antwoord kort en duidelijk (2–4 zinnen).
-- Als je een activiteit benoemt, eindig altijd met: Voltooi de oefening in de app …`;
+Antwoord als Luumilo Parent Coach volgens alle regels:
+- Gebruik de gevonden activiteiten indien relevant
+- Houd antwoord kort en ondersteunend (2-4 zinnen)
+- Volg alle Luumilo-richtlijnen uit de systeeminstructies`;
 }
 
-export const handleParentCoach = async (req, res)  => {
+export const handleParentCoach = async (req, res) => {
   try {
     const question = (req.body.question || "").trim();
     if (!question) return res.status(400).json({ error: "Question is required" });
 
     await loadActivities();
     const matches = findActivities(question, 2);
-
-    const systemInstruction = buildSystemInstruction();
     const userPrompt = buildUserPrompt(question, matches);
 
     const response = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [
-        { role: "system", content: systemInstruction },
-        { role: "user", content: userPrompt },
+        {
+          role: "system",
+          content: LUUMILO_PROMPT_ID 
+        },
+        { 
+          role: "user", 
+          content: userPrompt 
+        },
       ],
       max_tokens: 400,
       temperature: 0.25,
@@ -107,7 +95,19 @@ export const handleParentCoach = async (req, res)  => {
     const output = response.choices?.[0]?.message?.content || "";
     res.json({ answer: output.trim() });
   } catch (err) {
-    console.error(err.response?.data || err.message || err);
-    res.status(500).json({ error: "server_error", detail: err.message });
+    console.error("Error in handleParentCoach:", err.response?.data || err.message || err);
+    
+    // Provide more specific error messages
+    if (err.code === 'invalid_prompt') {
+      return res.status(400).json({ 
+        error: "Invalid Prompt ID", 
+        detail: "The provided Prompt ID may be incorrect or not accessible" 
+      });
+    }
+    
+    res.status(500).json({ 
+      error: "server_error", 
+      detail: err.message 
+    });
   }
 }

@@ -28,11 +28,25 @@ const ParentCoachBot = () => {
     scrollToBottom();
   }, [messages, isLoading]);
 
-  // Auto-resize textarea
+  // Fixed auto-resize textarea - height control
   useEffect(() => {
     if (textareaRef.current) {
+      // Reset height to auto first
       textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 120) + 'px';
+      
+      // Calculate the scroll height
+      const scrollHeight = textareaRef.current.scrollHeight;
+      
+      // Set maximum height limit (4 lines approx)
+      const maxHeight = 120; // pixels
+      
+      // Set the height based on content but within limits
+      if (scrollHeight <= maxHeight) {
+        textareaRef.current.style.height = scrollHeight + 'px';
+      } else {
+        textareaRef.current.style.height = maxHeight + 'px';
+        textareaRef.current.style.overflowY = 'auto'; // Add scroll when max height reached
+      }
     }
   }, [inputMessage]);
 
@@ -103,6 +117,14 @@ const ParentCoachBot = () => {
   const toggleMinimize = () => {
     setIsMinimized(!isMinimized);
   };
+
+  // Reset textarea height when chat is cleared or minimized
+  useEffect(() => {
+    if (textareaRef.current && inputMessage === '') {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.overflowY = 'hidden';
+    }
+  }, [inputMessage]);
 
   return (
     <>
@@ -257,7 +279,10 @@ const ParentCoachBot = () => {
                         placeholder="Stel je vraag over opvoeding of activiteiten..."
                         className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-[#8F34EA] focus:border-transparent text-sm leading-relaxed"
                         rows="1"
-                        style={{ minHeight: "44px" }}
+                        style={{ 
+                          minHeight: "44px",
+                          maxHeight: "120px"
+                        }}
                       />
                     </div>
                     <button
