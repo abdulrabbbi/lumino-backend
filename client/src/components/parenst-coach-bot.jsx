@@ -142,7 +142,7 @@ const ParentCoachBot = () => {
 
       {/* Chat Modal */}
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center pb-4 px-4 sm:items-end sm:justify-end sm:pb-6 sm:pr-6">
+        <div className="fixed inset-0 z-[1000000] flex items-end justify-center pb-4 px-4 sm:items-end sm:justify-end sm:pb-6 sm:pr-6">
           {/* Backdrop */}
           <div 
             className="absolute inset-0 bg-black/50 bg-opacity-50"
