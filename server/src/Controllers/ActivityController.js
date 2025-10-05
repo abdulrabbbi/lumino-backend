@@ -1047,16 +1047,15 @@ const getTop5ActivitiesExcluding = async (excludeIds = [], userAgeGroup = null, 
       }
     }).filter(id => id !== null);
 
-    // Base filter
     const baseFilter = {
       isApproved: true,
       _id: { $nin: excludeObjectIds },
     };
 
-    // First: activities with ≥3 ratings
+    // Step 1: Get activities with ≥3 ratings
     const highRatedQuery = {
       ...baseFilter,
-      "ratings.2": { $exists: true }  // requires at least 3 ratings
+      "ratings.2": { $exists: true } // at least 3 ratings
     };
 
     let activities = await Activity.find(highRatedQuery)
@@ -1067,7 +1066,7 @@ const getTop5ActivitiesExcluding = async (excludeIds = [], userAgeGroup = null, 
       })
       .limit(5);
 
-    // If not enough, fill remaining with activities having <3 ratings
+    // Step 2: Fill remaining with activities having <3 ratings
     if (activities.length < 5) {
       const alreadyPickedIds = activities.map(a => a._id);
 
@@ -1091,20 +1090,29 @@ const getTop5ActivitiesExcluding = async (excludeIds = [], userAgeGroup = null, 
       activities = [...activities, ...fallbackActivities];
     }
 
-    // Debug log
-    activities.forEach((activity, index) => {
-      const reviewCount = activity.ratings?.length || 0;
-      // console.log(
-      //   `  ${index + 1}. ${activity.title} (Rating: ${activity.averageRating || 0}, Reviews: ${reviewCount})`
-      // );
-    });
+    // ✅ Step 3: Final fallback - if still less than 5, add any remaining available ones
+    if (activities.length < 5) {
+      const alreadyPickedIds = activities.map(a => a._id);
 
-    return activities;
+      const anyAvailableActivities = await Activity.find({
+        ...baseFilter,
+        _id: { $nin: [...excludeObjectIds, ...alreadyPickedIds] },
+      })
+        .sort({ createdAt: -1 }) // newest first
+        .limit(5 - activities.length);
+
+      activities = [...activities, ...anyAvailableActivities];
+    }
+
+    // Always return up to 5 (or fewer if no activities exist at all)
+    return activities.slice(0, 5);
+
   } catch (error) {
-    console.error("Error in getTop5ActivitiesExcluding:", error);
+    console.error("❌ Error in getTop5ActivitiesExcluding:", error);
     return [];
   }
 };
+
 export const getTotalActivitiesCount = async (req, res) => {
   try {
 

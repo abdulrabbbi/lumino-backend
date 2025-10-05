@@ -5,67 +5,78 @@ import OpenAI from 'openai';
 const router = express.Router();
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 router.post('/suggest-activity', async (req, res) => {
   try {
-    const { prompt } = req.body;
-    
+    const { prompt, domain, ageGroup } = req.body;
+
     if (!prompt) {
-      return res.status(400).json({ error: 'Prompt is required' });
+      return res.status(400).json({ error: 'Prompt (theme) is required' });
+    }
+
+    if (!domain) {
+      return res.status(400).json({ error: 'Learning domain is required' });
+    }
+
+    if (!ageGroup) {
+      return res.status(400).json({ error: 'Age group is required' });
     }
 
     const completion = await openai.chat.completions.create({
-      messages: [{
-        role: "user",
-        content: `
-          Maak een kinderactiviteit in het Nederlands met de volgende regels:
-
-          - Gebruikersinvoer (thema/idee): ${prompt}
-          - **Ongeacht de invoertaal, het resultaat moet ALTIJD volledig in het Nederlands zijn.**
-          - Leeftijdsgroep: moet exact één van ["Age 3 - 4", "Age 3 - 6", "Age 5 - 6"] zijn.
-          - Leergebied: moet exact één van [
-            "Emotionele Gezondheid",
-            "Veerkracht",
-            "Dankbaarheid",
-            "Zelfzorg",
-            "Geldwijsheid",
-            "Ondernemerschap",
-            "Anders denken"
-          ] zijn.
-          - Titel moet ALTIJD in het Nederlands zijn.
-          - De "instructions" lijst moet altijd exact 5 duidelijke en korte stappen bevatten.
-          - "time" moet altijd een getal of bereik tussen 5 en 15 zijn (bijvoorbeeld "7" of "10-12").
-          - Geen tekst zoals "minuten", alleen een getal of bereik.
-          - Houd de uitleg eenvoudig en geschikt voor jonge kinderen.
-
-          Geef ALLEEN een JSON terug in dit formaat:
-          {
-            "title": "...",
-            "description": "...",
-            "instructions": ["...", "...", "...", "...", "..."],
-            "materials": "...",
-            "learningDomain": "...",
-            "ageGroup": "...",
-            "time": "...",
-            "effect": "..."
-          }
-        `
-      }],
       model: "gpt-3.5-turbo",
-      max_tokens: 1000
+      max_tokens: 1000,
+      messages: [
+        {
+          role: "system",
+          content: `You are an AI assistant that generates children's activities in Dutch.
+Follow these strict rules:
+
+- Output must ALWAYS be in Dutch.
+- Output must ALWAYS be JSON only, with this exact structure:
+{
+  "title": "...",
+  "description": "...",
+  "instructions": ["...", "...", "...", "...", "..."],
+  "materials": "...",
+  "learningDomain": "...",
+  "ageGroup": "...",
+  "time": "...",
+  "effect": "..."
+}
+
+Rules:
+- "ageGroup" must be exactly one of ["Age 3 - 4", "Age 3 - 6", "Age 5 - 6"].
+- "learningDomain" must be exactly one of ["Emotionele Gezondheid", "Veerkracht", "Dankbaarheid", "Zelfzorg", "Geldwijsheid", "Ondernemerschap", "Anders denken"].
+- "instructions" must ALWAYS contain exactly 5 short and clear steps.
+- "time" must be a number or range between 5 and 15 (e.g. "7" or "10-12"). No text like "minutes".
+- Language must be very simple and suitable for young children.`
+        },
+        {
+          role: "user",
+          content: `Maak een kinderactiviteit in het Nederlands.
+
+Thema: "${prompt}"
+Leergebied (learningDomain): "${domain}"
+Leeftijdsgroep (ageGroup): "${ageGroup}"
+
+Geef ALLEEN de JSON terug.`
+        }
+      ]
     });
 
     const content = completion.choices[0].message.content;
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
 
+    // Try to extract JSON
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const suggestion = JSON.parse(jsonMatch[0]);
       res.json({ success: true, suggestion });
     } else {
-      res.status(500).json({ error: 'Failed to parse AI response' });
+      res.status(500).json({ error: 'Failed to parse AI response as JSON', raw: content });
     }
+
   } catch (error) {
     console.error('AI suggestion error:', error);
     res.status(500).json({ error: 'Failed to generate suggestion' });

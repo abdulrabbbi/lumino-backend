@@ -1,5 +1,3 @@
-"use client"
-
 /* eslint-disable no-unused-vars */
 import { Plus } from "lucide-react"
 import Specs from "../components/specs"
@@ -21,6 +19,7 @@ import { BASE_URL } from "../utils/api"
 import axios from "axios"
 import { useNavigation } from "../components/NavigationContext"
 import { useScrollPosition } from "../hooks/useScrollPosition"
+import ParentCoachBot from "../components/parenst-coach-bot"
 
 export default function Activities() {
   const navigate = useNavigate()
@@ -780,6 +779,8 @@ export default function Activities() {
       <EducationalQuotes />
       <Specs />
       <Faqs />
+
+      <ParentCoachBot />
     </>
   )
 }

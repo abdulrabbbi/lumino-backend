@@ -20,6 +20,7 @@ import { checkTrialStatuses, handleStripeWebhook } from "./src/Controllers/Subsc
 import ReferralRoutes from './src/Routes/ReferralRoutes.js'
 import RewardRoutes from './src/Routes/RewardRoutes.js'
 import OpenAIRoutes from './src/Routes/OpenAIRoutes.js'
+import parentCoachRoutes from './src/Routes/parentCoachRoutes.js'
 
 import cron from 'node-cron';
 
@@ -96,6 +97,8 @@ app.use('/api', SubscriptionRoutes);
 app.use('/api', ReferralRoutes);
 app.use('/api', RewardRoutes);
 app.use('/api', OpenAIRoutes);
+app.use("/api", parentCoachRoutes);
+
 
 app.use((err, req, res, next) => {
     console.error('Error:', err);

@@ -32,6 +32,8 @@ const CreateActivity = () => {
 
   // AI Suggestion state
   const [aiPrompt, setAiPrompt] = useState('');
+  const [aiLearningDomain, setAiLearningDomain] = useState('');
+  const [aiAgeGroup, setAiAgeGroup] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [showAiPanel, setShowAiPanel] = useState(false);
 
@@ -220,12 +222,22 @@ const CreateActivity = () => {
       return;
     }
 
+    if (!aiLearningDomain) {
+      toast.error('Selecteer een leergebied voor de AI suggestie');
+      return;
+    }
+
+    if (!aiAgeGroup) {
+      toast.error('Selecteer een leeftijdsgroep voor de AI suggestie');
+      return;
+    }
+
     setIsGenerating(true);
     try {
       const suggestion = await generateActivitySuggestion(
         aiPrompt, 
-        formData.ageGroup, 
-        formData.learningDomain
+        aiLearningDomain, 
+        aiAgeGroup
       );
 
       // Apply the AI suggestion to the form
@@ -237,13 +249,14 @@ const CreateActivity = () => {
         materials: suggestion.materials || prev.materials,
         time: suggestion.time || prev.time,
         effect: suggestion.effect || prev.effect,
-        // Only update ageGroup and learningDomain if they're not already set
-        ageGroup: prev.ageGroup || suggestion.ageGroup || '',
-        learningDomain: prev.learningDomain || suggestion.learningDomain || ''
+        // Also update the main form's learning domain and age group
+        learningDomain: aiLearningDomain || prev.learningDomain,
+        ageGroup: aiAgeGroup || prev.ageGroup
       }));
 
       toast.success('AI suggestie succesvol toegepast!');
       setShowAiPanel(false);
+      setAiPrompt(''); // Clear the prompt after successful generation
       
     } catch (error) {
       console.error('AI generation error:', error);
@@ -251,13 +264,6 @@ const CreateActivity = () => {
     } finally {
       setIsGenerating(false);
     }
-  };
-
-  const applyAiSuggestionField = (field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
   };
 
   // Helper function to get input border color based on validation
@@ -326,16 +332,55 @@ const CreateActivity = () => {
                 <textarea
                   value={aiPrompt}
                   onChange={(e) => setAiPrompt(e.target.value)}
-                  placeholder="Bijvoorbeeld: 'Een buitenactiviteit voor 4-jarigen over natuur ontdekken' of 'Een knutselactiviteit over emoties'"
+                  placeholder="Bijvoorbeeld: 'Een buitenactiviteit over natuur ontdekken' of 'Een knutselactiviteit over emoties'"
                   className="w-full px-4 py-3 bg-white border border-purple-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm resize-none"
                   rows="3"
                 />
+              </div>
+
+              {/* AI-specific dropdowns */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-purple-700 mb-2">
+                    Leergebied <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={aiLearningDomain}
+                    onChange={(e) => setAiLearningDomain(e.target.value)}
+                    className="w-full px-4 py-3 bg-white border border-purple-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                  >
+                    <option value="">Selecteer leergebied</option>
+                    <option value="Emotionele Gezondheid">Emotionele Gezondheid</option>
+                    <option value="Veerkracht">Veerkracht</option>
+                    <option value="Dankbaarheid">Dankbaarheid</option>
+                    <option value="Zelfzorg">Zelfzorg</option>
+                    <option value="Geldwijsheid">Geldwijsheid</option>
+                    <option value="Ondernemerschap">Ondernemerschap</option>
+                    <option value="Anders denken">Anders denken</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-purple-700 mb-2">
+                    Leeftijdsgroep <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={aiAgeGroup}
+                    onChange={(e) => setAiAgeGroup(e.target.value)}
+                    className="w-full px-4 py-3 bg-white border border-purple-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm"
+                  >
+                    <option value="">Selecteer leeftijdsgroep</option>
+                    <option value="Age 3 - 4">Leeftijd 3 - 4</option>
+                    <option value="Age 3 - 6">Leeftijd 3 - 6</option>
+                    <option value="Age 5 - 6">Leeftijd 5 - 6</option>
+                  </select>
+                </div>
               </div>
               
               <div className="flex gap-3">
                 <button
                   onClick={handleGenerateSuggestion}
-                  disabled={isGenerating}
+                  disabled={isGenerating || !aiPrompt || !aiLearningDomain || !aiAgeGroup}
                   className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:from-purple-700 hover:to-blue-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                 >
                   {isGenerating ? (
@@ -353,7 +398,7 @@ const CreateActivity = () => {
               </div>
               
               <p className="text-xs text-purple-600">
-                Tip: Hoe specifieker je beschrijving, hoe beter de suggestie!
+                Tip: Hoe specifieker je beschrijving, hoe beter de suggestie! De AI zal een complete activiteit genereren op basis van je selecties.
               </p>
             </div>
           </div>
@@ -369,10 +414,10 @@ const CreateActivity = () => {
               
               <button
                 onClick={() => setShowAiPanel(!showAiPanel)}
-                className="flex items-center gap-2 bg-gradient-to-r from-purple-100 to-blue-100 text-purple-700 hover:from-purple-200 hover:to-blue-200 px-4 py-2 rounded-lg transition-all"
+                className="flex items-center gap-2 bg-gradient-to-r from-purple-100 to-blue-100 text-purple-700 hover:from-purple-200 hover:to-blue-200 px-7 py-3 rounded-lg transition-all"
               >
-                <Sparkles className="md:w-4 md:h-4 h-6 w-6" />
-                <span className="text-sm font-medium lg:inline md:inline hidden">AI Hulp</span>
+                <Sparkles className="md:w-6 md:h-6 h-6 w-6" />
+                <span className="text-md font-medium lg:inline md:inline hidden">AI Hulp</span>
               </button>
             </div>
           </div>
