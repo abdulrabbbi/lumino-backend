@@ -8,6 +8,7 @@ import UserSubscription from "../Models/UserSubscription.js";
 import GuestEmail from "../Models/GuestEmail.js";
 import { awardFreeMonth } from "./referralController.js";
 import Referral from "../Models/Referral.js";
+import { logEvent } from "../Utils/log-event.js";
 
 export const register = async (req, res) => {
   try {
@@ -57,6 +58,13 @@ export const register = async (req, res) => {
     });
 
     await user.save();
+
+    logEvent({
+      userId: user._id,
+      userType: "user",
+      eventName: "signup",
+      eventData: { method: "email" },
+    });
 
     // Process referral after user is created
     if (referralApplied && referrer) {
@@ -109,6 +117,13 @@ export const login = async (req, res) => {
     };
 
     const token = jwt.sign(payload, process.env.JWT_SECRET);
+
+    logEvent({
+      userId: user._id,
+      userType: "user",
+      eventName: "login",
+      eventData: { method: "email" },
+    });
 
     res.status(200).json({
       success: true,

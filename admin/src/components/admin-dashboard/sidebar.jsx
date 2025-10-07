@@ -12,6 +12,7 @@ import NavImage6 from "../../../public/nav-images/SVG.svg";
 import NavImage7 from "../../../public/nav-images/Vector (1).svg";
 import NavImage8 from "../../../public/library-images/Frame (6)-new.svg";
 import NavImage9 from "../../../public/rewards.png";
+import NavImag10 from '../../../public/nav-images/track-image.jpg'
 
 const Sidebar = () => {
   const { isOpen, setIsOpen } = useSidebar();
@@ -28,6 +29,8 @@ const Sidebar = () => {
     { to: "/admin-dashboard/manage-badge", label: "Manage Badge", image: NavImage8 },
     { to: "/admin-dashboard/marketinggebruikers", label: "Marketing Gebruikers", image: NavImage2 },
     { to: "/admin-dashboard/reward-settings", label: "Beloningen", image: NavImage9 },
+    { to: "/admin-dashboard/events-tracking", label: "Eventtracking", image: NavImag10 },
+
   ];
 
   return (

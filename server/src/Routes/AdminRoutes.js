@@ -1,4 +1,4 @@
-import { approveActivity, getParentApprovalActivity, changeTestUserPassword, getAllBadges, getAllMarketingUsers, deleteUser, getTestFamilyUsers, getUserDetailsWithActivities, getAllUsersWithSubscription, deleteParentsActivity, createBulkActivities, adminLogin,  createActivity , editParentsActivity, getAllActivities, getActivityCounts, getPlatformStats , getRewardPool, setRewardPool} from "../Controllers/AdminController.js";
+import { approveActivity, getParentApprovalActivity, changeTestUserPassword, getAllBadges, getAllMarketingUsers, deleteUser, getTestFamilyUsers, getUserDetailsWithActivities, getAllUsersWithSubscription, deleteParentsActivity, createBulkActivities, adminLogin,  createActivity , editParentsActivity, getAllActivities, getActivityCounts, getPlatformStats , getRewardPool, setRewardPool, getAllEvents} from "../Controllers/AdminController.js";
 import express from 'express'
 import {authenticate} from '../Middleware/Authenticate.js'
 
@@ -32,6 +32,8 @@ router.post('/change-test-users-password', authenticate, changeTestUserPassword)
 router.get('/get-reward-pool', getRewardPool);
 router.post('/set-reward-pool', setRewardPool);
 
+
+router.get("/get-all-tracking-events", getAllEvents)
 
 
 

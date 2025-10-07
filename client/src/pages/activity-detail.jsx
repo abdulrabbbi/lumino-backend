@@ -522,18 +522,22 @@ function ActivityDetail() {
                     <span className="text-sm inter-tight-700 font-medium text-[#1F1F1F]">{activity.ageGroup}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center text-[#4B5563]">
-                      <Star className="w-4 h-4 mr-2" />
-                      <span className="text-sm inter-tight-400">Rating</span>
-                    </div>
-                    <button
-                      onClick={handleRatingClick}
-                      className="text-sm text-[#1F1F1F] hover:text-blue-600 cursor-pointer"
-                    >
-                      <span className="inter-tight-700 font-bold">{averageRating}</span>
-                      <span className="inter-tight-400 font-light">/10</span>
-                    </button>
-                  </div>
+  <div className="flex items-center text-[#4B5563]">
+    <Star className="w-4 h-4 mr-2" />
+    <span className="text-sm inter-tight-400">Rating</span>
+  </div>
+  <button
+    onClick={handleRatingClick}
+    className="text-sm text-[#1F1F1F] hover:text-blue-600 cursor-pointer text-right"
+  >
+    <span className="inter-tight-700 font-bold">{averageRating}</span>
+    <span className="inter-tight-400 font-light">/10</span>
+    <br />
+    <span className="inter-tight-400 text-xs text-gray-500">
+      ({activity.ratingCount || 0} {activity.ratingCount === 1 ? 'beoordeling' : 'beoordelingen'})
+    </span>
+  </button>
+</div>
                 </div>
               </div>
 

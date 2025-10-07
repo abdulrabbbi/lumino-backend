@@ -263,11 +263,11 @@ export default function Activities() {
           filters:
             activeTab === "library"
               ? {
-                  searchTerm,
-                  selectedCategory,
-                  selectedAge,
-                  selectedSort,
-                }
+                searchTerm,
+                selectedCategory,
+                selectedAge,
+                selectedSort,
+              }
               : null,
         })
         navigate(`/activity-detail/${activity.id}`, {
@@ -290,11 +290,11 @@ export default function Activities() {
       filters:
         activeTab === "library"
           ? {
-              searchTerm,
-              selectedCategory,
-              selectedAge,
-              selectedSort,
-            }
+            searchTerm,
+            selectedCategory,
+            selectedAge,
+            selectedSort,
+          }
           : null,
     })
     navigate(`/activity-detail/${activity.id}`, {
@@ -425,9 +425,8 @@ export default function Activities() {
               <button
                 key={index}
                 onClick={() => handlePageChange(page)}
-                className={`px-2 sm:px-4 py-2 rounded-lg text-xs sm:text-sm inter-tight-400 cursor-pointer min-w-[32px] sm:min-w-[40px] ${
-                  currentPage === page ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                }`}
+                className={`px-2 sm:px-4 py-2 rounded-lg text-xs sm:text-sm inter-tight-400 cursor-pointer min-w-[32px] sm:min-w-[40px] ${currentPage === page ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                  }`}
               >
                 {page}
               </button>
@@ -689,7 +688,7 @@ export default function Activities() {
                       </div>
                       <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-[#DB297A] to-[#7940EA] z-0 opacity-0 group-hover:opacity-100 transition duration-500"></div>
                       <div
-                        className={`relative z-10 md:h-[570px] h-auto bg-white rounded-2xl overflow-hidden transition-shadow duration-300 ease-in-out group-hover:shadow-lg flex flex-col ${activity.isLocked ? "opacity-80" : ""}`}
+                        className={`relative z-10 md:h-[580px] h-auto bg-white rounded-2xl overflow-hidden transition-shadow duration-300 ease-in-out group-hover:shadow-lg flex flex-col ${activity.isLocked ? "opacity-80" : ""}`}
                       >
                         <div className="p-3">
                           <div className="bg-[#F3F4F6] rounded-2xl h-48 flex items-center justify-center">
@@ -718,13 +717,41 @@ export default function Activities() {
                             </div>
                           </div>
                           <div className="mt-4">
-                            {!activity.isCompleted && (
+                            {activity.isCompleted ? (
+                              <>
+                                {/* Rating box same as others */}
+                                <div className="rounded-lg bg-[#FFFCE6] border border-yellow-200 p-3 flex items-center justify-center gap-2">
+                                  <Star className="w-4 h-4 text-[#FACC15] fill-current" />
+                                  <span className="text-sm inter-tight-400 font-medium text-gray-700">
+                                    <span className="font-bold text-black inter-tight-700">{activity.rating}</span> ({activity.reviews})
+                                  </span>
+                                </div>
+
+                                {/* Smaller completed section */}
+                                <div className="bg-[#FEFCE8] flex flex-col justify-center items-center p-5 rounded-2xl mt-3">
+                                  <div className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-orange-600">
+                                    <svg
+                                      className="w-3 h-3 mr-1 bg-orange-600 text-white rounded-full"
+                                      fill="currentColor"
+                                      viewBox="0 0 20 20"
+                                    >
+                                      <path
+                                        fillRule="evenodd"
+                                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                        clipRule="evenodd"
+                                      />
+                                    </svg>
+                                    Voltooid
+                                  </div>
+                                  <span className="text-[#F59E0B] inter-tight-400 mt-1 text-xs">Fantastisch gedaan!</span>
+                                </div>
+                              </>
+                            ) : (
                               <>
                                 <div className="rounded-lg bg-[#FFFCE6] border border-yellow-200 p-3 flex items-center justify-center gap-2">
                                   <Star className="w-4 h-4 text-[#FACC15] fill-current" />
                                   <span className="text-sm inter-tight-400 font-medium text-gray-700">
-                                    <span className="font-bold text-black inter-tight-700">{activity.rating}</span> (
-                                    {activity.reviews})
+                                    <span className="font-bold text-black inter-tight-700">{activity.rating}</span> ({activity.reviews})
                                   </span>
                                 </div>
                                 <div className="flex justify-center mt-2">
@@ -732,35 +759,16 @@ export default function Activities() {
                                     {activity.tag}
                                   </span>
                                 </div>
+                                <button
+                                  className={`w-full bg-gradient-to-br from-[#C42E8B] to-[#6650C7] text-white inter-tight-700 cursor-pointer py-2.5 px-4 rounded-2xl hover:opacity-90 transition-opacity text-sm flex items-center justify-center gap-2 mt-4 ${activity.isLocked ? "opacity-50 cursor-not-allowed" : ""}`}
+                                  disabled={activity.isLocked}
+                                >
+                                  <IoPlayCircleOutline className="w-6 h-6" />
+                                  Start Activiteit
+                                </button>
                               </>
                             )}
-                            {!activity.isCompleted ? (
-                              <button
-                                className={`w-full bg-gradient-to-br from-[#C42E8B] to-[#6650C7] text-white inter-tight-700 cursor-pointer py-2.5 px-4 rounded-2xl hover:opacity-90 transition-opacity text-sm flex items-center justify-center gap-2 mt-4 ${activity.isLocked ? "opacity-50 cursor-not-allowed" : ""}`}
-                                disabled={activity.isLocked}
-                              >
-                                <IoPlayCircleOutline className="w-6 h-6" />
-                                Start Activiteit
-                              </button>
-                            ) : (
-                              <div className="bg-[#FEFCE8] flex-col flex justify-center items-center p-10 rounded-3xl mt-4">
-                                <div className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium text-orange-600">
-                                  <svg
-                                    className="w-4 h-4 mr-1 bg-orange-600 text-white rounded-full"
-                                    fill="currentColor"
-                                    viewBox="0 0 20 20"
-                                  >
-                                    <path
-                                      fillRule="evenodd"
-                                      d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                      clipRule="evenodd"
-                                    />
-                                  </svg>
-                                  Voltooid
-                                </div>
-                                <span className="text-[#F59E0B] inter-tight-400 mt-2 text-sm">Fantastisch gedaan!</span>
-                              </div>
-                            )}
+
                           </div>
                         </div>
                       </div>

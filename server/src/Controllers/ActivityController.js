@@ -9,6 +9,7 @@ import mongoose from "mongoose";
 import { checkAndAwardAreaBadges, checkAndAwardBounceBack, checkAndAwardCategoriesMaster, checkAndAwardChampion, checkAndAwardConsistencyChamp, checkAndAwardFiveInARow, checkAndAwardFocusFinisher, checkAndAwardGratitudeGiver, checkAndAwardMasterParent, checkAndAwardMobileExplorer, checkAndAwardStreakBuilder, checkAndAwardSurprisePlayer, checkAndAwardSurpriseStreak } from "../Helper/BadgeHelper.js";
 import UserSubscription from "../Models/UserSubscription.js";
 import { checkReferralReward } from "./referralController.js";
+import { logEvent } from "../Utils/log-event.js";
 
 const checkUserSubscription = async (userId) => {
   if (!userId) return false;
@@ -52,6 +53,16 @@ export const createActivity = async (req, res) => {
     });
 
     await activity.save();
+
+    logEvent({
+      userId,
+      userType: "user",
+      eventName: "created_activity",
+      eventData: {
+        activityId: activity._id,
+        activityTitle: activity.title,
+      },
+    });
 
     // 🏅 Check if this is the user's first activity
     const userActivitiesCount = await Activity.countDocuments({ userId: user._id });
@@ -144,6 +155,20 @@ export const rateActivity = async (req, res) => {
     activity.averageRating = (total / activity.ratings.length).toFixed(1);
 
     await activity.save();
+
+    const getUserType = userId ? 'user' : 'guest'
+
+    await logEvent({
+      userId: userId || null,
+      userType: getUserType,
+      eventName: "rated_activity",
+      eventData: {
+        activityId: activity._id,
+        activityTitle: activity.title,
+        ratingValue: value,
+        averageRating: activity.averageRating,
+      },
+    });
 
     res.json({
       success: true,
@@ -297,11 +322,14 @@ export const getSingleActivity = async (req, res) => {
       isCompleted = !!completion;
     }
 
+    const ratingCount = activity.ratings ? activity.ratings.length : 0;
+
     return res.status(200).json({
       success: true,
       activity: {
         ...activity.toObject(),
         isCompleted,
+        ratingCount
       },
     });
   } catch (error) {
@@ -463,6 +491,24 @@ export const markActivityCompleted = async (req, res) => {
       }
     }
 
+     const activity = await Activity.findById(id);
+     if (!activity) {
+       return res.status(404).json({ success: false, message: "Activity not found" });
+     }
+ 
+     // Log event: user started viewing/attempting activity
+     await logEvent({
+       userId: userId || guestId,
+       userType,
+       eventName: "activity_started",
+       eventData: {
+         activityId: activity._id,
+         activityTitle: activity.title,
+         startedAt: new Date(),
+       },
+     });
+
+
     // Check if already completed
     const existing = await CompletedActivity.findOne({
       activityId: id,
@@ -486,6 +532,18 @@ export const markActivityCompleted = async (req, res) => {
 
     await completion.save();
     await Activity.findByIdAndUpdate(id, { status: "Voltooid" });
+
+    await logEvent({
+      userId: userId || guestId,
+      userType,
+      eventName: "activity_completed",
+      eventData: {
+        activityId: activity._id,
+        activityTitle: activity.title,
+        completedAt: new Date(),
+        duration: `Started → Completed within session`,
+      },
+    });
 
     // Update session for guests
     if (!userId) {

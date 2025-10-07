@@ -16,6 +16,7 @@ import ScrollToTop from './components/ScrollToTop'
 import MarketingUsers from './pages/admin-dashboard-pages/marketing-users'
 import Rewards from './pages/admin-dashboard-pages/reward'
 import TopContributors from './pages/admin-dashboard-pages/top-contributers'
+import TrackingEvents from './pages/admin-dashboard-pages/tracking-events'
 
 import { SidebarProvider } from './context/SidebarContext'
 
@@ -74,6 +75,9 @@ function App() {
               <Route path="marketinggebruikers" element={<MarketingUsers />} />
               <Route path="reward-settings" element={<Rewards />} />
               <Route path="top-contributors" element={<TopContributors />} />
+              <Route path="events-tracking" element={<TrackingEvents />} />
+
+
             </Route>
 
             {/* Update 404 redirect to /admin/signin */}

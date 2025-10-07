@@ -4,6 +4,7 @@ import User from "../Models/User.js";
 import UserSubscription from "../Models/UserSubscription.js";
 import Badge from "../Models/Badge.js";
 import { sendSubscriptionChangeEmail, sendTrialEndingEmail } from "../Utils/emailService.js";
+import { logEvent } from "../Utils/log-event.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -38,8 +39,19 @@ export const purchaseSubscription = async (req, res) => {
     });
     
     if (existingSubscription) {
-      return res.status(400).json({ 
-        error: "You already have an active subscription. Please cancel it before purchasing a new one." 
+      await logEvent({
+      userId,
+      userType: 'user',
+      eventName: "subscription_attempt_with_active_plan",
+      eventData: {
+        subscriptionId,
+        subscriptionName: subscription.name,
+      },
+    });
+
+      return res.status(400).json({
+        error:
+          "You already have an active subscription. Please cancel it before purchasing a new one.",
       });
     }
 
@@ -60,6 +72,18 @@ export const purchaseSubscription = async (req, res) => {
     }
 
     const productName = `${subscription.name} (${subscription._id})`;
+
+    await logEvent({
+      userId,
+      userType: 'user',
+      eventName: "subscription_checkout_started",
+      eventData: {
+        subscriptionId: subscription._id,
+        subscriptionName: subscription.name,
+        priceType: subscription.priceType,
+        amount: subscription.price,
+      },
+    });
 
     if (subscription.priceType === "monthly") {
       // Monthly subscription with trial
@@ -164,6 +188,19 @@ export const purchaseSubscription = async (req, res) => {
         }
       });
 
+      await logEvent({
+        userId,
+        userType: 'user',
+        eventName: "subscription_checkout_session_created",
+        eventData: {
+          subscriptionId: subscription._id,
+          subscriptionName: subscription.name,
+          sessionId: session.id,
+          priceType: subscription.priceType,
+          amount: subscription.price,
+        },
+      });
+
       res.json({ url: session.url });
     }
   } catch (error) {
@@ -198,6 +235,18 @@ export const verifySubscription = async (req, res) => {
     if (!dbSubscription) {
       return res.status(404).json({ error: "Subscription plan not found" });
     }
+
+    await logEvent({
+      userId,
+      userType: 'user',
+      eventName: "subscription_verification_started",
+      eventData: {
+        sessionId: session.id,
+        subscriptionId: dbSubscription._id,
+        subscriptionName: dbSubscription.name,
+        paymentStatus: session.payment_status,
+      },
+    });
 
     let subscriptionDetails = null;
     let endDate = null;
@@ -354,6 +403,18 @@ export const verifySubscription = async (req, res) => {
       }
 
       if (isPaid) {
+        await logEvent({
+          userId,
+          userType: 'user',
+          eventName: "subscription_verified_success",
+          eventData: {
+            subscriptionId: dbSubscription._id,
+            subscriptionName: dbSubscription.name,
+            expiresAt: endDate,
+            trialEndDate,
+          },
+        });
+
         res.status(200).json({
           message: "Subscription verified and activated successfully",
           subscription: dbSubscription.name,
@@ -364,6 +425,18 @@ export const verifySubscription = async (req, res) => {
           isTrial: true
         });
       } else {
+        
+        await logEvent({
+          userId,
+          userType: 'user',
+          eventName: "subscription_verification_failed",
+          eventData: {
+            subscriptionId: dbSubscription._id,
+            subscriptionName: dbSubscription.name,
+            paymentStatus: session.payment_status,
+          },
+        });
+
         res.status(400).json({
           error: "Payment not completed",
           orderStatus: 'failed',
@@ -798,6 +871,7 @@ export const checkYearlySubscriptions = async () => {
     console.error('Error checking yearly subscriptions:', error);
   }
 }
+
 export const cancelSubscription = async (req, res) => {
   try {
     const userId = req.user?.userId;
@@ -812,6 +886,13 @@ export const cancelSubscription = async (req, res) => {
     }).populate('subscriptionId');
 
     if (!userSubscription) {
+      await logEvent({
+        userId,
+        userType: "user",
+        eventName: "subscription_cancel_failed",
+        eventData: { reason: "No active subscription found" },
+      });
+
       return res.status(404).json({ error: "No active subscription found" });
     }
 
@@ -820,28 +901,34 @@ export const cancelSubscription = async (req, res) => {
     const now = new Date();
     const trialEnded = userSubscription.trialEndDate && userSubscription.trialEndDate < now;
 
-    // 1. Allow cancellation during trial period for ALL subscription types
+    // 1️⃣ Cancel during trial
     if (isInTrial && !trialEnded) {
-      if (userSubscription.stripeDetails && userSubscription.stripeDetails.stripeSubscriptionId) {
+      if (userSubscription.stripeDetails?.stripeSubscriptionId) {
         try {
-          // Cancel the Stripe subscription immediately for trial period
           await stripe.subscriptions.cancel(userSubscription.stripeDetails.stripeSubscriptionId);
-          console.log(`Stripe subscription cancelled during trial: ${userSubscription.stripeDetails.stripeSubscriptionId}`);
         } catch (stripeError) {
           console.error("Error cancelling Stripe subscription:", stripeError);
-          // Continue with our database update even if Stripe fails
         }
       }
 
       userSubscription.status = 'cancelled';
       await userSubscription.save();
 
-      // Update user document
       user.subscriptionActive = false;
       user.isInTrial = false;
       user.trialEndDate = null;
       user.subscriptionExpiresAt = null;
       await user.save();
+
+      await logEvent({
+        userId,
+        userType: "user",
+        eventName: "subscription_cancelled_trial",
+        eventData: {
+          subscriptionType,
+          message: "User cancelled subscription during trial period",
+        },
+      });
 
       return res.status(200).json({
         message: "Subscription cancelled successfully during trial period",
@@ -849,17 +936,14 @@ export const cancelSubscription = async (req, res) => {
       });
     }
 
-    // 2. After trial period ended - apply restrictions
+    // 2️⃣ Cancel Monthly subscription
     if (subscriptionType === 'monthly') {
-      // Monthly can be cancelled anytime
-      if (userSubscription.stripeDetails && userSubscription.stripeDetails.stripeSubscriptionId) {
+      if (userSubscription.stripeDetails?.stripeSubscriptionId) {
         try {
-          // Cancel at period end instead of immediately
           await stripe.subscriptions.update(
             userSubscription.stripeDetails.stripeSubscriptionId,
             { cancel_at_period_end: true }
           );
-          console.log(`Stripe subscription set to cancel at period end: ${userSubscription.stripeDetails.stripeSubscriptionId}`);
         } catch (stripeError) {
           console.error("Error updating Stripe subscription:", stripeError);
           return res.status(500).json({ error: "Failed to cancel subscription with payment provider" });
@@ -869,34 +953,84 @@ export const cancelSubscription = async (req, res) => {
       userSubscription.status = 'cancelling';
       await userSubscription.save();
 
+      await logEvent({
+        userId,
+        userType: "user",
+        eventName: "subscription_cancellation_scheduled",
+        eventData: {
+          subscriptionType,
+          message: "User requested cancellation; will end at billing period end",
+          cancelDate: userSubscription.endDate,
+        },
+      });
+
       return res.status(200).json({
         message: "Subscription will be cancelled at the end of the billing period",
         cancelDate: userSubscription.endDate
       });
-    } 
-    else if (subscriptionType === 'yearly') {
-      // Yearly cannot be cancelled after trial
+    }
+
+    // 3️⃣ Yearly subscription (cannot cancel after trial)
+    if (subscriptionType === 'yearly') {
+      await logEvent({
+        userId,
+        userType: "user",
+        eventName: "subscription_cancel_denied",
+        eventData: {
+          subscriptionType,
+          reason: "Yearly subscriptions cannot be cancelled after trial period",
+        },
+      });
+
       return res.status(400).json({
         error: "Yearly subscriptions cannot be cancelled after trial period. They will automatically convert to monthly after one year."
       });
     }
-    else if (subscriptionType === 'one-time') {
-      // Lifetime cannot be cancelled after trial
+
+    // 4️⃣ Lifetime subscription (cannot cancel after trial)
+    if (subscriptionType === 'one-time') {
+      await logEvent({
+        userId,
+        userType: "user",
+        eventName: "subscription_cancel_denied",
+        eventData: {
+          subscriptionType,
+          reason: "Lifetime subscriptions cannot be cancelled after trial period",
+        },
+      });
+
       return res.status(400).json({
         error: "Lifetime subscriptions cannot be cancelled after trial period."
       });
     }
-    else {
-      return res.status(400).json({
-        error: "Unknown subscription type"
-      });
-    }
+
+    // 5️⃣ Unknown type fallback
+    await logEvent({
+      userId,
+      userType: "user",
+      eventName: "subscription_cancel_failed",
+      eventData: {
+        subscriptionType,
+        reason: "Unknown subscription type",
+      },
+    });
+
+    return res.status(400).json({ error: "Unknown subscription type" });
 
   } catch (error) {
     console.error("Subscription cancellation error:", error);
+
+    await logEvent({
+      userId: req.user?.userId,
+      userType: "user",
+      eventName: "subscription_cancel_error",
+      eventData: { error: error.message },
+    });
+
     res.status(500).json({ error: "Failed to cancel subscription" });
   }
-}
+};
+
 export const getSubscriptionStatus = async (req, res) => {
   try {
     const userId = req.user?.userId;

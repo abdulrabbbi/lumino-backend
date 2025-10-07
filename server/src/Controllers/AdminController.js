@@ -8,6 +8,7 @@ import UserSubscription from "../Models/UserSubscription.js";
 import CompletedActivity from "../Models/CompletedActivity.js";
 import GuestEmail from "../Models/GuestEmail.js";
 import RewardSetting from "../Models/RewardSetting.js";
+import TrackingEvents from "../Models/TrackingEvents.js";
 
 export const adminLogin = async (req, res) => {
   try {
@@ -510,6 +511,19 @@ export const getRewardPool = async (req, res) => {
     const setting = await RewardSetting.findOne({ month });
 
     res.json({ success: true, rewardPool: setting?.rewardPool });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+// Tracking Events Apis
+export const getAllEvents = async (req, res) => {
+  try {
+    const events = await TrackingEvents.find()
+      .populate("userId", "username email") 
+      .sort({ createdAt: -1 });
+
+    res.json({ success: true, events });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
