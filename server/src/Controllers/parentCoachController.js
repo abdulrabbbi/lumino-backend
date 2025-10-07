@@ -81,12 +81,7 @@
         messages: [
           {
             role: "system",
-            content: [
-              {
-                type: "prompt_id",
-                id: LUUMILO_PROMPT_ID,
-              },
-            ],
+            content: LUUMILO_PROMPT_ID
           },
           {
             role: "user",
