@@ -1,3 +1,5 @@
+"use client"
+
 /* eslint-disable no-unused-vars */
 import { Plus } from "lucide-react"
 import Specs from "../components/specs"
@@ -20,6 +22,7 @@ import axios from "axios"
 import { useNavigation } from "../components/NavigationContext"
 import { useScrollPosition } from "../hooks/useScrollPosition"
 import ParentCoachBot from "../components/parenst-coach-bot"
+import { AiOutlineHeart, AiFillHeart } from "react-icons/ai"
 
 export default function Activities() {
   const navigate = useNavigate()
@@ -33,6 +36,10 @@ export default function Activities() {
   const [isRestoringFromActivity, setIsRestoringFromActivity] = useState(false)
   const [totalCountActivities, settotalCountActivities] = useState(0)
 
+  const [favorites, setFavorites] = useState({})
+
+  const [favoriteLoading, setFavoriteLoading] = useState({}) // { [activityId]: boolean }
+
   const activityListRef = useRef(null)
 
   const getInitialFilters = () => {
@@ -45,7 +52,8 @@ export default function Activities() {
           category: savedState.filters.selectedCategory || "Alle Leergebieden",
           age: savedState.filters.selectedAge || "alle-leeftijden",
           sort: savedState.filters.selectedSort || "hoogstgewaardeerde",
-          page: savedState.currentPage || 1, // Maintain the same page (Scenario 1)
+          status: savedState.filters.selectedStatus || "all", // restore status
+          page: savedState.currentPage || 1,
         }
       }
     }
@@ -56,6 +64,7 @@ export default function Activities() {
       category: searchParams.get("category") || "Alle Leergebieden",
       age: searchParams.get("age") || "alle-leeftijden",
       sort: searchParams.get("sort") || "hoogstgewaardeerde",
+      status: searchParams.get("status") || "all", // read status from URL
       page: Number.parseInt(searchParams.get("page")) || 1,
     }
   }
@@ -70,6 +79,7 @@ export default function Activities() {
     selectedCategory,
     selectedAge,
     selectedSort,
+    selectedStatus, // new status from hook
     currentPage,
     totalPages,
     totalCount,
@@ -77,6 +87,7 @@ export default function Activities() {
     setSelectedCategory,
     setSelectedAge,
     setSelectedSort,
+    setSelectedStatus, // new setter
     resetFilters,
     triggerSearch,
     changePage,
@@ -86,6 +97,7 @@ export default function Activities() {
     initialFilters.age,
     initialFilters.sort,
     initialFilters.page,
+    initialFilters.status, // pass initial status
   )
 
   const { playweekActivities, weekInfo, loading: playweekLoading, error: playweekError } = usePlayweekActivities()
@@ -128,6 +140,7 @@ export default function Activities() {
       if (selectedCategory !== "Alle Leergebieden") params.set("category", selectedCategory)
       if (selectedAge !== "alle-leeftijden") params.set("age", selectedAge)
       if (selectedSort !== "hoogstgewaardeerde") params.set("sort", selectedSort)
+      if (selectedStatus !== "all") params.set("status", selectedStatus) // include status
       if (currentPage > 1) params.set("page", currentPage.toString())
 
       // Replace the current URL with updated params
@@ -138,6 +151,34 @@ export default function Activities() {
     selectedCategory,
     selectedAge,
     selectedSort,
+    selectedStatus, // dependency
+    currentPage,
+    activeTab,
+    hasRestoredState,
+    isRestoringFromActivity,
+    setSearchParams,
+  ])
+
+  useEffect(() => {
+    if (activeTab === "library" && hasRestoredState && !isRestoringFromActivity) {
+      const params = new URLSearchParams()
+
+      if (searchTerm) params.set("search", searchTerm)
+      if (selectedCategory !== "Alle Leergebieden") params.set("category", selectedCategory)
+      if (selectedAge !== "alle-leeftijden") params.set("age", selectedAge)
+      if (selectedSort !== "hoogstgewaardeerde") params.set("sort", selectedSort)
+      if (selectedStatus !== "all") params.set("status", selectedStatus) // include status
+      if (currentPage > 1) params.set("page", currentPage.toString())
+
+      // Replace the current URL with updated params
+      setSearchParams(params, { replace: true })
+    }
+  }, [
+    searchTerm,
+    selectedCategory,
+    selectedAge,
+    selectedSort,
+    selectedStatus, // dependency
     currentPage,
     activeTab,
     hasRestoredState,
@@ -169,6 +210,33 @@ export default function Activities() {
       }
     }
     fetchTotalCountActivites()
+  }, [])
+
+  useEffect(() => {
+    const fetchUserFavorites = async () => {
+      const authToken = localStorage.getItem("authToken")
+      if (!authToken) return
+
+      try {
+        const response = await axios.get(`${BASE_URL}/get-user-favorite-activities`, {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+        })
+
+        if (response.data.success) {
+          const favoritesMap = {}
+          response.data.favorites.forEach((fav) => {
+            favoritesMap[fav.activityId] = true
+          })
+          setFavorites(favoritesMap)
+        }
+      } catch (error) {
+        console.error("Error fetching favorites:", error)
+      }
+    }
+
+    fetchUserFavorites()
   }, [])
 
   const handleSubmitEmail = async (email) => {
@@ -263,11 +331,12 @@ export default function Activities() {
           filters:
             activeTab === "library"
               ? {
-                searchTerm,
-                selectedCategory,
-                selectedAge,
-                selectedSort,
-              }
+                  searchTerm,
+                  selectedCategory,
+                  selectedAge,
+                  selectedSort,
+                  selectedStatus, // save status
+                }
               : null,
         })
         navigate(`/activity-detail/${activity.id}`, {
@@ -290,11 +359,12 @@ export default function Activities() {
       filters:
         activeTab === "library"
           ? {
-            searchTerm,
-            selectedCategory,
-            selectedAge,
-            selectedSort,
-          }
+              searchTerm,
+              selectedCategory,
+              selectedAge,
+              selectedSort,
+              selectedStatus, // save status
+            }
           : null,
     })
     navigate(`/activity-detail/${activity.id}`, {
@@ -335,6 +405,11 @@ export default function Activities() {
   const handleSortChange = (e) => {
     console.log("[Activities] Sort filter changed - resetting to page 1")
     setSelectedSort(e.target.value) // This will reset to page 1 due to enhanced setter
+  }
+
+  const handleStatusChange = (e) => {
+    console.log("[Activities] Status filter changed - resetting to page 1")
+    setSelectedStatus(e.target.value) // update status
   }
 
   useEffect(() => {
@@ -425,8 +500,9 @@ export default function Activities() {
               <button
                 key={index}
                 onClick={() => handlePageChange(page)}
-                className={`px-2 sm:px-4 py-2 rounded-lg text-xs sm:text-sm inter-tight-400 cursor-pointer min-w-[32px] sm:min-w-[40px] ${currentPage === page ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                  }`}
+                className={`px-2 sm:px-4 py-2 rounded-lg text-xs sm:text-sm inter-tight-400 cursor-pointer min-w-[32px] sm:min-w-[40px] ${
+                  currentPage === page ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                }`}
               >
                 {page}
               </button>
@@ -444,6 +520,53 @@ export default function Activities() {
         </button>
       </div>
     )
+  }
+
+  const toggleFavorite = async (activityId) => {
+    const authToken = localStorage.getItem("authToken")
+    if (!authToken) {
+      toast.info("Je moet inloggen om activiteiten als favoriet te markeren")
+      return
+    }
+
+    // Prevent duplicate requests for the same item
+    if (favoriteLoading[activityId]) return
+
+    // Optimistic update
+    const wasFavorite = !!favorites[activityId]
+    setFavorites((prev) => ({ ...prev, [activityId]: !wasFavorite }))
+    setFavoriteLoading((prev) => ({ ...prev, [activityId]: true }))
+
+    try {
+      const response = await axios.post(
+        `${BASE_URL}/toggle-favourite-activity`,
+        { activityId },
+        {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+        },
+      )
+
+      if (response.data?.success) {
+        // Ensure UI matches backend response
+        setFavorites((prev) => ({ ...prev, [activityId]: !!response.data.isFavorite }))
+        if (response.data?.message) {
+          toast.success(response.data.message)
+        }
+      } else {
+        // Rollback on unexpected response
+        setFavorites((prev) => ({ ...prev, [activityId]: wasFavorite }))
+        toast.error("Fout bij bijwerken favorieten")
+      }
+    } catch (error) {
+      console.error("Error toggling favorite:", error)
+      // Rollback on error
+      setFavorites((prev) => ({ ...prev, [activityId]: wasFavorite }))
+      toast.error("Fout bij bijwerken favorieten")
+    } finally {
+      setFavoriteLoading((prev) => ({ ...prev, [activityId]: false }))
+    }
   }
 
   return (
@@ -502,7 +625,9 @@ export default function Activities() {
               <div className="flex  gap-2 justify-center items-center bg-gradient-to-tr from-[#F3F4F6] to-[#E5E7EB] p-1 rounded-lg">
                 <button
                   onClick={() => handleTabChange("speelweek")}
-                  className={`md:w-[575px] w-[160px] py-2 flex justify-center items-center gap-2 cursor-pointer rounded-lg text-sm transition-colors ${activeTab === "speelweek" ? "bg-[#8F34EA] text-white rounded-lg" : "text-[#616161]  rounded-lg"}`}
+                  className={`md:w-[575px] w-[160px] py-2 flex justify-center items-center gap-2 cursor-pointer rounded-lg text-sm transition-colors ${
+                    activeTab === "speelweek" ? "bg-[#8F34EA] text-white rounded-lg" : "text-[#616161]  rounded-lg"
+                  }`}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -526,7 +651,9 @@ export default function Activities() {
                 </button>
                 <button
                   onClick={() => handleTabChange("library")}
-                  className={`md:w-[575px] w-[160px] py-2 flex justify-center items-center gap-2 cursor-pointer rounded-lg text-sm transition-colors ${activeTab === "library" ? "bg-[#8F34EA] text-white rounded-lg" : "text-[#616161] rounded-lg"}`}
+                  className={`md:w-[575px] w-[160px] py-2 flex justify-center items-center gap-2 cursor-pointer rounded-lg text-sm transition-colors ${
+                    activeTab === "library" ? "bg-[#8F34EA] text-white rounded-lg" : "text-[#616161] rounded-lg"
+                  }`}
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -558,7 +685,7 @@ export default function Activities() {
         </div>
         {activeTab === "library" && (
           <div className="bg-gradient-to-br md:w-[90%] mx-auto w-full rounded-xl from-[#EFF6FF] via-[#FAF5FF] to-[#FDF2F8] md:p-6 p-3 mb-8 shadow-sm">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
               <div className="relative">
                 <input
                   type="text"
@@ -608,13 +735,22 @@ export default function Activities() {
                 <option value="5-6">5-6 jaar</option>
               </select>
               <select
+                value={selectedStatus}
+                onChange={handleStatusChange}
+                className="w-full pl-10 pr-4 py-2 border-none outline-none text-[#707070] text-sm bg-[#FFFFFF] rounded-xl inter-tight-400"
+              >
+                <option value="all">Alle Statussen</option>
+                <option value="voltooid">Voltooid</option>
+                <option value="niet-voltooid">Niet voltooid</option>
+                <option value="favoriet">Favorieten</option>
+              </select>
+              <select
                 value={selectedSort}
                 onChange={handleSortChange}
                 className="w-full pl-10 pr-4 py-2 border-none outline-none text-[#707070] text-sm bg-[#FFFFFF] rounded-xl inter-tight-400"
               >
                 <option value="hoogstgewaardeerde">Hoogst gewaardeerde</option>
                 <option value="meestgewaardeerde">Meest gewaardeerde</option>
-                <option value="voltooid">Voltooid</option>
               </select>
             </div>
           </div>
@@ -673,7 +809,7 @@ export default function Activities() {
               )}
               {!playweekLoading && !filterLoading && (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {getCurrentActivities().map((activity, index) => (
+                  {getCurrentActivities().map((activity) => (
                     <div
                       onClick={() => handleActivityClick(activity)}
                       key={activity.id}
@@ -681,14 +817,18 @@ export default function Activities() {
                     >
                       <div className="absolute top-10 right-6 z-20">
                         <span
-                          className={`px-4 py-1 text-xs font-bold rounded-md shadow-md ${activity.isLocked ? "bg-red-600 text-white" : "bg-yellow-500 text-white"}`}
+                          className={`px-4 py-1 text-xs font-bold rounded-md shadow-md ${
+                            activity.isLocked ? "bg-red-600 text-white" : "bg-yellow-500 text-white"
+                          }`}
                         >
                           {activity.isLocked ? "LOCKED" : "FREE"}
                         </span>
                       </div>
                       <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-[#DB297A] to-[#7940EA] z-0 opacity-0 group-hover:opacity-100 transition duration-500"></div>
                       <div
-                        className={`relative z-10 md:h-[580px] h-auto bg-white rounded-2xl overflow-hidden transition-shadow duration-300 ease-in-out group-hover:shadow-lg flex flex-col ${activity.isLocked ? "opacity-80" : ""}`}
+                        className={`relative z-10 md:h-[580px] h-auto bg-white rounded-2xl overflow-hidden transition-shadow duration-300 ease-in-out group-hover:shadow-lg flex flex-col ${
+                          activity.isLocked ? "opacity-80" : ""
+                        }`}
                       >
                         <div className="p-3">
                           <div className="bg-[#F3F4F6] rounded-2xl h-48 flex items-center justify-center">
@@ -700,7 +840,58 @@ export default function Activities() {
                         <div className="p-4 flex flex-col flex-1">
                           <div className="flex-1">
                             <div>
-                              <h3 className="text-lg text-[#0F2137] poppins-700 mb-1">{activity.title}</h3>
+                              <div className="w-full flex justify-between items-center">
+                                <h3 className="text-lg text-[#0F2137] poppins-700 mb-1">{activity.title}</h3>
+
+                                <div>
+                                  <div className="relative group">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        if (activity.isLocked || !localStorage.getItem("authToken")) return
+                                        toggleFavorite(activity.id)
+                                      }}
+                                      disabled={!!favoriteLoading[activity.id] || activity.isLocked}
+                                      className={`p-2 rounded-full cursor-pointer transition-colors ${
+                                        activity.isLocked ? "opacity-40 cursor-not-allowed" : ""
+                                      }`}
+                                      aria-pressed={!!favorites[activity.id]}
+                                      aria-label={
+                                        activity.isLocked
+                                          ? "Ontgrendel activiteit om als favoriet te markeren"
+                                          : favorites[activity.id]
+                                            ? "Verwijder uit favorieten"
+                                            : "Voeg toe aan favorieten"
+                                      }
+                                    >
+                                      {favorites[activity.id] && !activity.isLocked ? (
+                                        <AiFillHeart
+                                          size={25}
+                                          color="#ef4444"
+                                          className={`transition-colors ${
+                                            favoriteLoading[activity.id] ? "opacity-70" : ""
+                                          }`}
+                                        />
+                                      ) : (
+                                        <AiOutlineHeart
+                                          size={25}
+                                          color={
+                                            activity.isLocked
+                                              ? "#9ca3af"
+                                              : favorites[activity.id]
+                                                ? "#ef4444"
+                                                : "#6b7280"
+                                          }
+                                          className={`transition-colors ${
+                                            favoriteLoading[activity.id] ? "opacity-70" : ""
+                                          }`}
+                                        />
+                                      )}
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
                               <p className="text-[#666666] space-grotesk-400 text-[16px] leading-relaxed">
                                 {activity.description.slice(0, 120)}...
                               </p>
@@ -719,11 +910,11 @@ export default function Activities() {
                           <div className="mt-4">
                             {activity.isCompleted ? (
                               <>
-                                {/* Rating box same as others */}
                                 <div className="rounded-lg bg-[#FFFCE6] border border-yellow-200 p-3 flex items-center justify-center gap-2">
                                   <Star className="w-4 h-4 text-[#FACC15] fill-current" />
                                   <span className="text-sm inter-tight-400 font-medium text-gray-700">
-                                    <span className="font-bold text-black inter-tight-700">{activity.rating}</span> ({activity.reviews})
+                                    <span className="font-bold text-black inter-tight-700">{activity.rating}</span> (
+                                    {activity.reviews})
                                   </span>
                                 </div>
 
@@ -743,7 +934,9 @@ export default function Activities() {
                                     </svg>
                                     Voltooid
                                   </div>
-                                  <span className="text-[#F59E0B] inter-tight-400 mt-1 text-xs">Fantastisch gedaan!</span>
+                                  <span className="text-[#F59E0B] inter-tight-400 mt-1 text-xs">
+                                    Fantastisch gedaan!
+                                  </span>
                                 </div>
                               </>
                             ) : (
@@ -751,16 +944,20 @@ export default function Activities() {
                                 <div className="rounded-lg bg-[#FFFCE6] border border-yellow-200 p-3 flex items-center justify-center gap-2">
                                   <Star className="w-4 h-4 text-[#FACC15] fill-current" />
                                   <span className="text-sm inter-tight-400 font-medium text-gray-700">
-                                    <span className="font-bold text-black inter-tight-700">{activity.rating}</span> ({activity.reviews})
+                                    <span className="font-bold text-black inter-tight-700">{activity.rating}</span> (
+                                    {activity.reviews})
                                   </span>
                                 </div>
+
                                 <div className="flex justify-center mt-2">
                                   <span className={`${activity.tagColor} px-3 py-1 rounded-full text-xs font-medium`}>
                                     {activity.tag}
                                   </span>
                                 </div>
                                 <button
-                                  className={`w-full bg-gradient-to-br from-[#C42E8B] to-[#6650C7] text-white inter-tight-700 cursor-pointer py-2.5 px-4 rounded-2xl hover:opacity-90 transition-opacity text-sm flex items-center justify-center gap-2 mt-4 ${activity.isLocked ? "opacity-50 cursor-not-allowed" : ""}`}
+                                  className={`w-full bg-gradient-to-br from-[#C42E8B] to-[#6650C7] text-white inter-tight-700 cursor-pointer py-2.5 px-4 rounded-2xl hover:opacity-90 transition-opacity text-sm flex items-center justify-center gap-2 mt-4 ${
+                                    activity.isLocked ? "opacity-50 cursor-not-allowed" : ""
+                                  }`}
                                   disabled={activity.isLocked}
                                 >
                                   <IoPlayCircleOutline className="w-6 h-6" />
@@ -768,7 +965,6 @@ export default function Activities() {
                                 </button>
                               </>
                             )}
-
                           </div>
                         </div>
                       </div>

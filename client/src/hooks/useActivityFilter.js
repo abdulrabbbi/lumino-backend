@@ -1,5 +1,3 @@
-"use client"
-
 import { useState, useEffect, useCallback } from "react"
 import axios from "axios"
 import { BASE_URL } from "../utils/api"
@@ -11,6 +9,7 @@ export const useActivitiesFilter = (
   initialAge = "alle-leeftijden",
   initialSort = "hoogstgewaardeerde",
   initialPage = 1,
+  initialStatus = "all",
 ) => {
   const [activities, setActivities] = useState([])
   const [loading, setLoading] = useState(false)
@@ -20,6 +19,7 @@ export const useActivitiesFilter = (
   const [selectedCategory, setSelectedCategory] = useState(initialCategory)
   const [selectedAge, setSelectedAge] = useState(initialAge)
   const [selectedSort, setSelectedSort] = useState(initialSort)
+  const [selectedStatus, setSelectedStatus] = useState(initialStatus) // New status state
 
   const [currentPage, setCurrentPage] = useState(initialPage)
   const [totalPages, setTotalPages] = useState(0)
@@ -40,6 +40,7 @@ export const useActivitiesFilter = (
             category: selectedCategory,
             age: selectedAge,
             sort: selectedSort,
+            status: selectedStatus, // Send status separately
             page: page,
             limit: limit,
           },
@@ -64,23 +65,24 @@ export const useActivitiesFilter = (
         setLoading(false)
       }
     },
-    [effectiveSearchTerm, selectedCategory, selectedAge, selectedSort, currentPage, limit],
+    [effectiveSearchTerm, selectedCategory, selectedAge, selectedSort, selectedStatus, currentPage, limit], // Include selectedStatus
   )
 
   useEffect(() => {
     fetchFilteredActivities()
-  }, [selectedCategory, selectedAge, selectedSort, fetchFilteredActivities])
+  }, [selectedCategory, selectedAge, selectedSort, selectedStatus, fetchFilteredActivities]) // Include selectedStatus
 
   useEffect(() => {
     if (
       effectiveSearchTerm !== "" ||
       selectedCategory !== "Alle Leergebieden" ||
       selectedAge !== "alle-leeftijden" ||
-      selectedSort !== "hoogstgewaardeerde"
+      selectedSort !== "hoogstgewaardeerde" ||
+      selectedStatus !== "all" // Include status in change checks
     ) {
       fetchFilteredActivities()
     }
-  }, [effectiveSearchTerm, fetchFilteredActivities])
+  }, [effectiveSearchTerm, fetchFilteredActivities, selectedStatus]) // Include selectedStatus
 
   const triggerSearch = useCallback(() => {
     setEffectiveSearchTerm(searchTerm)
@@ -93,6 +95,7 @@ export const useActivitiesFilter = (
     setSelectedCategory("Alle Leergebieden")
     setSelectedAge("alle-leeftijden")
     setSelectedSort("hoogstgewaardeerde")
+    setSelectedStatus("all") // Reset status
     setCurrentPage(1)
   }, [])
 
@@ -119,6 +122,11 @@ export const useActivitiesFilter = (
     setCurrentPage(1) // Reset to page 1 when filter changes
   }, [])
 
+  const setSelectedStatusWithReset = useCallback((status) => {
+    setSelectedStatus(status)
+    setCurrentPage(1) // Reset to page 1 when status changes
+  }, [])
+
   return {
     activities,
     loading,
@@ -127,13 +135,15 @@ export const useActivitiesFilter = (
     selectedCategory,
     selectedAge,
     selectedSort,
+    selectedStatus, // Expose status
     currentPage,
     totalPages,
     totalCount,
     setSearchTerm,
-    setSelectedCategory: setSelectedCategoryWithReset, // Use enhanced setter
-    setSelectedAge: setSelectedAgeWithReset, // Use enhanced setter
-    setSelectedSort: setSelectedSortWithReset, // Use enhanced setter
+    setSelectedCategory: setSelectedCategoryWithReset,
+    setSelectedAge: setSelectedAgeWithReset,
+    setSelectedSort: setSelectedSortWithReset,
+    setSelectedStatus: setSelectedStatusWithReset, // Expose setter
     resetFilters,
     triggerSearch,
     changePage,

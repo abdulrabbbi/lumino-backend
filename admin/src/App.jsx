@@ -17,6 +17,7 @@ import MarketingUsers from './pages/admin-dashboard-pages/marketing-users'
 import Rewards from './pages/admin-dashboard-pages/reward'
 import TopContributors from './pages/admin-dashboard-pages/top-contributers'
 import TrackingEvents from './pages/admin-dashboard-pages/tracking-events'
+import RetentionDashboard from './pages/admin-dashboard-pages/retention-metrics'
 
 import { SidebarProvider } from './context/SidebarContext'
 
@@ -76,6 +77,8 @@ function App() {
               <Route path="reward-settings" element={<Rewards />} />
               <Route path="top-contributors" element={<TopContributors />} />
               <Route path="events-tracking" element={<TrackingEvents />} />
+              <Route path="retention-metrics" element={<RetentionDashboard />} />
+
 
 
             </Route>

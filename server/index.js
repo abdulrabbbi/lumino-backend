@@ -21,6 +21,7 @@ import ReferralRoutes from './src/Routes/ReferralRoutes.js'
 import RewardRoutes from './src/Routes/RewardRoutes.js'
 import OpenAIRoutes from './src/Routes/OpenAIRoutes.js'
 import parentCoachRoutes from './src/Routes/parentCoachRoutes.js'
+import cohortRoutes from './src/Routes/cohortRoutes.js'
 
 import cron from 'node-cron';
 
@@ -98,6 +99,7 @@ app.use('/api', ReferralRoutes);
 app.use('/api', RewardRoutes);
 app.use('/api', OpenAIRoutes);
 app.use("/api", parentCoachRoutes);
+app.use("/api", cohortRoutes)
 
 
 app.use((err, req, res, next) => {

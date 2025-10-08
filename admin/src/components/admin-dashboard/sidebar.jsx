@@ -13,6 +13,7 @@ import NavImage7 from "../../../public/nav-images/Vector (1).svg";
 import NavImage8 from "../../../public/library-images/Frame (6)-new.svg";
 import NavImage9 from "../../../public/rewards.png";
 import NavImag10 from '../../../public/nav-images/track-image.jpg'
+import NavImage11 from "../../../public/nav-images/analytics.jpg"
 
 const Sidebar = () => {
   const { isOpen, setIsOpen } = useSidebar();
@@ -30,6 +31,8 @@ const Sidebar = () => {
     { to: "/admin-dashboard/marketinggebruikers", label: "Marketing Gebruikers", image: NavImage2 },
     { to: "/admin-dashboard/reward-settings", label: "Beloningen", image: NavImage9 },
     { to: "/admin-dashboard/events-tracking", label: "Eventtracking", image: NavImag10 },
+    { to: "/admin-dashboard/retention-metrics", label: "Retentiecohorten", image: NavImage11 },
+
 
   ];
 

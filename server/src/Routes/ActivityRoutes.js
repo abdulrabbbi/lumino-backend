@@ -1,4 +1,4 @@
-import { createActivity, rateActivity, getTotalActivitiesCount, getActivityLibrary, getPlayWeekActivities, getProgressStats, getSingleActivity, filterActivities, markActivityCompleted} from "../Controllers/ActivityController.js";
+import { createActivity, rateActivity, getTotalActivitiesCount, getActivityLibrary, getPlayWeekActivities, getProgressStats, getSingleActivity, filterActivities, markActivityCompleted, toggleFavorite, getUserFavorites} from "../Controllers/ActivityController.js";
 import { authenticate } from "../Middleware/Authenticate.js";
 import { optionalAuth } from "../Middleware/OptionalAuth.js";
 import express from 'express'
@@ -19,6 +19,9 @@ router.get("/get-total-activities-count", getTotalActivitiesCount);
 
 
 router.get("/get-progress", optionalAuth, getProgressStats);
+
+router.post('/toggle-favourite-activity', optionalAuth, toggleFavorite)
+router.get("/get-user-favorite-activities", optionalAuth, getUserFavorites)
 
 
 
