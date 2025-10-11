@@ -185,10 +185,21 @@ export const getAllActivities = async (req, res) => {
     
     const activities = await Activity.find(query)
       .sort({ createdAt: -1 });
+
+
+      const activitiesWithCount = await Promise.all(
+        activities.map(async (activity) => {
+          const count = await CompletedActivity.countDocuments({ activityId: activity._id });
+          return {
+            ...activity.toObject(),
+            completionCount: count, // add field
+          };
+        })
+      );
     
     res.status(200).json({
       success: true,
-      data: activities
+      data: activitiesWithCount
     });
   } catch (err) {
     console.error(err);

@@ -31,7 +31,7 @@ const Sidebar = () => {
     { to: "/admin-dashboard/marketinggebruikers", label: "Marketing Gebruikers", image: NavImage2 },
     { to: "/admin-dashboard/reward-settings", label: "Beloningen", image: NavImage9 },
     { to: "/admin-dashboard/events-tracking", label: "Eventtracking", image: NavImag10 },
-    { to: "/admin-dashboard/retention-metrics", label: "Retentiecohorten", image: NavImage11 },
+    // { to: "/admin-dashboard/retention-metrics", label: "Retentiecohorten", image: NavImage11 },
 
 
   ];

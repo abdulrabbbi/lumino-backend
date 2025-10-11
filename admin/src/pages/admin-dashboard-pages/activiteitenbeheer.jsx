@@ -571,6 +571,12 @@ export default function ActiviteitenBeheer() {
                               scope="col"
                               className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
                             >
+                              aantal voltooiingen
+                            </th>
+                            <th
+                              scope="col"
+                              className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500"
+                            >
                               Aangemaakt
                             </th>
                             <th
@@ -593,10 +599,13 @@ export default function ActiviteitenBeheer() {
                               <tr key={activity._id} className="hover:bg-gray-50">
                                 <td className="whitespace-nowrap px-6 py-4">
                                   <div className="font-medium text-gray-900">{activity.title}</div>
-                                  <div className="line-clamp-1 text-sm text-gray-500">{activity.description}</div>
+                                  <div className="line-clamp-1 text-sm text-gray-500">{activity.description.slice(0,50)}...</div>
                                 </td>
                                 <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                                   {activity.learningDomain}
+                                </td>
+                                <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                                  {activity.completionCount}
                                 </td>
                                 <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
                                   {new Date(activity.createdAt).toLocaleDateString("nl-NL")}
