@@ -589,11 +589,11 @@ function ActivityDetail() {
               </div>
 
               {/* Favorite button near the complete button - good secondary position */}
-              <div className="flex space-x-4">
+              <div className="flex md:flex-row flex-col gap-2 w-full space-x-4">
                 <button
                   onClick={toggleFavorite}
                   disabled={favoriteLoading}
-                  className="flex-1 flex items-center justify-center space-x-2 px-6 py-3 border border-gray-300 bg-white rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  className="flex-1 w-full flex items-center justify-center space-x-2 px-6 py-3 border border-gray-300 bg-white rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50"
                 >
                   {isFavorite ? (
                     <AiFillHeart size={20} color="#ef4444" className={favoriteLoading ? "opacity-70" : ""} />
