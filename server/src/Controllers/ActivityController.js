@@ -453,7 +453,7 @@
         })
       }
   
-      if (status !== "voltooid" && status !== "favoriet" && status !== "niet-voltooid") {
+      if (!sort && status !== "voltooid" && status !== "favoriet" && status !== "niet-voltooid") {
         finalActivities.sort((a, b) => {
           if (a.isCompleted && !b.isCompleted) return 1
           if (!a.isCompleted && b.isCompleted) return -1

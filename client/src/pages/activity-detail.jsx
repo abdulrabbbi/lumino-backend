@@ -2,12 +2,13 @@
 
 /* eslint-disable no-unused-vars */
 import { useEffect, useState } from "react"
-import { ArrowLeft, Clock, Users, Star, CheckCircle, X } from "lucide-react"
+import { ArrowLeft, Clock, Users, Star, CheckCircle, X, Heart } from "lucide-react"
 import { useParams, useNavigate, useLocation } from "react-router-dom"
 import DetailImage from "../../public/images/SVG-detail.svg"
 import DetailImage1 from "../../public/images/SVG-detail-1.svg"
 import DetailImage2 from "../../public/images/Frame (1)-detail.svg"
 import { IoMdStar } from "react-icons/io"
+import { AiOutlineHeart, AiFillHeart } from "react-icons/ai"
 import Faqs from "../components/faqs"
 import BadgeModal from "../components/badge-modal"
 import { useSingleActivity } from "../hooks/useSingleActivity"
@@ -21,6 +22,8 @@ import LoaderOverlay from "../components/LoaderOverlay"
 import { toast } from "react-toastify"
 import { useMarkActivityCompleted, useRateActivity } from "../hooks/useActivityAPI"
 import { useNavigation } from "../components/NavigationContext"
+import axios from "axios"
+import { BASE_URL } from "../utils/api"
 
 const Sparkle = ({ style }) => (
   <div className="absolute pointer-events-none" style={style}>
@@ -114,12 +117,41 @@ function ActivityDetail() {
   const [isMarkingComplete, setIsMarkingComplete] = useState(false)
   const [hasShownRatingModal, setHasShownRatingModal] = useState(false)
   const [isSubmittingRating, setIsSubmittingRating] = useState(false)
+  const [isFavorite, setIsFavorite] = useState(false)
+  const [favoriteLoading, setFavoriteLoading] = useState(false)
 
   const [showReminder, setShowReminder] = useState(false)
 
   const { markCompleted } = useMarkActivityCompleted()
   const { rateActivity } = useRateActivity()
   const { activity, loading, error } = useSingleActivity(id)
+
+  // Fetch favorite status when activity loads
+  useEffect(() => {
+    const fetchFavoriteStatus = async () => {
+      const authToken = localStorage.getItem("authToken")
+      if (!authToken) return
+
+      try {
+        const response = await axios.get(`${BASE_URL}/get-user-favorite-activities`, {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+        })
+
+        if (response.data.success) {
+          const isActivityFavorite = response.data.favorites.some(fav => fav.activityId === id)
+          setIsFavorite(isActivityFavorite)
+        }
+      } catch (error) {
+        console.error("Error fetching favorite status:", error)
+      }
+    }
+
+    if (id) {
+      fetchFavoriteStatus()
+    }
+  }, [id])
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -175,6 +207,53 @@ function ActivityDetail() {
       })
     } else {
       navigate("/activities", { state: { fromActivity: true } })
+    }
+  }
+
+  // Favorite toggle function
+  const toggleFavorite = async () => {
+    const authToken = localStorage.getItem("authToken")
+    if (!authToken) {
+      toast.info("Je moet inloggen om activiteiten als favoriet te markeren")
+      return
+    }
+
+    if (favoriteLoading) return
+
+    // Optimistic update
+    const wasFavorite = isFavorite
+    setIsFavorite(!wasFavorite)
+    setFavoriteLoading(true)
+
+    try {
+      const response = await axios.post(
+        `${BASE_URL}/toggle-favourite-activity`,
+        { activityId: id },
+        {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+        },
+      )
+
+      if (response.data?.success) {
+        // Ensure UI matches backend response
+        setIsFavorite(!!response.data.isFavorite)
+        if (response.data?.message) {
+          toast.success(response.data.message)
+        }
+      } else {
+        // Rollback on unexpected response
+        setIsFavorite(wasFavorite)
+        toast.error("Fout bij bijwerken favorieten")
+      }
+    } catch (error) {
+      console.error("Error toggling favorite:", error)
+      // Rollback on error
+      setIsFavorite(wasFavorite)
+      toast.error("Fout bij bijwerken favorieten")
+    } finally {
+      setFavoriteLoading(false)
     }
   }
 
@@ -390,16 +469,47 @@ function ActivityDetail() {
         {isMarkingComplete && <LoaderOverlay />}
 
         <div className="md:w-[90%] w-full mx-auto p-4 lg:p-6">
-          <div className="px-4 py-3">
+          <div className="px-4 py-3 flex justify-between items-center">
             <button onClick={handleBack} className="flex items-center text-[#262F40] cursor-pointer transition-colors">
               <ArrowLeft className="w-5 h-5 mr-2" />
               <span className="text-sm inter-tight-400 font-medium">Terug naar activiteiten</span>
+            </button>
+            
+            {/* Favorite Button - Positioned at top right for easy access */}
+            <button
+              onClick={toggleFavorite}
+              disabled={favoriteLoading}
+              className="flex items-center space-x-2 px-4 py-2 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 transition-colors disabled:opacity-50"
+              aria-label={isFavorite ? "Verwijder uit favorieten" : "Voeg toe aan favorieten"}
+            >
+              {isFavorite ? (
+                <AiFillHeart size={20} color="#ef4444" className={favoriteLoading ? "opacity-70" : ""} />
+              ) : (
+                <AiOutlineHeart size={20} color="#6b7280" className={favoriteLoading ? "opacity-70" : ""} />
+              )}
+              <span className="text-sm inter-tight-400 text-gray-700 hidden sm:inline">
+                {isFavorite ? "Favoriet" : "Toevoegen aan favorieten"}
+              </span>
             </button>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6 p-4 rounded-2xl bg-[#F1F6FB]">
-              <div className={`${domainColor.split(" ")[0]} rounded-2xl text-white p-8 text-center`}>
+              <div className={`${domainColor.split(" ")[0]} rounded-2xl text-white p-8 text-center relative`}>
+                {/* Favorite button in the header area - alternative position */}
+                <button
+                  onClick={toggleFavorite}
+                  disabled={favoriteLoading}
+                  className="absolute top-4 right-4 p-2 bg-white/20 rounded-full hover:bg-white/30 transition-colors disabled:opacity-50"
+                  aria-label={isFavorite ? "Verwijder uit favorieten" : "Voeg toe aan favorieten"}
+                >
+                  {isFavorite ? (
+                    <AiFillHeart size={24} color="#ef4444" className={favoriteLoading ? "opacity-70" : ""} />
+                  ) : (
+                    <AiOutlineHeart size={24} color="white" className={favoriteLoading ? "opacity-70" : ""} />
+                  )}
+                </button>
+                
                 <div className="w-16 h-16 shadow-2xl bg-white rounded-full flex items-center justify-center mx-auto mb-4">
                   <div>
                     <img src={domainImage || "/placeholder.svg"} alt="" className="h-10 w-10" />
@@ -418,15 +528,6 @@ function ActivityDetail() {
                     </p>
                   )}
                 </div>
-                {/* <div>
-                  {activity.creatorName.toLowerCase() !== "floris" && (
-                    <div className="flex justify-center items-center mt-1">
-                      <p className={`${newdomainColor} w-50  px-3 mt-2 py-1 rounded-full text-xs font-medium`}>
-                        Schepper: {activity.creatorName}
-                      </p>
-                    </div>
-                  )}
-                </div> */}
               </div>
 
               <div className="rounded-2xl p-3">
@@ -487,20 +588,38 @@ function ActivityDetail() {
                 )}
               </div>
 
-              <button
-                onClick={handleMarkComplete}
-                disabled={completed || isMarkingComplete}
-                className={`w-full ${
-                  completed
-                    ? "bg-gray-400 cursor-not-allowed"
-                    : "bg-gradient-to-br from-[#079A68] to-[#20C25F] hover:from-[#068a5d] hover:to-[#1cb055]"
-                } text-white py-3 text-sm px-6 rounded-xl inter-tight-700 font-medium transition-colors flex items-center justify-center space-x-2 ${
-                  showCelebration ? "animate-pulse" : ""
-                }`}
-              >
-                <CheckCircle className="w-5 h-5" />
-                <span>{completed ? "Voltooid" : isMarkingComplete ? "Bezig..." : "Markeer als voltooid"}</span>
-              </button>
+              {/* Favorite button near the complete button - good secondary position */}
+              <div className="flex space-x-4">
+                <button
+                  onClick={toggleFavorite}
+                  disabled={favoriteLoading}
+                  className="flex-1 flex items-center justify-center space-x-2 px-6 py-3 border border-gray-300 bg-white rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  {isFavorite ? (
+                    <AiFillHeart size={20} color="#ef4444" className={favoriteLoading ? "opacity-70" : ""} />
+                  ) : (
+                    <AiOutlineHeart size={20} color="#6b7280" className={favoriteLoading ? "opacity-70" : ""} />
+                  )}
+                  <span className="inter-tight-400 font-medium">
+                    {isFavorite ? "Verwijder uit favorieten" : "Toevoegen aan favorieten"}
+                  </span>
+                </button>
+
+                <button
+                  onClick={handleMarkComplete}
+                  disabled={completed || isMarkingComplete}
+                  className={`flex-1 ${
+                    completed
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : "bg-gradient-to-br from-[#079A68] to-[#20C25F] hover:from-[#068a5d] hover:to-[#1cb055]"
+                  } text-white py-3 text-sm px-6 rounded-xl inter-tight-700 font-medium transition-colors flex items-center justify-center space-x-2 ${
+                    showCelebration ? "animate-pulse" : ""
+                  }`}
+                >
+                  <CheckCircle className="w-5 h-5" />
+                  <span>{completed ? "Voltooid" : isMarkingComplete ? "Bezig..." : "Markeer als voltooid"}</span>
+                </button>
+              </div>
             </div>
 
             <div className="space-y-6">
@@ -522,22 +641,42 @@ function ActivityDetail() {
                     <span className="text-sm inter-tight-700 font-medium text-[#1F1F1F]">{activity.ageGroup}</span>
                   </div>
                   <div className="flex items-center justify-between">
-  <div className="flex items-center text-[#4B5563]">
-    <Star className="w-4 h-4 mr-2" />
-    <span className="text-sm inter-tight-400">Rating</span>
-  </div>
-  <button
-    onClick={handleRatingClick}
-    className="text-sm text-[#1F1F1F] hover:text-blue-600 cursor-pointer text-right"
-  >
-    <span className="inter-tight-700 font-bold">{averageRating}</span>
-    <span className="inter-tight-400 font-light">/10</span>
-    <br />
-    <span className="inter-tight-400 text-xs text-gray-500">
-      ({activity.ratingCount || 0} {activity.ratingCount === 1 ? 'beoordeling' : 'beoordelingen'})
-    </span>
-  </button>
-</div>
+                    <div className="flex items-center text-[#4B5563]">
+                      <Star className="w-4 h-4 mr-2" />
+                      <span className="text-sm inter-tight-400">Rating</span>
+                    </div>
+                    <button
+                      onClick={handleRatingClick}
+                      className="text-sm text-[#1F1F1F] hover:text-blue-600 cursor-pointer text-right"
+                    >
+                      <span className="inter-tight-700 font-bold">{averageRating}</span>
+                      <span className="inter-tight-400 font-light">/10</span>
+                      <br />
+                      <span className="inter-tight-400 text-xs text-gray-500">
+                        ({activity.ratingCount || 0} {activity.ratingCount === 1 ? 'beoordeling' : 'beoordelingen'})
+                      </span>
+                    </button>
+                  </div>
+                  {/* Favorite status in details panel */}
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                    <div className="flex items-center text-[#4B5563]">
+                      <Heart className="w-4 h-4 mr-2" />
+                      <span className="text-sm inter-tight-400">Favoriet</span>
+                    </div>
+                    <div className="flex items-center">
+                      {isFavorite ? (
+                        <div className="flex items-center text-green-600">
+                          <AiFillHeart size={16} className="mr-1" />
+                          <span className="text-sm inter-tight-400">Ja</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center text-gray-500">
+                          <AiOutlineHeart size={16} className="mr-1" />
+                          <span className="text-sm inter-tight-400">Nee</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
 
