@@ -341,17 +341,29 @@
 
   export const filterActivities = async (req, res) => {
     try {
-      const { searchTerm, category, age, sort, status, page = 1, limit = 20 } = req.query
+      const {
+        searchTerm,
+        category,
+        age,
+        sort,
+        status, // This can be: "all", "voltooid", "niet-voltooid", "favoriet"
+        page = 1,
+        limit = 20,
+      } = req.query
+  
       const query = {}
   
+      // 🔍 Search filter
       if (searchTerm && typeof searchTerm === "string") {
         query.title = { $regex: searchTerm, $options: "i" }
       }
   
+      // 🧩 Category filter
       if (category && category !== "Alle Leergebieden") {
         query.learningDomain = category
       }
   
+      // 👶 Age group filter
       if (age && age !== "alle-leeftijden") {
         const ageMap = {
           "3-4": "3 - 4",
@@ -361,6 +373,7 @@
         query.ageGroup = ageMap[age] || age
       }
   
+      // 👤 User data setup
       const userId = req.user?.userId
       let isTestFamily = false
       let isLoggedIn = false
@@ -384,6 +397,7 @@
         }
       }
   
+      // 🎯 Status filters - ONLY apply when a specific status is selected
       if (status === "voltooid") {
         if (!isLoggedIn) {
           return res.status(200).json({
@@ -392,10 +406,10 @@
             message: "Login required to view completed activities.",
           })
         }
-        query._id = { $in: Array.from(completedActivityIds).map((id) => new mongoose.Types.ObjectId(id)) }
-      }
-  
-      if (status === "favoriet") {
+        query._id = {
+          $in: Array.from(completedActivityIds).map((id) => new mongoose.Types.ObjectId(id)),
+        }
+      } else if (status === "favoriet") {
         if (!isLoggedIn) {
           return res.status(200).json({
             success: true,
@@ -403,21 +417,22 @@
             message: "Login required to view favorite activities.",
           })
         }
-        query._id = { $in: Array.from(favoriteActivityIds).map((id) => new mongoose.Types.ObjectId(id)) }
-      }
-  
-      if (status === "niet-voltooid") {
-        // If logged in, exclude completed ones; if not logged in, there are no completed, so no filter.
+        query._id = {
+          $in: Array.from(favoriteActivityIds).map((id) => new mongoose.Types.ObjectId(id)),
+        }
+      } else if (status === "niet-voltooid") {
+        // Only apply this filter when specifically selecting "niet-voltooid"
         if (isLoggedIn) {
           const completedIds = Array.from(completedActivityIds).map((id) => new mongoose.Types.ObjectId(id))
           query._id = { $nin: completedIds }
         }
       }
+      // When status is "all" or undefined, NO completion filter is applied
   
-      // Fetch all activities matching filters
+      // 📦 Fetch all matching activities
       const allActivities = await Activity.find(query).exec()
   
-      // Add metadata
+      // 🧩 Add metadata
       const finalActivities = allActivities.map((activity) => {
         const activityObject = activity.toObject()
         const id = activityObject._id.toString()
@@ -425,7 +440,6 @@
         const isLocked = !(isLoggedIn && (isTestFamily || hasSubscription))
         const isCompleted = completedActivityIds.has(id)
         const isFavorite = favoriteActivityIds.has(id)
-  
         const reviewCount = activityObject.ratings?.length || 0
   
         return {
@@ -437,6 +451,7 @@
         }
       })
   
+      // 🔝 Sorting logic
       if (sort === "hoogstgewaardeerde") {
         finalActivities.sort((a, b) => {
           const aRating = a.averageRating || 0
@@ -453,7 +468,8 @@
         })
       }
   
-      if (!sort && status !== "voltooid" && status !== "favoriet" && status !== "niet-voltooid") {
+      // ✅ Default sort (completed last) - ONLY when no specific status is selected
+      if (!status || status === "all") {
         finalActivities.sort((a, b) => {
           if (a.isCompleted && !b.isCompleted) return 1
           if (!a.isCompleted && b.isCompleted) return -1
@@ -466,9 +482,10 @@
       const skip = (Number(page) - 1) * Number(limit)
       const paginatedActivities = finalActivities.slice(skip, skip + Number(limit))
   
-      // Remove unnecessary fields before sending response
+      // 🧹 Clean up response
       const responseActivities = paginatedActivities.map(({ reviewCount, ...rest }) => rest)
   
+      // ✅ Send final response
       res.status(200).json({
         success: true,
         activities: responseActivities,
