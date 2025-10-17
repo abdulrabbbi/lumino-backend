@@ -339,165 +339,157 @@
     }
   };
 
-  export const filterActivities = async (req, res) => {
-    try {
-      const {
-        searchTerm,
-        category,
-        age,
-        sort,
-        status, // This can be: "all", "voltooid", "niet-voltooid", "favoriet"
-        page = 1,
-        limit = 20,
-      } = req.query
-  
-      const query = {}
-  
-      // 🔍 Search filter
-      if (searchTerm && typeof searchTerm === "string") {
-        query.title = { $regex: searchTerm, $options: "i" }
-      }
-  
-      // 🧩 Category filter
-      if (category && category !== "Alle Leergebieden") {
-        query.learningDomain = category
-      }
-  
-      // 👶 Age group filter
-      if (age && age !== "alle-leeftijden") {
-        const ageMap = {
-          "3-4": "3 - 4",
-          "3-6": "3 - 6",
-          "5-6": "5 - 6",
-        }
-        query.ageGroup = ageMap[age] || age
-      }
-  
-      // 👤 User data setup
-      const userId = req.user?.userId
-      let isTestFamily = false
-      let isLoggedIn = false
-      let completedActivityIds = new Set()
-      let favoriteActivityIds = new Set()
-      let hasSubscription = false
-  
-      // 🧠 If user is logged in, fetch their data
-      if (userId) {
-        const user = await User.findById(userId)
-        if (user) {
-          isLoggedIn = true
-          isTestFamily = user.isTestFamily
-          hasSubscription = await checkUserSubscription(userId)
-  
-          const completedActivities = await CompletedActivity.find({ userId }).select("activityId")
-          completedActivityIds = new Set(completedActivities.map((c) => c.activityId.toString()))
-  
-          const favoriteActivities = await Favorite.find({ userId }).select("activityId")
-          favoriteActivityIds = new Set(favoriteActivities.map((f) => f.activityId.toString()))
-        }
-      }
-  
-      // 🎯 Status filters - ONLY apply when a specific status is selected
-      if (status === "voltooid") {
-        if (!isLoggedIn) {
-          return res.status(200).json({
-            success: true,
-            activities: [],
-            message: "Login required to view completed activities.",
-          })
-        }
-        query._id = {
-          $in: Array.from(completedActivityIds).map((id) => new mongoose.Types.ObjectId(id)),
-        }
-      } else if (status === "favoriet") {
-        if (!isLoggedIn) {
-          return res.status(200).json({
-            success: true,
-            activities: [],
-            message: "Login required to view favorite activities.",
-          })
-        }
-        query._id = {
-          $in: Array.from(favoriteActivityIds).map((id) => new mongoose.Types.ObjectId(id)),
-        }
-      } else if (status === "niet-voltooid") {
-        // Only apply this filter when specifically selecting "niet-voltooid"
-        if (isLoggedIn) {
-          const completedIds = Array.from(completedActivityIds).map((id) => new mongoose.Types.ObjectId(id))
-          query._id = { $nin: completedIds }
-        }
-      }
-      // When status is "all" or undefined, NO completion filter is applied
-  
-      // 📦 Fetch all matching activities
-      const allActivities = await Activity.find(query).exec()
-  
-      // 🧩 Add metadata
-      const finalActivities = allActivities.map((activity) => {
-        const activityObject = activity.toObject()
-        const id = activityObject._id.toString()
-  
-        const isLocked = !(isLoggedIn && (isTestFamily || hasSubscription))
-        const isCompleted = completedActivityIds.has(id)
-        const isFavorite = favoriteActivityIds.has(id)
-        const reviewCount = activityObject.ratings?.length || 0
-  
-        return {
-          ...activityObject,
-          isLocked,
-          isCompleted,
-          isFavorite,
-          reviewCount,
-        }
-      })
-  
-      // 🔝 Sorting logic
-      if (sort === "hoogstgewaardeerde") {
-        finalActivities.sort((a, b) => {
-          const aRating = a.averageRating || 0
-          const bRating = b.averageRating || 0
-          if (bRating !== aRating) return bRating - aRating
-          return b.reviewCount - a.reviewCount
-        })
-      } else if (sort === "meestgewaardeerde") {
-        finalActivities.sort((a, b) => {
-          if (b.reviewCount !== a.reviewCount) return b.reviewCount - a.reviewCount
-          const aRating = a.averageRating || 0
-          const bRating = b.averageRating || 0
-          return bRating - aRating
-        })
-      }
-  
-      // ✅ Default sort (completed last) - ONLY when no specific status is selected
-      if (!status || status === "all") {
-        finalActivities.sort((a, b) => {
-          if (a.isCompleted && !b.isCompleted) return 1
-          if (!a.isCompleted && b.isCompleted) return -1
-          return 0
-        })
-      }
-  
-      // 📄 Pagination
-      const totalCount = finalActivities.length
-      const skip = (Number(page) - 1) * Number(limit)
-      const paginatedActivities = finalActivities.slice(skip, skip + Number(limit))
-  
-      // 🧹 Clean up response
-      const responseActivities = paginatedActivities.map(({ reviewCount, ...rest }) => rest)
-  
-      // ✅ Send final response
-      res.status(200).json({
-        success: true,
-        activities: responseActivities,
-        totalPages: Math.ceil(totalCount / limit),
-        currentPage: Number(page),
-        totalCount,
-      })
-    } catch (error) {
-      console.error("Error filtering activities:", error)
-      res.status(500).json({ message: "Server error" })
+export const filterActivities = async (req, res) => {
+  try {
+    let {
+      searchTerm,
+      category,
+      age,
+      sort,
+      status, // can be: "all", "voltooid", "niet-voltooid", "favoriet"
+      page = 1,
+      limit = 20,
+    } = req.query
+
+    // 🧠 Default to "niet-voltooid"
+    if (!status) {
+      status = "niet-voltooid"
     }
+
+    const query = {}
+
+    // 🔍 Search filter
+    if (searchTerm && typeof searchTerm === "string") {
+      query.title = { $regex: searchTerm, $options: "i" }
+    }
+
+    // 🧩 Category filter
+    if (category && category !== "Alle Leergebieden") {
+      query.learningDomain = category
+    }
+
+    // 👶 Age filter
+    if (age && age !== "alle-leeftijden") {
+      const ageMap = {
+        "3-4": "3 - 4",
+        "3-6": "3 - 6",
+        "5-6": "5 - 6",
+      }
+      query.ageGroup = ageMap[age] || age
+    }
+
+    // 👤 User data
+    const userId = req.user?.userId
+    let isTestFamily = false
+    let isLoggedIn = false
+    let completedActivityIds = new Set()
+    let favoriteActivityIds = new Set()
+    let hasSubscription = false
+
+    if (userId) {
+      const user = await User.findById(userId)
+      if (user) {
+        isLoggedIn = true
+        isTestFamily = user.isTestFamily
+        hasSubscription = await checkUserSubscription(userId)
+
+        const completedActivities = await CompletedActivity.find({ userId }).select("activityId")
+        completedActivityIds = new Set(completedActivities.map((c) => c.activityId.toString()))
+
+        const favoriteActivities = await Favorite.find({ userId }).select("activityId")
+        favoriteActivityIds = new Set(favoriteActivities.map((f) => f.activityId.toString()))
+      }
+    }
+
+    // 🎯 Status filter
+    if (status === "voltooid") {
+      if (!isLoggedIn)
+        return res.status(200).json({
+          success: true,
+          activities: [],
+          message: "Login required to view completed activities.",
+        })
+      query._id = { $in: Array.from(completedActivityIds).map((id) => new mongoose.Types.ObjectId(id)) }
+    } else if (status === "favoriet") {
+      if (!isLoggedIn)
+        return res.status(200).json({
+          success: true,
+          activities: [],
+          message: "Login required to view favorite activities.",
+        })
+      query._id = { $in: Array.from(favoriteActivityIds).map((id) => new mongoose.Types.ObjectId(id)) }
+    } else if (status === "niet-voltooid") {
+      if (isLoggedIn) {
+        const completedIds = Array.from(completedActivityIds).map((id) => new mongoose.Types.ObjectId(id))
+        query._id = { $nin: completedIds }
+      }
+    }
+    // “all” → no filter applied
+
+    const allActivities = await Activity.find(query).exec()
+
+    const finalActivities = allActivities.map((activity) => {
+      const activityObject = activity.toObject()
+      const id = activityObject._id.toString()
+      const isLocked = !(isLoggedIn && (isTestFamily || hasSubscription))
+      const isCompleted = completedActivityIds.has(id)
+      const isFavorite = favoriteActivityIds.has(id)
+      const reviewCount = activityObject.ratings?.length || 0
+
+      return {
+        ...activityObject,
+        isLocked,
+        isCompleted,
+        isFavorite,
+        reviewCount,
+      }
+    })
+
+    // 🔝 Sorting logic
+    if (sort === "hoogstgewaardeerde") {
+      finalActivities.sort((a, b) => {
+        const aRating = a.averageRating || 0
+        const bRating = b.averageRating || 0
+        if (bRating !== aRating) return bRating - aRating
+        return b.reviewCount - a.reviewCount
+      })
+    } else if (sort === "meestgewaardeerde") {
+      finalActivities.sort((a, b) => {
+        if (b.reviewCount !== a.reviewCount) return b.reviewCount - a.reviewCount
+        const aRating = a.averageRating || 0
+        const bRating = b.averageRating || 0
+        return bRating - aRating
+      })
+    }
+
+    // ✅ Only apply "completed last" if no sort & no explicit status filter
+    if (!sort && (status === "all" || !status)) {
+      finalActivities.sort((a, b) => {
+        if (a.isCompleted && !b.isCompleted) return 1
+        if (!a.isCompleted && b.isCompleted) return -1
+        return 0
+      })
+    }
+
+    // 📄 Pagination
+    const totalCount = finalActivities.length
+    const skip = (Number(page) - 1) * Number(limit)
+    const paginatedActivities = finalActivities.slice(skip, skip + Number(limit))
+    const responseActivities = paginatedActivities.map(({ reviewCount, ...rest }) => rest)
+
+    res.status(200).json({
+      success: true,
+      activities: responseActivities,
+      totalPages: Math.ceil(totalCount / limit),
+      currentPage: Number(page),
+      totalCount,
+    })
+  } catch (error) {
+    console.error("Error filtering activities:", error)
+    res.status(500).json({ message: "Server error" })
   }
+}
+
   
 
 
