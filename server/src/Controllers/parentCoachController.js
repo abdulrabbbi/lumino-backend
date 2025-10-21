@@ -1,8 +1,116 @@
+// import fs from "fs/promises";
+// import path from "path";
+// import OpenAI from 'openai';
+// import dotenv from "dotenv";
+// import { LUUMILO_SYSTEM_PROMPT } from "../Utils/system-prompt.js";
+
+// dotenv.config();
+
+// const openai = new OpenAI({
+//   apiKey: process.env.OPENAI_API_KEY_FOR_LUMMILO_PARENT_COACH,
+// });
+
+// let ACTIVITIES = [];
+// const ACTIVITIES_PATH = path.join(process.cwd(), "src", "Luumilo_Activiteitenlijst.json");
+
+// async function loadActivities() {
+//   if (!ACTIVITIES.length) {
+//     try {
+//       const raw = await fs.readFile(ACTIVITIES_PATH, "utf8");
+//       ACTIVITIES = JSON.parse(raw);
+//     } catch (error) {
+//       console.error("Error loading activities:", error);
+//       throw error;
+//     }
+//   }
+// }
+
+// function findActivities(userQuestion, max = 2) {
+//   const q = userQuestion.toLowerCase();
+//   const tokens = q.split(/\W+/).filter(Boolean);
+  
+//   const scores = ACTIVITIES.map((a) => {
+//     const hay = `${a.Titel || ""} ${a["Korte uitleg"] || ""} ${a.Leergebied || ""}`.toLowerCase();
+//     const hayTokens = new Set(hay.split(/\W+/).filter(Boolean));
+//     let score = 0;
+//     for (const t of tokens) if (hayTokens.has(t)) score++;
+//     return { score, activity: a };
+//   });
+  
+//   scores.sort((a, b) => b.score - a.score);
+//   const filtered = scores.filter((s) => s.score > 0).map((s) => s.activity);
+//   return filtered.slice(0, max);
+// }
+
+// function buildUserPrompt(question, activities) {
+//   let context = "";
+//   if (activities.length) {
+//     context =
+//       "Relevante activiteiten gevonden in de Luumilo Activity List:\n" +
+//       activities
+//         .map(
+//           (a) =>
+//             `Titel: "${a.Titel}"\nKorte uitleg: ${a["Korte uitleg"] || "Geen uitleg beschikbaar"}\nStappen: ${(a.Stappen || "").replace(/\s+/g, " ").trim().substring(0, 200)}`
+//         )
+//         .join("\n\n");
+//   } else {
+//     context = "Geen direct passende activiteiten gevonden in de Luumilo Activity List.";
+//   }
+
+//   return `${context}
+
+// Vraag van ouder:
+// ${question}
+
+// Antwoord als Luumilo Parent Coach volgens alle regels:
+// - Gebruik de gevonden activiteiten indien relevant
+// - Houd antwoord kort en ondersteunend (2-4 zinnen)
+// - Volg alle Luumilo-richtlijnen uit de systeeminstructies`;
+// }
+
+// export const handleParentCoach = async (req, res) => {
+//   try {
+//     const question = (req.body.question || "").trim();
+//     if (!question) return res.status(400).json({ error: "Question is required" });
+
+//     await loadActivities();
+    
+//     const matches = findActivities(question, 2);
+//     const userPrompt = buildUserPrompt(question, matches);
+
+//     const response = await openai.chat.completions.create({
+//       model: "gpt-3.5-turbo",
+//       messages: [
+//         {
+//           role: "system",
+//           content: LUUMILO_SYSTEM_PROMPT
+//         },
+//         {
+//           role: "user",
+//           content: userPrompt,
+//         },
+//       ],
+//       max_tokens: 400,
+//       temperature: 0.25,
+//     });
+
+//     const output = response.choices?.[0]?.message?.content || "";
+//     res.json({ answer: output.trim() });
+//   } catch (err) {
+//     console.error("Error in handleParentCoach:", err.response?.data || err.message || err);
+    
+//     res.status(500).json({ 
+//       error: "server_error", 
+//       detail: err.message 
+//     });
+//   }
+// };
+
+
 import fs from "fs/promises";
 import path from "path";
 import OpenAI from 'openai';
 import dotenv from "dotenv";
-import { LUUMILO_SYSTEM_PROMPT } from "../Utils/system-prompt.js";
 
 dotenv.config();
 
@@ -12,6 +120,10 @@ const openai = new OpenAI({
 
 let ACTIVITIES = [];
 const ACTIVITIES_PATH = path.join(process.cwd(), "src", "Luumilo_Activiteitenlijst.json");
+
+// Your prompt ID from OpenAI dashboard
+const LUUMILO_PROMPT_ID = "pmpt_68deb3eb56c88197a764f5d9ecf909c6023134dcf4b55982";
+const LUUMILO_PROMPT_VERSION = "37"; // or your version number
 
 async function loadActivities() {
   if (!ACTIVITIES.length) {
@@ -42,30 +154,16 @@ function findActivities(userQuestion, max = 2) {
   return filtered.slice(0, max);
 }
 
-function buildUserPrompt(question, activities) {
-  let context = "";
-  if (activities.length) {
-    context =
-      "Relevante activiteiten gevonden in de Luumilo Activity List:\n" +
-      activities
-        .map(
-          (a) =>
-            `Titel: "${a.Titel}"\nKorte uitleg: ${a["Korte uitleg"] || "Geen uitleg beschikbaar"}\nStappen: ${(a.Stappen || "").replace(/\s+/g, " ").trim().substring(0, 200)}`
-        )
-        .join("\n\n");
-  } else {
-    context = "Geen direct passende activiteiten gevonden in de Luumilo Activity List.";
+function formatActivitiesForPrompt(activities) {
+  if (!activities.length) {
+    return "Geen direct passende activiteiten gevonden.";
   }
-
-  return `${context}
-
-Vraag van ouder:
-${question}
-
-Antwoord als Luumilo Parent Coach volgens alle regels:
-- Gebruik de gevonden activiteiten indien relevant
-- Houd antwoord kort en ondersteunend (2-4 zinnen)
-- Volg alle Luumilo-richtlijnen uit de systeeminstructies`;
+  
+  return activities
+    .map((a) => 
+      `Titel: "${a.Titel}"\nKorte uitleg: ${a["Korte uitleg"] || "Geen uitleg"}\nStappen: ${(a.Stappen || "").replace(/\s+/g, " ").trim().substring(0, 200)}`
+    )
+    .join("\n\n");
 }
 
 export const handleParentCoach = async (req, res) => {
@@ -76,25 +174,22 @@ export const handleParentCoach = async (req, res) => {
     await loadActivities();
     
     const matches = findActivities(question, 2);
-    const userPrompt = buildUserPrompt(question, matches);
+    const activitiesContext = formatActivitiesForPrompt(matches);
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [
-        {
-          role: "system",
-          content: LUUMILO_SYSTEM_PROMPT
-        },
-        {
-          role: "user",
-          content: userPrompt,
-        },
-      ],
-      max_tokens: 400,
-      temperature: 0.25,
+    // Use the Prompt API instead of Chat Completions
+    const response = await openai.responses.create({
+      model: "gpt-5-mini", // or your preferred model
+      prompt: {
+        id: LUUMILO_PROMPT_ID,
+        version: LUUMILO_PROMPT_VERSION,
+        variables: {
+          activities_context: activitiesContext,
+          parent_question: question
+        }
+      }
     });
 
-    const output = response.choices?.[0]?.message?.content || "";
+    const output = response.output_text || "";
     res.json({ answer: output.trim() });
   } catch (err) {
     console.error("Error in handleParentCoach:", err.response?.data || err.message || err);
