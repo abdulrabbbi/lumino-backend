@@ -22,6 +22,7 @@ import RewardRoutes from './src/Routes/RewardRoutes.js'
 import OpenAIRoutes from './src/Routes/OpenAIRoutes.js'
 import parentCoachRoutes from './src/Routes/parentCoachRoutes.js'
 import cohortRoutes from './src/Routes/cohortRoutes.js'
+import funnelRoutes from './src/Routes/funnelRoutes.js'
 
 import cron from 'node-cron';
 
@@ -41,19 +42,21 @@ if (process.env.NODE_ENV === 'production') {
 app.use(prerender.set("prerenderToken", process.env.PRERENDER_TOKEN));
 
 // CORS Configuration - Simplified for JWT only
-app.use(cors({
-    origin: [
-        "https://eensterkestart.nl",
-        "https://admin.eensterkestart.nl",
-        "https://api.eensterkestart.nl",
-        "http://localhost:4001",
-        "http://localhost:4002",
-    ],
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    credentials: false,
-    optionsSuccessStatus: 200,
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'User-Timezone'],
-}));
+// app.use(cors({
+//     origin: [
+//         "https://eensterkestart.nl",
+//         "https://admin.eensterkestart.nl",
+//         "https://api.eensterkestart.nl",
+//         "http://localhost:4001",
+//         "http://localhost:4002",
+//     ],
+//     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+//     credentials: false,
+//     optionsSuccessStatus: 200,
+//     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'User-Timezone'],
+// }));
+
+app.use(cors())
 
 // Stripe webhook - needs raw body
 app.post('/api/webhook', express.raw({ type: 'application/json' }), handleStripeWebhook);
@@ -100,6 +103,8 @@ app.use('/api', RewardRoutes);
 app.use('/api', OpenAIRoutes);
 app.use("/api", parentCoachRoutes);
 app.use("/api", cohortRoutes)
+app.use("/api", funnelRoutes)
+
 
 
 app.use((err, req, res, next) => {

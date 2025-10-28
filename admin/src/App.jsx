@@ -18,12 +18,12 @@ import Rewards from './pages/admin-dashboard-pages/reward'
 import TopContributors from './pages/admin-dashboard-pages/top-contributers'
 import TrackingEvents from './pages/admin-dashboard-pages/tracking-events'
 import RetentionDashboard from './pages/admin-dashboard-pages/retention-metrics'
+import FunnelConversion from './pages/admin-dashboard-pages/conversion-funnel'
 
 import { SidebarProvider } from './context/SidebarContext'
 
 function AppLayout() {
   const location = useLocation()
-  // Update paths to include /admin prefix
   const hideNavbar = location.pathname === '/admin/signin' || location.pathname === '/admin'
 
   return (
@@ -43,17 +43,13 @@ function PrivateRoute({ children }) {
 function App() {
   return (
     <SidebarProvider>
-      {/* Add basename="/admin" to BrowserRouter */}
       <BrowserRouter basename="/admin">
         <ScrollToTop />
         <Routes>
-          {/* Redirect /admin to /admin/signin */}
           <Route path="/" element={<Navigate to="/signin" replace />} />
 
-          {/* Public Signin Route - now at /admin/signin */}
           <Route path="/signin" element={<AdminSignin />} />
 
-          {/* Protected Routes */}
           <Route element={<AppLayout />}>
             <Route
               path="admin-dashboard"
@@ -78,6 +74,7 @@ function App() {
               <Route path="top-contributors" element={<TopContributors />} />
               <Route path="events-tracking" element={<TrackingEvents />} />
               <Route path="retention-metrics" element={<RetentionDashboard />} />
+              <Route path="funnel-conversion" element={<FunnelConversion />} />
 
 
 

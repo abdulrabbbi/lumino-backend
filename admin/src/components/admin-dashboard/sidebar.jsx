@@ -14,6 +14,7 @@ import NavImage8 from "../../../public/library-images/Frame (6)-new.svg";
 import NavImage9 from "../../../public/rewards.png";
 import NavImag10 from '../../../public/nav-images/track-image.jpg'
 import NavImage11 from "../../../public/nav-images/analytics.jpg"
+import NavImage12 from "../../../public/nav-images/conversion.png"
 
 const Sidebar = () => {
   const { isOpen, setIsOpen } = useSidebar();
@@ -32,6 +33,8 @@ const Sidebar = () => {
     { to: "/admin-dashboard/reward-settings", label: "Beloningen", image: NavImage9 },
     { to: "/admin-dashboard/events-tracking", label: "Eventtracking", image: NavImag10 },
     // { to: "/admin-dashboard/retention-metrics", label: "Retentiecohorten", image: NavImage11 },
+        { to: "/admin-dashboard/funnel-conversion", label: "Funnel Conversion", image: NavImage12 },
+
 
 
   ];

@@ -237,7 +237,7 @@ const getDate30DaysAgo = () => {
 };
 export const getPlatformStats = async (req, res) => {
   try {
-    const totalSubscribers = await User.countDocuments();
+    const totalSubscribers = await User.countDocuments({ role: 'user' });
     const totalActivities = await Activity.countDocuments();
     const completedActivities = await Activity.countDocuments({ status: "Voltooid" });
     const completedActivitiesCount = await CompletedActivity.countDocuments({ userId: {$ne: null}});
