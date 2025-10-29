@@ -12,9 +12,9 @@ import NavImage6 from "../../../public/nav-images/SVG.svg";
 import NavImage7 from "../../../public/nav-images/Vector (1).svg";
 import NavImage8 from "../../../public/library-images/Frame (6)-new.svg";
 import NavImage9 from "../../../public/rewards.png";
-import NavImag10 from '../../../public/nav-images/track-image.jpg'
-import NavImage11 from "../../../public/nav-images/analytics.jpg"
-import NavImage12 from "../../../public/nav-images/conversion.png"
+import NavImag10 from "../../../public/nav-images/track-image.jpg";
+import NavImage11 from "../../../public/nav-images/analytics.jpg";
+import NavImage12 from "../../../public/nav-images/conversion.png";
 
 const Sidebar = () => {
   const { isOpen, setIsOpen } = useSidebar();
@@ -32,11 +32,7 @@ const Sidebar = () => {
     { to: "/admin-dashboard/marketinggebruikers", label: "Marketing Gebruikers", image: NavImage2 },
     { to: "/admin-dashboard/reward-settings", label: "Beloningen", image: NavImage9 },
     { to: "/admin-dashboard/events-tracking", label: "Eventtracking", image: NavImag10 },
-    // { to: "/admin-dashboard/retention-metrics", label: "Retentiecohorten", image: NavImage11 },
-        { to: "/admin-dashboard/funnel-conversion", label: "Funnel Conversion", image: NavImage12 },
-
-
-
+    { to: "/admin-dashboard/funnel-conversion", label: "Funnel Conversion", image: NavImage12 },
   ];
 
   return (
@@ -49,19 +45,19 @@ const Sidebar = () => {
       )}
 
       <nav
-        className={`fixed top-0 left-0 h-full w-64 bg-white shadow-md transform lg:z-50  z-[10000000] transition-transform duration-500 lg:translate-x-0 lg:relative md:shadow-none ${
+        className={`fixed top-0 left-0 h-full w-64 bg-white shadow-md transform lg:z-50 z-[10000000] transition-transform duration-500 lg:translate-x-0 lg:relative md:shadow-none ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         {/* Close button for mobile */}
-        <div className="flex justify-end md:hidden p-4">
+        <div className="flex justify-end md:hidden p-4 border-b">
           <button onClick={() => setIsOpen(false)}>
             <X size={24} />
           </button>
         </div>
 
-        {/* Links */}
-        <div className="flex flex-col">
+        {/* Scrollable Links */}
+        <div className="flex flex-col overflow-y-auto h-[calc(100vh-64px)]">
           {links.map((link) => (
             <NavLink
               key={link.to}
