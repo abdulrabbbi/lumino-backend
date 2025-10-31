@@ -2,17 +2,27 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { BASE_URL } from '../utils/api';
 
-
 export const useConversionFunnel = () => {
   const [funnelData, setFunnelData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [dateRange, setDateRange] = useState({
+    startDate: '',
+    endDate: ''
+  });
 
-  const fetchFunnelData = async () => {
+  const fetchFunnelData = async (customDateRange = null) => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axios.get(`${BASE_URL}/get-funnel-data`);
+      
+      const range = customDateRange || dateRange;
+      const params = {};
+      if (range.startDate) params.startDate = range.startDate;
+      if (range.endDate) params.endDate = range.endDate;
+
+      const response = await axios.get(`${BASE_URL}/get-funnel-data`, { params });
+      
       if (response.data.success) {
         setFunnelData(response.data);
       } else {
@@ -30,5 +40,17 @@ export const useConversionFunnel = () => {
     fetchFunnelData();
   }, []);
 
-  return { funnelData, loading, error, fetchFunnelData };
+  const updateDateRange = (newDateRange) => {
+    setDateRange(newDateRange);
+    fetchFunnelData(newDateRange);
+  };
+
+  return { 
+    funnelData, 
+    loading, 
+    error, 
+    fetchFunnelData, 
+    dateRange,
+    updateDateRange 
+  };
 };

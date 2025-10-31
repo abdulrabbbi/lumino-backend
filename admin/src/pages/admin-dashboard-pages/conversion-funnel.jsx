@@ -1,9 +1,12 @@
-import React from 'react';
+/* eslint-disable no-unused-vars */
+import React, { useState } from 'react';
 import { useConversionFunnel } from '../../hooks/usefunnelConversion';
 import LoaderOverlay from '../../components/LoaderOverlay';
 
 const ConversionFunnel = () => {
-  const { funnelData, loading, error, fetchFunnelData } = useConversionFunnel();
+  const { funnelData, loading, error, fetchFunnelData, dateRange, updateDateRange } = useConversionFunnel();
+  const [localStartDate, setLocalStartDate] = useState('');
+  const [localEndDate, setLocalEndDate] = useState('');
 
   const getConversionRateColor = (rate) => {
     const numericRate = parseFloat(rate);
@@ -18,10 +21,24 @@ const ConversionFunnel = () => {
     return `${dropOff}%`;
   };
 
+  const handleApplyFilter = () => {
+    updateDateRange({
+      startDate: localStartDate,
+      endDate: localEndDate
+    });
+  };
+
+  const handleClearFilter = () => {
+    setLocalStartDate('');
+    setLocalEndDate('');
+    updateDateRange({
+      startDate: '',
+      endDate: ''
+    });
+  };
+
   if (loading) {
-    return (
-     <LoaderOverlay/>
-    );
+    return <LoaderOverlay/>;
   }
 
   if (error) {
@@ -71,13 +88,63 @@ const ConversionFunnel = () => {
   }
 
   return (
-    <div className="min-h-screen  ">
-      <div className="max-w-7xl mx-auto w-full ">
-        <div className="text-left mb-12">
+    <div className="min-h-screen">
+      <div className="max-w-7xl mx-auto w-full">
+        <div className="text-left mb-8">
           <h1 className="text-2xl font-bold inter-tight-700 text-gray-900 mb-3">
             Conversion Funnel Analytics
           </h1>
+        </div>
 
+        {/* Date Filter Section */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-8">
+          <div className="flex flex-wrap items-end gap-4">
+            <div className="flex-1 min-w-[200px]">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Start Date
+              </label>
+              <input
+                type="date"
+                value={localStartDate}
+                onChange={(e) => setLocalStartDate(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <div className="flex-1 min-w-[200px]">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                End Date
+              </label>
+              <input
+                type="date"
+                value={localEndDate}
+                onChange={(e) => setLocalEndDate(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={handleApplyFilter}
+                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition duration-200"
+              >
+                Apply Filter
+              </button>
+              {(localStartDate || localEndDate) && (
+                <button
+                  onClick={handleClearFilter}
+                  className="px-6 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium rounded-lg transition duration-200"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          </div>
+          {funnelData.dateRange && (funnelData.dateRange.startDate || funnelData.dateRange.endDate) && (
+            <div className="mt-4 text-sm text-gray-600">
+              Showing data from{' '}
+              {funnelData.dateRange.startDate ? new Date(funnelData.dateRange.startDate).toLocaleDateString() : 'beginning'} to{' '}
+              {funnelData.dateRange.endDate ? new Date(funnelData.dateRange.endDate).toLocaleDateString() : 'now'}
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
@@ -126,8 +193,6 @@ const ConversionFunnel = () => {
           </div>
         </div>
 
-
-
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
           <div className="px-8 py-6 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
             <h2 className="text-xl font-semibold inter-tight-700 text-gray-800">Funnel Overview</h2>
@@ -136,19 +201,19 @@ const ConversionFunnel = () => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-8 py-4 text-left text-sm inter-tight-400 text-gray-700   tracking-wider">
+                  <th className="px-8 py-4 text-left text-sm inter-tight-400 text-gray-700 tracking-wider">
                     Step
                   </th>
-                  <th className="px-8 py-4 text-left text-sm inter-tight-400 text-gray-700   tracking-wider">
+                  <th className="px-8 py-4 text-left text-sm inter-tight-400 text-gray-700 tracking-wider">
                     Description
                   </th>
-                  <th className="px-8 py-4 text-left text-sm inter-tight-400 text-gray-700   tracking-wider">
+                  <th className="px-8 py-4 text-left text-sm inter-tight-400 text-gray-700 tracking-wider">
                     Users
                   </th>
-                  <th className="px-8 py-4 text-left text-sm inter-tight-400 text-gray-700   tracking-wider">
+                  <th className="px-8 py-4 text-left text-sm inter-tight-400 text-gray-700 tracking-wider">
                     Conversion Rate
                   </th>
-                  <th className="px-8- py-4 text-left text-sm inter-tight-400 text-gray-700      tracking-wider">
+                  <th className="px-8 py-4 text-left text-sm inter-tight-400 text-gray-700 tracking-wider">
                     Drop-off
                   </th>
                 </tr>
