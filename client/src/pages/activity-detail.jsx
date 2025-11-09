@@ -2,7 +2,7 @@
 
 /* eslint-disable no-unused-vars */
 import { useEffect, useState } from "react"
-import { ArrowLeft, Clock, Users, Star, CheckCircle, X, Heart } from "lucide-react"
+import { ArrowLeft, Clock, Users, Star, CheckCircle, X, Heart, Printer } from "lucide-react"
 import { useParams, useNavigate, useLocation } from "react-router-dom"
 import DetailImage from "../../public/images/SVG-detail.svg"
 import DetailImage1 from "../../public/images/SVG-detail-1.svg"
@@ -125,6 +125,172 @@ function ActivityDetail() {
   const { markCompleted } = useMarkActivityCompleted()
   const { rateActivity } = useRateActivity()
   const { activity, loading, error } = useSingleActivity(id)
+
+  // Print functionality
+  const handlePrint = () => {
+    const printContent = document.getElementById('activity-print-content');
+    const originalContents = document.body.innerHTML;
+    
+    if (printContent) {
+      // Create a print-friendly version
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>${activity?.title || 'Activity'} - Print</title>
+          <style>
+            body { 
+              font-family: Arial, sans-serif; 
+              line-height: 1.6; 
+              color: #333; 
+              max-width: 800px; 
+              margin: 0 auto; 
+              padding: 20px;
+            }
+            .print-header { 
+              text-align: center; 
+              border-bottom: 2px solid #333; 
+              padding-bottom: 20px; 
+              margin-bottom: 30px;
+            }
+            .print-title { 
+              font-size: 24px; 
+              font-weight: bold; 
+              margin-bottom: 10px;
+              color: #079A68;
+            }
+            .print-section { 
+              margin-bottom: 25px; 
+              page-break-inside: avoid;
+            }
+            .print-section-title { 
+              font-size: 18px; 
+              font-weight: bold; 
+              margin-bottom: 10px; 
+              border-bottom: 1px solid #ddd; 
+              padding-bottom: 5px;
+              color: #079A68;
+            }
+            .print-details { 
+              display: grid; 
+              grid-template-columns: 1fr 1fr; 
+              gap: 15px; 
+              margin-bottom: 20px;
+            }
+            .print-detail-item { 
+              margin-bottom: 8px;
+            }
+            .print-detail-label { 
+              font-weight: bold; 
+              color: #666;
+            }
+            .instructions-list { 
+              margin-left: 20px;
+            }
+            .instruction-step { 
+              margin-bottom: 10px;
+            }
+            .materials-box { 
+              background: #f9f9f9; 
+              border: 1px solid #ddd; 
+              padding: 15px; 
+              border-radius: 5px;
+            }
+            .footer { 
+              text-align: center; 
+              margin-top: 40px; 
+              font-size: 12px; 
+              color: #666; 
+              border-top: 1px solid #ddd; 
+              padding-top: 20px;
+            }
+            @media print {
+              body { margin: 0; }
+              .no-print { display: none !important; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="print-header">
+            <div class="print-title">${activity?.title || 'Activity'}</div>
+            <div style="font-size: 14px; color: #666;">Gedrukt op ${new Date().toLocaleDateString('nl-NL')}</div>
+          </div>
+          
+          <div class="print-section">
+            <div class="print-section-title">Activiteit Details</div>
+            <div class="print-details">
+              <div class="print-detail-item">
+                <span class="print-detail-label">Leergebied:</span> ${activity?.learningDomain || 'Niet gespecificeerd'}
+              </div>
+              <div class="print-detail-item">
+                <span class="print-detail-label">Leeftijd:</span> ${activity?.ageGroup || 'Niet gespecificeerd'}
+              </div>
+              <div class="print-detail-item">
+                <span class="print-detail-label">Duur:</span> ${activity?.time || '0'} minuten
+              </div>
+              ${activity?.nickname ? `<div class="print-detail-item">
+                <span class="print-detail-label">Gemaakt door:</span> ${activity.nickname}
+              </div>` : ''}
+            </div>
+          </div>
+          
+          <div class="print-section">
+            <div class="print-section-title">Over deze activiteit</div>
+            <p>${activity?.description || 'Geen beschrijving beschikbaar.'}</p>
+          </div>
+          
+          <div class="print-section">
+            <div class="print-section-title">Benodigdheden</div>
+            <div class="materials-box">
+              <p>${activity?.materials || 'Geen specifieke materialen benodigd.'}</p>
+            </div>
+          </div>
+          
+          <div class="print-section">
+            <div class="print-section-title">Stap voor stap instructies</div>
+            <div class="instructions-list">
+              ${activity?.instructions?.map((step, index) => 
+                `<div class="instruction-step"><strong>Stap ${index + 1}:</strong> ${step}</div>`
+              ).join('') || '<p>Geen instructies beschikbaar.</p>'}
+            </div>
+          </div>
+          
+          ${activity?.effect ? `
+          <div class="print-section">
+            <div class="print-section-title">Effect op je kind</div>
+            <p>${activity.effect}</p>
+          </div>
+          ` : ''}
+          
+          <div class="footer">
+            <p>© ${new Date().getFullYear()} - Gedrukt vanuit de activiteiten applicatie</p>
+          </div>
+        </body>
+        </html>
+      `);
+      
+      printWindow.document.close();
+      printWindow.focus();
+      
+      // Wait for content to load before printing
+      setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+      }, 250);
+    } else {
+      // Fallback: print the entire page but hide non-essential elements
+      const elementsToHide = document.querySelectorAll('.no-print');
+      elementsToHide.forEach(el => el.style.display = 'none');
+      
+      window.print();
+      
+      // Restore elements after printing
+      setTimeout(() => {
+        elementsToHide.forEach(el => el.style.display = '');
+      }, 500);
+    }
+  }
 
   // Fetch favorite status when activity loads
   useEffect(() => {
@@ -424,6 +590,9 @@ function ActivityDetail() {
 
   return (
     <>
+      {/* Hidden print content */}
+      <div id="activity-print-content" style={{ display: 'none' }}></div>
+      
       {/* <ToastContainer style={{ zIndex: 100000000 }} /> */}
       <div className="min-h-screen bg-gray-50 pb-10">
         <CelebrationSparkles isVisible={showCelebration} onComplete={handleCelebrationComplete} />
@@ -475,32 +644,34 @@ function ActivityDetail() {
               <span className="text-sm inter-tight-400 font-medium">Terug naar activiteiten</span>
             </button>
             
-            {/* Favorite Button - Positioned at top right for easy access */}
+            {/* Print Button */}
             <button
-              onClick={toggleFavorite}
-              disabled={favoriteLoading}
-              className="flex items-center space-x-2 px-4 py-2 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 transition-colors disabled:opacity-50"
-              aria-label={isFavorite ? "Verwijder uit favorieten" : "Voeg toe aan favorieten"}
+              onClick={handlePrint}
+              className="flex items-center space-x-2 px-4 py-2 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 transition-colors no-print"
+              aria-label="Print activiteit"
             >
-              {isFavorite ? (
-                <AiFillHeart size={20} color="#ef4444" className={favoriteLoading ? "opacity-70" : ""} />
-              ) : (
-                <AiOutlineHeart size={20} color="#6b7280" className={favoriteLoading ? "opacity-70" : ""} />
-              )}
-              <span className="text-sm inter-tight-400 text-gray-700 hidden sm:inline">
-                {isFavorite ? "Favoriet" : "Toevoegen aan favorieten"}
-              </span>
+              <Printer className="w-4 h-4" />
+              <span className="text-sm inter-tight-400 text-gray-700 hidden sm:inline">Printen</span>
             </button>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6 p-4 rounded-2xl bg-[#F1F6FB]">
               <div className={`${domainColor.split(" ")[0]} rounded-2xl text-white p-8 text-center relative`}>
+                {/* Print button in header for easy access */}
+                <button
+                  onClick={handlePrint}
+                  className="absolute top-4 right-16 p-2 bg-white/20 rounded-full hover:bg-white/30 transition-colors no-print"
+                  aria-label="Print activiteit"
+                >
+                  <Printer className="w-5 h-5" />
+                </button>
+                
                 {/* Favorite button in the header area - alternative position */}
                 <button
                   onClick={toggleFavorite}
                   disabled={favoriteLoading}
-                  className="absolute top-4 right-4 p-2 bg-white/20 rounded-full hover:bg-white/30 transition-colors disabled:opacity-50"
+                  className="absolute top-4 right-4 p-2 bg-white/20 rounded-full hover:bg-white/30 transition-colors disabled:opacity-50 no-print"
                   aria-label={isFavorite ? "Verwijder uit favorieten" : "Voeg toe aan favorieten"}
                 >
                   {isFavorite ? (
@@ -588,24 +759,26 @@ function ActivityDetail() {
                 )}
               </div>
 
-              {/* Favorite button near the complete button - good secondary position */}
-              <div className="flex md:flex-row flex-col gap-2 w-full space-x-4">
-                <button
-                  onClick={toggleFavorite}
-                  disabled={favoriteLoading}
-                  className="flex-1 w-full flex items-center justify-center space-x-2 px-6 py-3 border border-gray-300 bg-white rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50"
-                >
-                  {isFavorite ? (
-                    <AiFillHeart size={20} color="#ef4444" className={favoriteLoading ? "opacity-70" : ""} />
-                  ) : (
-                    <AiOutlineHeart size={20} color="#6b7280" className={favoriteLoading ? "opacity-70" : ""} />
-                  )}
-                  <span className="inter-tight-400 font-medium">
-                    {isFavorite ? "Verwijder uit favorieten" : "Toevoegen aan favorieten"}
-                  </span>
-                </button>
+              {/* Action buttons including Print */}
+              <div className="flex md:flex-row flex-col gap-2 w-full space-x-4 no-print">
+                <div className="flex flex-1 gap-2">
+                  
+                  <button
+                    onClick={toggleFavorite}
+                    disabled={favoriteLoading}
+                    className="flex-1 flex items-center justify-center space-x-2 px-6 py-3 border border-gray-300 bg-white rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  >
+                    {isFavorite ? (
+                      <AiFillHeart size={20} color="#ef4444" className={favoriteLoading ? "opacity-70" : ""} />
+                    ) : (
+                      <AiOutlineHeart size={20} color="#6b7280" className={favoriteLoading ? "opacity-70" : ""} />
+                    )}
+                    <span className="inter-tight-400 font-medium">
+                      {isFavorite ? "Verwijder uit favorieten" : "Toevoegen aan favorieten"}
+                    </span>
+                  </button>
 
-                <button
+                  <button
                   onClick={handleMarkComplete}
                   disabled={completed || isMarkingComplete}
                   className={`flex-1 ${
@@ -619,7 +792,14 @@ function ActivityDetail() {
                   <CheckCircle className="w-5 h-5" />
                   <span>{completed ? "Voltooid" : isMarkingComplete ? "Bezig..." : "Markeer als voltooid"}</span>
                 </button>
+                </div>
+
+                
+
+
+                
               </div>
+             
             </div>
 
             <div className="space-y-6">
@@ -655,6 +835,19 @@ function ActivityDetail() {
                       <span className="inter-tight-400 text-xs text-gray-500">
                         ({activity.ratingCount || 0} {activity.ratingCount === 1 ? 'beoordeling' : 'beoordelingen'})
                       </span>
+                    </button>
+                  </div>
+                  {/* Print option in details panel */}
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-100 no-print">
+                    <div className="flex items-center text-[#4B5563]">
+                      <Printer className="w-4 h-4 mr-2" />
+                      <span className="text-sm inter-tight-400">Printen</span>
+                    </div>
+                    <button
+                      onClick={handlePrint}
+                      className="text-sm text-blue-600 hover:text-blue-800 cursor-pointer font-medium"
+                    >
+                      Print activiteit
                     </button>
                   </div>
                   {/* Favorite status in details panel */}
@@ -715,7 +908,7 @@ function ActivityDetail() {
         </div>
 
         {showRatingModal && (
-          <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center z-50 md:p-4 p-2">
+          <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center z-50 md:p-4 p-2 no-print">
             <div className="bg-white rounded-3xl p-8 max-w-xl w-full mx-4 relative">
               <button
                 onClick={() => setShowRatingModal(false)}
