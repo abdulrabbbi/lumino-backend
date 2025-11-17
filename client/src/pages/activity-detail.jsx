@@ -1,8 +1,6 @@
-"use client"
-
 /* eslint-disable no-unused-vars */
 import { useEffect, useState } from "react"
-import { ArrowLeft, Clock, Users, Star, CheckCircle, X, Heart, Printer } from "lucide-react"
+import { ArrowLeft, Clock, Users, Star, CheckCircle, X, Heart, Printer } from 'lucide-react'
 import { useParams, useNavigate, useLocation } from "react-router-dom"
 import DetailImage from "../../public/images/SVG-detail.svg"
 import DetailImage1 from "../../public/images/SVG-detail-1.svg"
@@ -119,177 +117,485 @@ function ActivityDetail() {
   const [isSubmittingRating, setIsSubmittingRating] = useState(false)
   const [isFavorite, setIsFavorite] = useState(false)
   const [favoriteLoading, setFavoriteLoading] = useState(false)
-
   const [showReminder, setShowReminder] = useState(false)
 
   const { markCompleted } = useMarkActivityCompleted()
   const { rateActivity } = useRateActivity()
   const { activity, loading, error } = useSingleActivity(id)
 
-  // Print functionality
   const handlePrint = () => {
-    const printContent = document.getElementById('activity-print-content');
-    const originalContents = document.body.innerHTML;
+    const printWindow = window.open('', '_blank')
     
-    if (printContent) {
-      // Create a print-friendly version
-      const printWindow = window.open('', '_blank');
-      printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>${activity?.title || 'Activity'} - Print</title>
-          <style>
-            body { 
-              font-family: Arial, sans-serif; 
-              line-height: 1.6; 
-              color: #333; 
-              max-width: 800px; 
-              margin: 0 auto; 
-              padding: 20px;
+    // Get current computed styles for colors and fonts
+    const headerElement = document.querySelector('[class*="domainColor"]')
+    const computedStyle = headerElement ? window.getComputedStyle(headerElement) : {}
+    
+    const printHTML = `
+      <!DOCTYPE html>
+      <html lang="nl">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${activity?.title || 'Activity'} - Print</title>
+        <style>
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+          
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: white;
+            padding: 40px 20px;
+          }
+          
+          .print-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+          }
+          
+          .print-header-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e5e7eb;
+          }
+          
+          .logo-section {
+            display: flex;
+            align-items: center;
+          }
+          
+          .logo-section img {
+            height: 40px;
+            width: auto;
+            object-fit: contain;
+          }
+          
+          .print-date {
+            font-size: 12px;
+            color: #666;
+          }
+          
+          .print-main-header {
+            background: linear-gradient(135deg, #079A68 0%, #20C25F 100%);
+            color: white;
+            padding: 40px 30px;
+            border-radius: 20px;
+            text-align: center;
+            margin-bottom: 30px;
+          }
+          
+          .domain-icon {
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+          }
+          
+          .domain-icon img {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+          }
+          
+          .print-title {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            line-height: 1.3;
+          }
+          
+          .print-domain-badge {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-top: 10px;
+          }
+          
+          .print-creator {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            margin-top: 10px;
+            margin-left: 10px;
+          }
+          
+          .print-content {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+          }
+          
+          .print-section {
+            margin-bottom: 0;
+            page-break-inside: avoid;
+          }
+          
+          /* Zorg ervoor dat materialen en instructies samen blijven */
+          .instructions-group {
+            page-break-inside: avoid;
+            break-inside: avoid;
+          }
+          
+          .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            color: #1f2937;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+          }
+          
+          .section-icon {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+          }
+          
+          .section-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+          }
+          
+          .description-text {
+            font-size: 15px;
+            color: #374151;
+            line-height: 1.6;
+            margin-bottom: 10px;
+          }
+          
+          .materials-box {
+            background: #f0fdf4;
+            border: 2px solid #bbf7d0;
+            padding: 20px;
+            border-radius: 15px;
+            font-size: 14px;
+            color: #166534;
+            line-height: 1.6;
+            margin-bottom: 5px;
+          }
+          
+          .steps-container {
+            space: 15px;
+          }
+          
+          .step {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            page-break-inside: avoid;
+          }
+          
+          .step-number {
+            flex-shrink: 0;
+            width: 30px;
+            height: 30px;
+            background: #3b82f6;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+          }
+          
+          .step-text {
+            flex-grow: 1;
+            font-size: 14px;
+            color: #4b5563;
+            line-height: 1.6;
+            padding-top: 3px;
+          }
+          
+          .activity-info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            background: #f9fafb;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            page-break-inside: avoid;
+          }
+          
+          .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+          }
+          
+          .info-label {
+            font-size: 12px;
+            color: #666;
+            font-weight: 600;
+            text-transform: uppercase;
+          }
+          
+          .info-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1f2937;
+          }
+          
+          .divider {
+            border: none;
+            border-top: 1px solid #e5e7eb;
+            margin: 20px 0;
+          }
+          
+          .print-footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #e5e7eb;
+            font-size: 12px;
+            color: #666;
+          }
+          
+          .learning-domain-section {
+            background: white;
+            border: 1px solid #e5e7eb;
+            padding: 20px;
+            border-radius: 15px;
+            page-break-inside: avoid;
+          }
+          
+          .domain-info {
+            display: flex;
+            gap: 15px;
+          }
+          
+          .domain-info-icon {
+            width: 32px;
+            height: 32px;
+            flex-shrink: 0;
+          }
+          
+          .domain-info-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+          }
+          
+          .domain-info-content {
+            flex-grow: 1;
+          }
+          
+          .domain-info-title {
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 5px;
+            font-size: 15px;
+          }
+          
+          .domain-info-description {
+            font-size: 13px;
+            color: #4b5563;
+            line-height: 1.5;
+          }
+          
+          /* Print-specifieke optimalisaties */
+          @media print {
+            body {
+              background: white;
+              padding: 0;
+              font-size: 12pt;
             }
-            .print-header { 
-              text-align: center; 
-              border-bottom: 2px solid #333; 
-              padding-bottom: 20px; 
-              margin-bottom: 30px;
+            .print-container {
+              box-shadow: none;
+              border: none;
+              max-width: 100%;
             }
-            .print-title { 
-              font-size: 24px; 
-              font-weight: bold; 
-              margin-bottom: 10px;
-              color: #079A68;
+            .print-content {
+              gap: 15px;
             }
-            .print-section { 
-              margin-bottom: 25px; 
+            .print-section {
+              margin-bottom: 15px;
+            }
+            /* Forceer dat materialen en instructies op dezelfde pagina blijven */
+            .instructions-group {
               page-break-inside: avoid;
+              break-inside: avoid-page;
             }
-            .print-section-title { 
-              font-size: 18px; 
-              font-weight: bold; 
-              margin-bottom: 10px; 
-              border-bottom: 1px solid #ddd; 
-              padding-bottom: 5px;
-              color: #079A68;
-            }
-            .print-details { 
-              display: grid; 
-              grid-template-columns: 1fr 1fr; 
-              gap: 15px; 
+            /* Verminder padding voor betere paginering */
+            .print-main-header {
+              padding: 25px 20px;
               margin-bottom: 20px;
             }
-            .print-detail-item { 
-              margin-bottom: 8px;
+            .materials-box, .steps-container {
+              page-break-inside: avoid;
             }
-            .print-detail-label { 
-              font-weight: bold; 
-              color: #666;
-            }
-            .instructions-list { 
-              margin-left: 20px;
-            }
-            .instruction-step { 
+            /* Optimaliseer stap-weergave voor print */
+            .step {
               margin-bottom: 10px;
+              page-break-inside: avoid;
             }
-            .materials-box { 
-              background: #f9f9f9; 
-              border: 1px solid #ddd; 
-              padding: 15px; 
-              border-radius: 5px;
+            * {
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
+              color-adjust: exact !important;
             }
-            .footer { 
-              text-align: center; 
-              margin-top: 40px; 
-              font-size: 12px; 
-              color: #666; 
-              border-top: 1px solid #ddd; 
-              padding-top: 20px;
-            }
-            @media print {
-              body { margin: 0; }
-              .no-print { display: none !important; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="print-header">
-            <div class="print-title">${activity?.title || 'Activity'}</div>
-            <div style="font-size: 14px; color: #666;">Gedrukt op ${new Date().toLocaleDateString('nl-NL')}</div>
-          </div>
-          
-          <div class="print-section">
-            <div class="print-section-title">Activiteit Details</div>
-            <div class="print-details">
-              <div class="print-detail-item">
-                <span class="print-detail-label">Leergebied:</span> ${activity?.learningDomain || 'Niet gespecificeerd'}
-              </div>
-              <div class="print-detail-item">
-                <span class="print-detail-label">Leeftijd:</span> ${activity?.ageGroup || 'Niet gespecificeerd'}
-              </div>
-              <div class="print-detail-item">
-                <span class="print-detail-label">Duur:</span> ${activity?.time || '0'} minuten
-              </div>
-              ${activity?.nickname ? `<div class="print-detail-item">
-                <span class="print-detail-label">Gemaakt door:</span> ${activity.nickname}
-              </div>` : ''}
+          }
+        </style>
+      </head>
+      <body>
+        <div class="print-container">
+          <!-- Header with Logo -->
+          <div class="print-header-top">
+            <div class="logo-section">
+              <img src="/logo.svg" alt="Logo" />
+            </div>
+            <div class="print-date">
+              Gedrukt op ${new Date().toLocaleDateString('nl-NL', { year: 'numeric', month: 'long', day: 'numeric' })}
             </div>
           </div>
           
-          <div class="print-section">
-            <div class="print-section-title">Over deze activiteit</div>
-            <p>${activity?.description || 'Geen beschrijving beschikbaar.'}</p>
-          </div>
-          
-          <div class="print-section">
-            <div class="print-section-title">Benodigdheden</div>
-            <div class="materials-box">
-              <p>${activity?.materials || 'Geen specifieke materialen benodigd.'}</p>
+          <!-- Main Header Section -->
+          <div class="print-main-header">
+            <div class="domain-icon">
+              <img src="${activity?.learningDomain ? learningDomainImages[activity.learningDomain] : '/placeholder.svg'}" alt="Domain" />
+            </div>
+            <h1 class="print-title">${activity?.title || 'Activity'}</h1>
+            <div>
+              <span class="print-domain-badge">${activity?.learningDomain || 'Unknown'}</span>
+              ${activity?.nickname ? `<span class="print-creator">Gemaakt door: ${activity.nickname}</span>` : ''}
             </div>
           </div>
           
-          <div class="print-section">
-            <div class="print-section-title">Stap voor stap instructies</div>
-            <div class="instructions-list">
-              ${activity?.instructions?.map((step, index) => 
-                `<div class="instruction-step"><strong>Stap ${index + 1}:</strong> ${step}</div>`
-              ).join('') || '<p>Geen instructies beschikbaar.</p>'}
+          <!-- Activity Info Grid -->
+          <div class="activity-info-grid">
+            <div class="info-item">
+              <span class="info-label">⏱ Duur</span>
+              <span class="info-value">${activity?.time || '0'} minuten</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">👥 Leeftijd</span>
+              <span class="info-value">${activity?.ageGroup || 'Niet gespecificeerd'}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">📚 Leergebied</span>
+              <span class="info-value">${activity?.learningDomain || 'Unknown'}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">⭐ Gemiddelde Beoordeling</span>
+              <span class="info-value">${(activity?.averageRating || 0).toFixed(1)}/10</span>
             </div>
           </div>
           
-          ${activity?.effect ? `
-          <div class="print-section">
-            <div class="print-section-title">Effect op je kind</div>
-            <p>${activity.effect}</p>
-          </div>
-          ` : ''}
+          <hr class="divider" />
           
-          <div class="footer">
-            <p>© ${new Date().getFullYear()} - Gedrukt vanuit de activiteiten applicatie</p>
+          <div class="print-content">
+            <!-- Description Section -->
+            <div class="print-section">
+              <h2 class="section-title">
+                <span class="section-icon">📝</span>
+                Over deze activiteit
+              </h2>
+              <p class="description-text">${activity?.description || 'Geen beschrijving beschikbaar.'}</p>
+            </div>
+            
+            <!-- Materials and Instructions Group - blijft bij elkaar -->
+            <div class="instructions-group">
+              <!-- Materials Section -->
+              <div class="print-section">
+                <h2 class="section-title">
+                  <span class="section-icon">🛠</span>
+                  Benodigdheden
+                </h2>
+                <div class="materials-box">
+                  ${activity?.materials || 'Geen specifieke materialen benodigd.'}
+                </div>
+              </div>
+              
+              <!-- Instructions Section -->
+              <div class="print-section">
+                <h2 class="section-title">
+                  <span class="section-icon">📋</span>
+                  Stap voor stap instructies
+                </h2>
+                <div class="steps-container">
+                  ${activity?.instructions?.map((step, index) => `
+                    <div class="step">
+                      <div class="step-number">${index + 1}</div>
+                      <div class="step-text">${step}</div>
+                    </div>
+                  `).join('') || '<p class="description-text">Geen instructies beschikbaar.</p>'}
+                </div>
+              </div>
+            </div>
+            
+            <!-- Effect Section -->
+            <div class="print-section">
+              <h2 class="section-title">
+                <span class="section-icon">✨</span>
+                Effect op je kind
+              </h2>
+              <p class="description-text">
+                ${activity?.effect || `This activity helps children develop various skills related to ${activity?.learningDomain}.`}
+              </p>
+            </div>
+            
+            <!-- Learning Domain Info -->
+            <div class="print-section">
+              <div class="learning-domain-section">
+                <h2 class="section-title">
+                  <span class="section-icon">
+                    <img src="${activity?.learningDomain ? learningDomainImages[activity.learningDomain] : '/placeholder.svg'}" alt="Domain" />
+                  </span>
+                  ${activity?.learningDomain || 'Learning Domain'}
+                </h2>
+                <div class="domain-info">
+                  <p class="domain-info-description">
+                    ${LearningDomainDescription[activity?.learningDomain] || 'Information about this learning domain.'}
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
-        </body>
-        </html>
-      `);
-      
-      printWindow.document.close();
-      printWindow.focus();
-      
-      // Wait for content to load before printing
-      setTimeout(() => {
-        printWindow.print();
-        printWindow.close();
-      }, 250);
-    } else {
-      // Fallback: print the entire page but hide non-essential elements
-      const elementsToHide = document.querySelectorAll('.no-print');
-      elementsToHide.forEach(el => el.style.display = 'none');
-      
-      window.print();
-      
-      // Restore elements after printing
-      setTimeout(() => {
-        elementsToHide.forEach(el => el.style.display = '');
-      }, 500);
-    }
+          
+          <hr class="divider" />
+          
+          <!-- Footer -->
+          <div class="print-footer">
+            <p>© ${new Date().getFullYear()} - Activiteiten Applicatie</p>
+            <p>Deze activiteit is afgeprint op ${new Date().toLocaleDateString('nl-NL')}</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `
+    
+    printWindow.document.write(printHTML)
+    printWindow.document.close()
+    printWindow.focus()
+    
+    setTimeout(() => {
+      printWindow.print()
+    }, 250)
   }
 
   // Fetch favorite status when activity loads
@@ -330,7 +636,7 @@ function ActivityDetail() {
     if (!completed) {
       interval = setInterval(() => {
         setShowReminder(true)
-      }, 180000) // Every 3 minutes
+      }, 180000)
     }
 
     return () => {
@@ -345,7 +651,6 @@ function ActivityDetail() {
     console.log("[ActivityDetail] Handling back with saved state:", savedState)
 
     if (savedState) {
-      // Navigate back to activities with restoration flag
       navigate("/activities", {
         state: {
           fromActivity: true,
@@ -354,7 +659,6 @@ function ActivityDetail() {
         replace: false,
       })
     } else {
-      // Fallback navigation
       navigate("/activities", { state: { fromActivity: true } })
     }
   }
@@ -376,7 +680,7 @@ function ActivityDetail() {
     }
   }
 
-  // Favorite toggle function
+
   const toggleFavorite = async () => {
     const authToken = localStorage.getItem("authToken")
     if (!authToken) {
@@ -386,7 +690,6 @@ function ActivityDetail() {
 
     if (favoriteLoading) return
 
-    // Optimistic update
     const wasFavorite = isFavorite
     setIsFavorite(!wasFavorite)
     setFavoriteLoading(true)
@@ -403,19 +706,16 @@ function ActivityDetail() {
       )
 
       if (response.data?.success) {
-        // Ensure UI matches backend response
         setIsFavorite(!!response.data.isFavorite)
         if (response.data?.message) {
           toast.success(response.data.message)
         }
       } else {
-        // Rollback on unexpected response
         setIsFavorite(wasFavorite)
         toast.error("Fout bij bijwerken favorieten")
       }
     } catch (error) {
       console.error("Error toggling favorite:", error)
-      // Rollback on error
       setIsFavorite(wasFavorite)
       toast.error("Fout bij bijwerken favorieten")
     } finally {
@@ -456,7 +756,6 @@ function ActivityDetail() {
 
   const handleReminderAction = () => {
     setShowReminder(false)
-    // Scroll to the complete button
     const completeButtons = document.querySelectorAll("button")
     let completeButton = null
 
@@ -469,7 +768,6 @@ function ActivityDetail() {
 
     if (completeButton) {
       completeButton.scrollIntoView({ behavior: "smooth", block: "center" })
-      // Add a slight highlight effect
       completeButton.classList.add("ring-2", "ring-blue-500", "ring-opacity-50")
       setTimeout(() => {
         completeButton.classList.remove("ring-2", "ring-blue-500", "ring-opacity-50")
@@ -522,11 +820,9 @@ function ActivityDetail() {
 
       await rateActivity(id, selectedRating)
 
-      // Close modal and reset
       setShowRatingModal(false)
       setSelectedRating(0)
 
-      // Navigate back after short delay
       setTimeout(() => {
         handleReturnToOrigin()
       }, 1000)
@@ -590,10 +886,6 @@ function ActivityDetail() {
 
   return (
     <>
-      {/* Hidden print content */}
-      <div id="activity-print-content" style={{ display: 'none' }}></div>
-      
-      {/* <ToastContainer style={{ zIndex: 100000000 }} /> */}
       <div className="min-h-screen bg-gray-50 pb-10">
         <CelebrationSparkles isVisible={showCelebration} onComplete={handleCelebrationComplete} />
         <BadgeModal isVisible={showBadgeModal} onClose={handleBadgeModalClose} badges={earnedBadges} />
@@ -667,7 +959,7 @@ function ActivityDetail() {
                   <Printer className="w-5 h-5" />
                 </button>
                 
-                {/* Favorite button in the header area - alternative position */}
+                {/* Favorite button in the header area */}
                 <button
                   onClick={toggleFavorite}
                   disabled={favoriteLoading}
@@ -759,7 +1051,7 @@ function ActivityDetail() {
                 )}
               </div>
 
-              {/* Action buttons including Print */}
+              {/* Action buttons */}
               <div className="flex md:flex-row flex-col gap-2 w-full space-x-4 no-print">
                 <div className="flex flex-1 gap-2">
                   
@@ -793,11 +1085,6 @@ function ActivityDetail() {
                   <span>{completed ? "Voltooid" : isMarkingComplete ? "Bezig..." : "Markeer als voltooid"}</span>
                 </button>
                 </div>
-
-                
-
-
-                
               </div>
              
             </div>
@@ -949,7 +1236,7 @@ function ActivityDetail() {
                   </button>
                   <button
                     onClick={(e) => {
-                      e.stopPropagation() // Prevent event bubbling
+                      e.stopPropagation()
                       handleSubmitRating()
                     }}
                     disabled={selectedRating === 0 || isSubmittingRating}
