@@ -124,479 +124,120 @@ function ActivityDetail() {
   const { activity, loading, error } = useSingleActivity(id)
 
   const handlePrint = () => {
-    const printWindow = window.open('', '_blank')
+    const printStyle = document.createElement('style')
+    printStyle.innerHTML = `
+      @media print {
+        /* Hide elements */
+        nav, .fixed.bottom-0, .faqs-section, .no-print,
+        footer, [class*="faq"], [class*="Faqs"], [class*="footer"] {
+          display: none !important;
+        }
+        
+        body {
+          background: white !important;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+        
+        @page {
+          margin: 80px 15mm 20mm 15mm;
+          size: A4;
+        }
+        
+        * {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        
+        .min-h-screen {
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+        
+        /* Print header */
+        .print-header {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 70px;
+          background: white !important;
+          z-index: 9999;
+          display: flex !important;
+          align-items: center;
+          padding: 0 20px;
+          border-bottom: 2px solid #000 !important;
+        }
+        
+        .print-header img {
+          width: auto !important;
+          height: 40px !important;
+          max-width: 150px !important;
+          display: block !important;
+        }
+      }
+    `
+    document.head.appendChild(printStyle)
     
-    // Get current computed styles for colors and fonts
-    const headerElement = document.querySelector('[class*="domainColor"]')
-    const computedStyle = headerElement ? window.getComputedStyle(headerElement) : {}
+    // Existing logo dhundho aur clone karo
+    const findLogo = () => {
+      const selectors = [
+        'nav img',
+        '.logo img',
+        'header img',
+        '[class*="logo"] img',
+        'img[src*="logo"]',
+        'img[alt*="logo" i]',
+        'img[alt*="brand" i]'
+      ]
+      
+      for (let selector of selectors) {
+        const logo = document.querySelector(selector)
+        if (logo && logo.src) {
+          return logo
+        }
+      }
+      return null
+    }
     
-    const printHTML = `
-      <!DOCTYPE html>
-      <html lang="nl">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>${activity?.title || 'Activity'} - Print</title>
-        <style>
-          * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-          }
-          
-          body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
-            line-height: 1.6;
-            color: #333;
-            background: white;
-            padding: 40px 20px;
-          }
-          
-          .print-container {
-            max-width: 900px;
-            margin: 0 auto;
-            background: white;
-          }
-          
-          .print-header-top {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 2px solid #e5e7eb;
-          }
-          
-          .logo-section {
-            display: flex;
-            align-items: center;
-          }
-          
-          .logo-section img {
-            height: 40px;
-            width: auto;
-            object-fit: contain;
-          }
-          
-          .print-date {
-            font-size: 12px;
-            color: #666;
-          }
-          
-          .print-main-header {
-            background: linear-gradient(135deg, #079A68 0%, #20C25F 100%);
-            color: white;
-            padding: 40px 30px;
-            border-radius: 20px;
-            text-align: center;
-            margin-bottom: 30px;
-          }
-          
-          .domain-icon {
-            width: 60px;
-            height: 60px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 20px;
-          }
-          
-          .domain-icon img {
-            width: 40px;
-            height: 40px;
-            object-fit: contain;
-          }
-          
-          .print-title {
-            font-size: 28px;
-            font-weight: 700;
-            margin-bottom: 15px;
-            line-height: 1.3;
-          }
-          
-          .print-domain-badge {
-            display: inline-block;
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: 600;
-            margin-top: 10px;
-          }
-          
-          .print-creator {
-            display: inline-block;
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 13px;
-            margin-top: 10px;
-            margin-left: 10px;
-          }
-          
-          .print-content {
-            display: flex;
-            flex-direction: column;
-            gap: 25px;
-          }
-          
-          .print-section {
-            margin-bottom: 0;
-            page-break-inside: avoid;
-          }
-          
-          /* Zorg ervoor dat materialen en instructies samen blijven */
-          .instructions-group {
-            page-break-inside: avoid;
-            break-inside: avoid;
-          }
-          
-          .section-title {
-            font-size: 18px;
-            font-weight: 700;
-            margin-bottom: 15px;
-            color: #1f2937;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-          }
-          
-          .section-icon {
-            width: 24px;
-            height: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-          }
-          
-          .section-icon img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-          }
-          
-          .description-text {
-            font-size: 15px;
-            color: #374151;
-            line-height: 1.6;
-            margin-bottom: 10px;
-          }
-          
-          .materials-box {
-            background: #f0fdf4;
-            border: 2px solid #bbf7d0;
-            padding: 20px;
-            border-radius: 15px;
-            font-size: 14px;
-            color: #166534;
-            line-height: 1.6;
-            margin-bottom: 5px;
-          }
-          
-          .steps-container {
-            space: 15px;
-          }
-          
-          .step {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 15px;
-            page-break-inside: avoid;
-          }
-          
-          .step-number {
-            flex-shrink: 0;
-            width: 30px;
-            height: 30px;
-            background: #3b82f6;
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 14px;
-          }
-          
-          .step-text {
-            flex-grow: 1;
-            font-size: 14px;
-            color: #4b5563;
-            line-height: 1.6;
-            padding-top: 3px;
-          }
-          
-          .activity-info-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            background: #f9fafb;
-            padding: 20px;
-            border-radius: 15px;
-            margin-bottom: 20px;
-            page-break-inside: avoid;
-          }
-          
-          .info-item {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-          }
-          
-          .info-label {
-            font-size: 12px;
-            color: #666;
-            font-weight: 600;
-            text-transform: uppercase;
-          }
-          
-          .info-value {
-            font-size: 16px;
-            font-weight: 600;
-            color: #1f2937;
-          }
-          
-          .divider {
-            border: none;
-            border-top: 1px solid #e5e7eb;
-            margin: 20px 0;
-          }
-          
-          .print-footer {
-            text-align: center;
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 2px solid #e5e7eb;
-            font-size: 12px;
-            color: #666;
-          }
-          
-          .learning-domain-section {
-            background: white;
-            border: 1px solid #e5e7eb;
-            padding: 20px;
-            border-radius: 15px;
-            page-break-inside: avoid;
-          }
-          
-          .domain-info {
-            display: flex;
-            gap: 15px;
-          }
-          
-          .domain-info-icon {
-            width: 32px;
-            height: 32px;
-            flex-shrink: 0;
-          }
-          
-          .domain-info-icon img {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-          }
-          
-          .domain-info-content {
-            flex-grow: 1;
-          }
-          
-          .domain-info-title {
-            font-weight: 700;
-            color: #1f2937;
-            margin-bottom: 5px;
-            font-size: 15px;
-          }
-          
-          .domain-info-description {
-            font-size: 13px;
-            color: #4b5563;
-            line-height: 1.5;
-          }
-          
-          /* Print-specifieke optimalisaties */
-          @media print {
-            body {
-              background: white;
-              padding: 0;
-              font-size: 12pt;
-            }
-            .print-container {
-              box-shadow: none;
-              border: none;
-              max-width: 100%;
-            }
-            .print-content {
-              gap: 15px;
-            }
-            .print-section {
-              margin-bottom: 15px;
-            }
-            /* Forceer dat materialen en instructies op dezelfde pagina blijven */
-            .instructions-group {
-              page-break-inside: avoid;
-              break-inside: avoid-page;
-            }
-            /* Verminder padding voor betere paginering */
-            .print-main-header {
-              padding: 25px 20px;
-              margin-bottom: 20px;
-            }
-            .materials-box, .steps-container {
-              page-break-inside: avoid;
-            }
-            /* Optimaliseer stap-weergave voor print */
-            .step {
-              margin-bottom: 10px;
-              page-break-inside: avoid;
-            }
-            * {
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
-              color-adjust: exact !important;
-            }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="print-container">
-          <!-- Header with Logo -->
-          <div class="print-header-top">
-            <div class="logo-section">
-              <img src="/logo.svg" alt="Logo" />
-            </div>
-            <div class="print-date">
-              Gedrukt op ${new Date().toLocaleDateString('nl-NL', { year: 'numeric', month: 'long', day: 'numeric' })}
-            </div>
-          </div>
-          
-          <!-- Main Header Section -->
-          <div class="print-main-header">
-            <div class="domain-icon">
-              <img src="${activity?.learningDomain ? learningDomainImages[activity.learningDomain] : '/placeholder.svg'}" alt="Domain" />
-            </div>
-            <h1 class="print-title">${activity?.title || 'Activity'}</h1>
-            <div>
-              <span class="print-domain-badge">${activity?.learningDomain || 'Unknown'}</span>
-              ${activity?.nickname ? `<span class="print-creator">Gemaakt door: ${activity.nickname}</span>` : ''}
-            </div>
-          </div>
-          
-          <!-- Activity Info Grid -->
-          <div class="activity-info-grid">
-            <div class="info-item">
-              <span class="info-label">⏱ Duur</span>
-              <span class="info-value">${activity?.time || '0'} minuten</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">👥 Leeftijd</span>
-              <span class="info-value">${activity?.ageGroup || 'Niet gespecificeerd'}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">📚 Leergebied</span>
-              <span class="info-value">${activity?.learningDomain || 'Unknown'}</span>
-            </div>
-            <div class="info-item">
-              <span class="info-label">⭐ Gemiddelde Beoordeling</span>
-              <span class="info-value">${(activity?.averageRating || 0).toFixed(1)}/10</span>
-            </div>
-          </div>
-          
-          <hr class="divider" />
-          
-          <div class="print-content">
-            <!-- Description Section -->
-            <div class="print-section">
-              <h2 class="section-title">
-                <span class="section-icon">📝</span>
-                Over deze activiteit
-              </h2>
-              <p class="description-text">${activity?.description || 'Geen beschrijving beschikbaar.'}</p>
-            </div>
-            
-            <!-- Materials and Instructions Group - blijft bij elkaar -->
-            <div class="instructions-group">
-              <!-- Materials Section -->
-              <div class="print-section">
-                <h2 class="section-title">
-                  <span class="section-icon">🛠</span>
-                  Benodigdheden
-                </h2>
-                <div class="materials-box">
-                  ${activity?.materials || 'Geen specifieke materialen benodigd.'}
-                </div>
-              </div>
-              
-              <!-- Instructions Section -->
-              <div class="print-section">
-                <h2 class="section-title">
-                  <span class="section-icon">📋</span>
-                  Stap voor stap instructies
-                </h2>
-                <div class="steps-container">
-                  ${activity?.instructions?.map((step, index) => `
-                    <div class="step">
-                      <div class="step-number">${index + 1}</div>
-                      <div class="step-text">${step}</div>
-                    </div>
-                  `).join('') || '<p class="description-text">Geen instructies beschikbaar.</p>'}
-                </div>
-              </div>
-            </div>
-            
-            <!-- Effect Section -->
-            <div class="print-section">
-              <h2 class="section-title">
-                <span class="section-icon">✨</span>
-                Effect op je kind
-              </h2>
-              <p class="description-text">
-                ${activity?.effect || `This activity helps children develop various skills related to ${activity?.learningDomain}.`}
-              </p>
-            </div>
-            
-            <!-- Learning Domain Info -->
-            <div class="print-section">
-              <div class="learning-domain-section">
-                <h2 class="section-title">
-                  <span class="section-icon">
-                    <img src="${activity?.learningDomain ? learningDomainImages[activity.learningDomain] : '/placeholder.svg'}" alt="Domain" />
-                  </span>
-                  ${activity?.learningDomain || 'Learning Domain'}
-                </h2>
-                <div class="domain-info">
-                  <p class="domain-info-description">
-                    ${LearningDomainDescription[activity?.learningDomain] || 'Information about this learning domain.'}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <hr class="divider" />
-          
-          <!-- Footer -->
-          <div class="print-footer">
-            <p>© ${new Date().getFullYear()} - Activiteiten Applicatie</p>
-            <p>Deze activiteit is afgeprint op ${new Date().toLocaleDateString('nl-NL')}</p>
+    const header = document.createElement('div')
+    header.className = 'print-header'
+    
+    const existingLogo = findLogo()
+    
+    if (existingLogo) {
+      const logoClone = existingLogo.cloneNode(true)
+      logoClone.style.display = 'block'
+      logoClone.style.visibility = 'visible'
+      logoClone.style.opacity = '1'
+      header.appendChild(logoClone)
+    } else {
+      // Fallback: Simple text logo
+      header.innerHTML = `
+        <div style="display: flex; align-items: center; height: 100%;">
+          <div style="width: 100px; height: 40px; background: #000; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 16px;">
+            LOGO
           </div>
         </div>
-      </body>
-      </html>
-    `
+      `
+    }
     
-    printWindow.document.write(printHTML)
-    printWindow.document.close()
-    printWindow.focus()
+    document.body.insertBefore(header, document.body.firstChild)
     
+    // Ensure logo loads before printing
     setTimeout(() => {
-      printWindow.print()
-    }, 250)
-  }
+      window.print()
+      
+      setTimeout(() => {
+        if (document.head.contains(printStyle)) {
+          document.head.removeChild(printStyle)
+        }
+        if (document.body.contains(header)) {
+          document.body.removeChild(header)
+        }
+      }, 500)
+    }, 100)
+}
 
   // Fetch favorite status when activity loads
   useEffect(() => {

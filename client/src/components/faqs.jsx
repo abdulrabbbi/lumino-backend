@@ -94,7 +94,7 @@ const Faqs = () => {
   ]
 
   return (
-    <section className="px-4 pb-10 sm:px-6 lg:px-8 max-w-7xl m-auto md:mt-30 mt-10">
+    <section className="px-4 faq pb-10 sm:px-6 lg:px-8 max-w-7xl m-auto md:mt-30 mt-10">
       <div className="max-w-7xl mx-auto">
         <div className="text-center">
           <h2 className="text-3xl sm:text-5xl mb-6 text-[#0F2137] inter-tight-700">
