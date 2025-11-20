@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 import { useEffect, useState } from "react"
-import { ArrowLeft, Clock, Users, Star, CheckCircle, X, Heart, Printer } from 'lucide-react'
+import { ArrowLeft, Clock, Users, Star, CheckCircle, X, Heart, Printer, Share2, Info } from 'lucide-react'
 import { useParams, useNavigate, useLocation } from "react-router-dom"
 import DetailImage from "../../public/images/SVG-detail.svg"
 import DetailImage1 from "../../public/images/SVG-detail-1.svg"
@@ -22,6 +22,7 @@ import { useMarkActivityCompleted, useRateActivity } from "../hooks/useActivityA
 import { useNavigation } from "../components/NavigationContext"
 import axios from "axios"
 import { BASE_URL } from "../utils/api"
+import { shareActivity, hasSharedActivityThisWeek as checkShareLimit, recordActivityShare } from "../utils/whatsappShare"
 
 const Sparkle = ({ style }) => (
   <div className="absolute pointer-events-none" style={style}>
@@ -118,10 +119,18 @@ function ActivityDetail() {
   const [isFavorite, setIsFavorite] = useState(false)
   const [favoriteLoading, setFavoriteLoading] = useState(false)
   const [showReminder, setShowReminder] = useState(false)
+  const [showShareLimitModal, setShowShareLimitModal] = useState(false)
 
   const { markCompleted } = useMarkActivityCompleted()
   const { rateActivity } = useRateActivity()
   const { activity, loading, error } = useSingleActivity(id)
+
+  const [hasSharedThisWeek, setHasSharedThisWeek] = useState(false);
+
+  // Check share limit on component mount and when activity changes
+  useEffect(() => {
+    setHasSharedThisWeek(checkShareLimit());
+  }, [activity]);
 
   const handlePrint = () => {
     const printStyle = document.createElement('style')
@@ -179,7 +188,6 @@ function ActivityDetail() {
     `
     document.head.appendChild(printStyle)
     
-    // Existing logo dhundho aur clone karo
     const findLogo = () => {
       const selectors = [
         'nav img',
@@ -212,7 +220,6 @@ function ActivityDetail() {
       logoClone.style.opacity = '1'
       header.appendChild(logoClone)
     } else {
-      // Fallback: Simple text logo
       header.innerHTML = `
         <div style="display: flex; align-items: center; height: 100%;">
           <div style="width: 100px; height: 40px; background: #000; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 16px;">
@@ -224,7 +231,6 @@ function ActivityDetail() {
     
     document.body.insertBefore(header, document.body.firstChild)
     
-    // Ensure logo loads before printing
     setTimeout(() => {
       window.print()
       
@@ -237,7 +243,7 @@ function ActivityDetail() {
         }
       }, 500)
     }, 100)
-}
+  }
 
   // Fetch favorite status when activity loads
   useEffect(() => {
@@ -321,7 +327,6 @@ function ActivityDetail() {
     }
   }
 
-
   const toggleFavorite = async () => {
     const authToken = localStorage.getItem("authToken")
     if (!authToken) {
@@ -362,6 +367,30 @@ function ActivityDetail() {
     } finally {
       setFavoriteLoading(false)
     }
+  }
+
+  // WhatsApp Share Functionality
+  const handleShareActivity = () => {
+    if (!activity) return
+    
+    // Check if user has already shared this week
+    if (hasSharedThisWeek) {
+      setShowShareLimitModal(true)
+      return
+    }
+    
+    const activityData = {
+      id: activity._id,
+      title: activity.title,
+      description: activity.description,
+      time: activity.time,
+      ageGroup: activity.ageGroup,
+      learningDomain: activity.learningDomain
+    }
+    
+    shareActivity(activityData)
+    setHasSharedThisWeek(true)
+    toast.success("Activiteit gedeeld via WhatsApp! 🎉")
   }
 
   const handleMarkComplete = async () => {
@@ -568,6 +597,51 @@ function ActivityDetail() {
           </div>
         )}
 
+        {/* Share Limit Modal */}
+        {showShareLimitModal && (
+          <div className="fixed inset-0 bg-black/50 bg-opacity-50 flex items-center justify-center z-50 md:p-4 p-2 no-print">
+            <div className="bg-white rounded-3xl p-8 max-w-md w-full mx-4 relative">
+              <button
+                onClick={() => setShowShareLimitModal(false)}
+                className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+              >
+                <X className="w-4 h-4 text-gray-600" />
+              </button>
+              
+              <div className="text-center">
+                <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Info className="w-8 h-8 text-yellow-500" />
+                </div>
+                
+                <h2 className="text-xl font-semibold inter-tight-700 text-gray-800 mb-3">
+                  Eén activiteit per week
+                </h2>
+                
+                <p className="text-gray-600 inter-tight-400 mb-2">
+                  Je hebt deze week <span className="font-semibold">al een activiteit gedeeld</span> via WhatsApp.
+                </p>
+                
+                <p className="text-gray-500 text-sm inter-tight-400 mb-6">
+                  We moedigen kwalitatieve sharing aan. Volgende week kun je weer een nieuwe favoriete activiteit delen!
+                </p>
+                
+                <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 mb-6">
+                  <p className="text-blue-800 text-sm inter-tight-400">
+                    <span className="font-semibold">Tip:</span> Je kunt deze activiteit wel als favoriet markeren om hem later te delen!
+                  </p>
+                </div>
+                
+                <button
+                  onClick={() => setShowShareLimitModal(false)}
+                  className="w-full bg-blue-500 text-white py-3 rounded-xl inter-tight-700 font-medium hover:bg-blue-600 transition-colors"
+                >
+                  Begrepen!
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {isMarkingComplete && <LoaderOverlay />}
 
         <div className="md:w-[90%] w-full mx-auto p-4 lg:p-6">
@@ -627,7 +701,7 @@ function ActivityDetail() {
                 </div>
                 <div className="flex justify-center items-center">
                   {activity.nickname && (
-                    <p className={` ${newdomainColor} w-50  px-3 mt-2 py-1 rounded-full text-xs font-medium`}>
+                    <p className={`${newdomainColor} w-50 px-3 mt-2 py-1 rounded-full text-xs font-medium`}>
                       Gemaakt door: {activity.nickname}
                     </p>
                   )}
@@ -696,6 +770,34 @@ function ActivityDetail() {
               <div className="flex md:flex-row flex-col gap-2 w-full space-x-4 no-print">
                 <div className="flex flex-1 gap-2">
                   
+                  {/* WhatsApp Share Button with weekly limit */}
+                  <div className="relative flex-1">
+                    <button
+                      onClick={handleShareActivity}
+                      disabled={hasSharedThisWeek}
+                      className={`flex items-center justify-center inter-tight-400 space-x-2 px-6 py-3 border rounded-xl transition-colors w-full ${
+                        hasSharedThisWeek 
+                          ? 'border-gray-300 bg-gray-100 text-gray-400 cursor-not-allowed' 
+                          : 'border-green-500 bg-green-500 text-white hover:bg-green-600 hover:border-green-600'
+                      }`}
+                    >
+                      <Share2 className="w-4 h-4" />
+                      <span className="inter-tight-400 font-medium">
+                        {hasSharedThisWeek ? 'Al gedeeld deze week' : 'Deel via WhatsApp'}
+                      </span>
+                    </button>
+                    
+                    {/* Info badge when shared */}
+                    {hasSharedThisWeek && (
+                      <div className="absolute -top-2 -right-2">
+                        <div className="bg-green-500 text-white rounded-full p-1">
+                          <Info className="w-3 h-3" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Favorite Button */}
                   <button
                     onClick={toggleFavorite}
                     disabled={favoriteLoading}
@@ -711,23 +813,34 @@ function ActivityDetail() {
                     </span>
                   </button>
 
+                  {/* Complete Activity Button */}
                   <button
-                  onClick={handleMarkComplete}
-                  disabled={completed || isMarkingComplete}
-                  className={`flex-1 ${
-                    completed
-                      ? "bg-gray-400 cursor-not-allowed"
-                      : "bg-gradient-to-br from-[#079A68] to-[#20C25F] hover:from-[#068a5d] hover:to-[#1cb055]"
-                  } text-white py-3 text-sm px-6 rounded-xl inter-tight-700 font-medium transition-colors flex items-center justify-center space-x-2 ${
-                    showCelebration ? "animate-pulse" : ""
-                  }`}
-                >
-                  <CheckCircle className="w-5 h-5" />
-                  <span>{completed ? "Voltooid" : isMarkingComplete ? "Bezig..." : "Markeer als voltooid"}</span>
-                </button>
+                    onClick={handleMarkComplete}
+                    disabled={completed || isMarkingComplete}
+                    className={`flex-1 ${
+                      completed
+                        ? "bg-gray-400 cursor-not-allowed"
+                        : "bg-gradient-to-br from-[#079A68] to-[#20C25F] hover:from-[#068a5d] hover:to-[#1cb055]"
+                    } text-white py-3 text-sm px-6 rounded-xl inter-tight-700 font-medium transition-colors flex items-center justify-center space-x-2 ${
+                      showCelebration ? "animate-pulse" : ""
+                    }`}
+                  >
+                    <CheckCircle className="w-5 h-5" />
+                    <span>{completed ? "Voltooid" : isMarkingComplete ? "Bezig..." : "Markeer als voltooid"}</span>
+                  </button>
                 </div>
               </div>
-             
+
+              {/* Share limit info text */}
+              {hasSharedThisWeek && (
+                <div className="text-center">
+                  <p className="text-xs text-gray-500 inter-tight-400">
+                    🎉 Je hebt deze week al een activiteit gedeeld! 
+                    <br />
+                    Volgende week kun je weer een nieuwe activiteit delen.
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="space-y-6">
@@ -794,6 +907,25 @@ function ActivityDetail() {
                         <div className="flex items-center text-gray-500">
                           <AiOutlineHeart size={16} className="mr-1" />
                           <span className="text-sm inter-tight-400">Nee</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {/* WhatsApp Share status in details panel */}
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                    <div className="flex items-center text-[#4B5563]">
+                      <Share2 className="w-4 h-4 mr-2" />
+                      <span className="text-sm inter-tight-400">Gedeeld deze week</span>
+                    </div>
+                    <div className="flex items-center">
+                      {hasSharedThisWeek ? (
+                        <div className="flex items-center text-green-600">
+                          <CheckCircle className="w-4 h-4 mr-1" />
+                          <span className="text-sm inter-tight-400">Ja</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center text-gray-500">
+                          <span className="text-sm inter-tight-400">Nog niet</span>
                         </div>
                       )}
                     </div>

@@ -5,8 +5,14 @@ import Image2 from '../../public/images/SVG (1).svg'
 import Image3 from '../../public/images/SVG (2).svg'
 import Image4 from '../../public/images/SVG (3).svg'
 import { Link } from 'react-router-dom';
+import { Share2 } from 'lucide-react';
+import { shareWebsite } from '../utils/whatsappShare';
 
 const Footer = () => {
+    const handleShareWebsite = () => {
+        shareWebsite();
+    };
+
     return (
         <footer className="bg-[#F1F6FB] py-12 px-4 sm:px-6 lg:px-8">
             <div className="max-w-7xl mx-auto">
@@ -48,17 +54,31 @@ const Footer = () => {
                         <div>
                             <img src={Logo} alt="" />
                         </div>
-                        <div className="bg-gradient-to-br from-[#1E40AF] to-[#6B21A8] rounded-2xl p-4 text-white">
+                        <div className="bg-gradient-to-br from-[#1E40AF] to-[#6B21A8] rounded-2xl p-4 text-white mb-4">
                             <p className="text-sm leading-relaxed">
                                 "Het platform dat kinderen
                                 voorbereidt op de wereld van
                                 morgen, vandaag."
                             </p>
                         </div>
+                        
+                        {/* WhatsApp Share Button */}
+                        <div className="text-center">
+                            <button
+                                onClick={handleShareWebsite}
+                                className="inline-flex items-center inter-tight-400 cursor-pointer gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors duration-200 text-sm font-medium"
+                            >
+                                <Share2 className="w-4 h-4" />
+                                Deel Lummilo
+                            </button>
+                            <p className="text-xs text-gray-600 mt-2">
+                                Deel met andere ouders
+                            </p>
+                        </div>
                     </div>
                 </div>
 
-                <div className=" pt-8">
+                <div className="pt-8">
                     <div className="flex flex-col sm:flex-row md:justify-between md:items-center justify-start items-start">
                         <div className="text-[#B1B7BE] text-sm text-left mb-4 sm:mb-0">
                         © 2025 Luumilo. Alle rechten voorbehouden.
@@ -81,7 +101,6 @@ const Footer = () => {
                                 <div className="w-8 h-8 bg-[#8937EA99] cursor-pointer rounded-full flex items-center justify-center">
                                     <img src={Image4} alt="Social Icon 1" className="w-4 h-4" />
                                 </div>
-                               
                             </div>
                         </div>
                     </div>
