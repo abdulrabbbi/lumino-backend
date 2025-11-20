@@ -47,6 +47,17 @@ const userSchema = new mongoose.Schema({
     content: String,
     activityId: { type: mongoose.Schema.Types.ObjectId, ref: 'Activity' },
     sharedAt: { type: Date, default: Date.now }
+  }],
+  lastActivityShare: {
+    week: Number,
+    year: Number,
+    timestamp: Date
+  },
+  shareHistory: [{
+    activityId: mongoose.Schema.Types.ObjectId,
+    week: Number,
+    year: Number,
+    timestamp: Date
   }]
 
 }, { timestamps: true })

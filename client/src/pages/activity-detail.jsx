@@ -22,7 +22,7 @@ import { useMarkActivityCompleted, useRateActivity } from "../hooks/useActivityA
 import { useNavigation } from "../components/NavigationContext"
 import axios from "axios"
 import { BASE_URL } from "../utils/api"
-import { shareActivity, hasSharedActivityThisWeek as checkShareLimit, recordActivityShare } from "../utils/whatsappShare"
+import { shareActivity, hasSharedActivityThisWeek, recordActivityShare } from "../utils/whatsappShare"
 
 const Sparkle = ({ style }) => (
   <div className="absolute pointer-events-none" style={style}>
@@ -129,8 +129,15 @@ function ActivityDetail() {
 
   // Check share limit on component mount and when activity changes
   useEffect(() => {
-    setHasSharedThisWeek(checkShareLimit());
-  }, [activity]);
+    const checkShareStatus = async () => {
+      const shared = await hasSharedActivityThisWeek();
+      setHasSharedThisWeek(shared);
+    };
+    
+    if (id) {
+      checkShareStatus();
+    }
+  }, [id, activity]);
 
   const handlePrint = () => {
     const printStyle = document.createElement('style')
@@ -370,7 +377,7 @@ function ActivityDetail() {
   }
 
   // WhatsApp Share Functionality
-  const handleShareActivity = () => {
+  const handleShareActivity = async () => {
     if (!activity) return
     
     // Check if user has already shared this week
@@ -388,9 +395,15 @@ function ActivityDetail() {
       learningDomain: activity.learningDomain
     }
     
-    shareActivity(activityData)
-    setHasSharedThisWeek(true)
-    toast.success("Activiteit gedeeld via WhatsApp! 🎉")
+    try {
+      // Share via WhatsApp and record in backend
+      await shareActivity(activityData)
+      setHasSharedThisWeek(true)
+      toast.success("Activiteit gedeeld via WhatsApp! 🎉")
+    } catch (error) {
+      console.error("Error sharing activity:", error)
+      toast.error("Er ging iets mis bij het delen van de activiteit")
+    }
   }
 
   const handleMarkComplete = async () => {
@@ -768,7 +781,7 @@ function ActivityDetail() {
 
               {/* Action buttons */}
               <div className="flex md:flex-row flex-col gap-2 w-full space-x-4 no-print">
-                <div className="flex flex-1 gap-2">
+                <div className="flex flex-col md:flex-row flex-1 gap-2">
                   
                   {/* WhatsApp Share Button with weekly limit */}
                   <div className="relative flex-1">

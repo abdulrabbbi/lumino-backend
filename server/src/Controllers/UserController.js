@@ -314,3 +314,90 @@ export const getUserDetail = async (req,res) =>{
   }
 }
 
+export const checkShareLimit = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "User not found" 
+      });
+    }
+
+    const currentWeek = getCurrentWeekNumber();
+    const currentYear = new Date().getFullYear();
+
+    const hasSharedThisWeek = user.lastActivityShare && 
+      user.lastActivityShare.week === currentWeek && 
+      user.lastActivityShare.year === currentYear;
+
+    res.json({ 
+      success: true, 
+      hasSharedThisWeek 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: "Error checking share limit" 
+    });
+  }
+};
+
+export const recordActivityShare = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { activityId } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "User not found" 
+      });
+    }
+
+    const currentWeek = getCurrentWeekNumber();
+    const currentYear = new Date().getFullYear();
+    const now = new Date();
+
+    user.lastActivityShare = {
+      week: currentWeek,
+      year: currentYear,
+      timestamp: now
+    };
+
+    user.shareHistory.push({
+      activityId,
+      week: currentWeek,
+      year: currentYear,
+      timestamp: now
+    });
+
+    // Keep only last 20 shares to prevent bloating
+    if (user.shareHistory.length > 20) {
+      user.shareHistory = user.shareHistory.slice(-20);
+    }
+
+    await user.save();
+
+    res.json({ 
+      success: true, 
+      message: "Activity share recorded successfully" 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: "Error recording activity share" 
+    });
+  }
+};
+
+const getCurrentWeekNumber = () => {
+  const now = new Date();
+  const startOfYear = new Date(now.getFullYear(), 0, 1);
+  const pastDaysOfYear = (now - startOfYear) / 86400000;
+  return Math.ceil((pastDaysOfYear + startOfYear.getDay() + 1) / 7);
+};
+
