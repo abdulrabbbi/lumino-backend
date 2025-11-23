@@ -378,12 +378,12 @@ function ActivityDetail() {
 
   // WhatsApp Share Functionality
   const handleShareActivity = async () => {
-    if (!activity) return
+    if (!activity) return;
     
     // Check if user has already shared this week
     if (hasSharedThisWeek) {
-      setShowShareLimitModal(true)
-      return
+      setShowShareLimitModal(true);
+      return;
     }
     
     const activityData = {
@@ -393,18 +393,23 @@ function ActivityDetail() {
       time: activity.time,
       ageGroup: activity.ageGroup,
       learningDomain: activity.learningDomain
-    }
+    };
     
     try {
-      // Share via WhatsApp and record in backend
-      await shareActivity(activityData)
-      setHasSharedThisWeek(true)
-      toast.success("Activiteit gedeeld via WhatsApp! 🎉")
+      // Share via WhatsApp - this function now returns success status
+      const shareSuccess = await shareActivity(activityData);
+      
+      if (shareSuccess) {
+        setHasSharedThisWeek(true);
+        // toast.success("Activiteit succesvol gedeeld via WhatsApp! 🎉");
+      } else {
+        toast.info("Delen geannuleerd of niet voltooid");
+      }
     } catch (error) {
-      console.error("Error sharing activity:", error)
-      toast.error("Er ging iets mis bij het delen van de activiteit")
+      console.error("Error sharing activity:", error);
+      toast.error("Er ging iets mis bij het delen van de activiteit");
     }
-  }
+  };
 
   const handleMarkComplete = async () => {
     if (completed || isMarkingComplete) return

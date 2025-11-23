@@ -35,7 +35,7 @@ export const recordActivityShare = async (activityId) => {
   }
 };
 
-// General WhatsApp share function
+// Improved WhatsApp share function for mobile compatibility
 export const shareToWhatsApp = (text, url = null) => {
   const shareText = encodeURIComponent(text);
   const shareUrl = url ? encodeURIComponent(url) : '';
@@ -43,10 +43,53 @@ export const shareToWhatsApp = (text, url = null) => {
   let whatsappUrl = `https://wa.me/?text=${shareText}`;
   
   if (url) {
-    whatsappUrl += ` ${shareUrl}`;
+    whatsappUrl += `%20${shareUrl}`;
   }
   
-  window.open(whatsappUrl, '_blank', 'width=600,height=400');
+  // Check if we're on a mobile device
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  
+  if (isMobile) {
+    // For mobile devices, use window.location which is more reliable
+    window.location.href = whatsappUrl;
+  } else {
+    // For desktop, open in new window
+    window.open(whatsappUrl, '_blank', 'width=600,height=400');
+  }
+};
+
+// Alternative method using WhatsApp API URL
+export const shareToWhatsAppAlternative = (text, url = null) => {
+  let fullText = text;
+  if (url) {
+    fullText += ` ${url}`;
+  }
+  
+  const encodedText = encodeURIComponent(fullText);
+  const whatsappUrl = `https://api.whatsapp.com/send?text=${encodedText}`;
+  
+  // Always use window.location for better mobile compatibility
+  window.location.href = whatsappUrl;
+};
+
+// Even better: Use the Web Share API when available
+export const shareWithWebShareAPI = async (text, url = null) => {
+  if (navigator.share) {
+    try {
+      const shareData = {
+        title: 'Lummilo Activiteit',
+        text: text,
+        url: url || window.location.href,
+      };
+      
+      await navigator.share(shareData);
+      return true;
+    } catch (error) {
+      console.log('Web Share API cancelled or failed:', error);
+      return false;
+    }
+  }
+  return false;
 };
 
 // Share Lummilo website (UNLIMITED - no restrictions)
@@ -62,7 +105,12 @@ export const shareWebsite = () => {
     `✅ Slechts 5-15 minuten per dag\n\n` +
     `Bezoek de website en begin vandaag nog met groeien! 🌱`;
   
-  shareToWhatsApp(text, websiteUrl);
+  // Try Web Share API first, then fallback to WhatsApp
+  shareWithWebShareAPI(text, websiteUrl).then(success => {
+    if (!success) {
+      shareToWhatsAppAlternative(text, websiteUrl);
+    }
+  });
 };
 
 // Share specific activity (LIMITED to once per week)
@@ -78,9 +126,16 @@ export const shareActivity = async (activity) => {
   text += `🏷️ Leergebied: ${activity.learningDomain}\n\n`;
   text += `Ontdek meer leuke activiteiten op Lummilo!`;
   
+  // Try Web Share API first
+  const webShareSuccess = await shareWithWebShareAPI(text, activityUrl);
+  
+  if (!webShareSuccess) {
+    // Fallback to WhatsApp sharing
+    shareToWhatsAppAlternative(text, activityUrl);
+  }
+  
   // Record this activity share via API
   await recordActivityShare(activity.id);
-  shareToWhatsApp(text, activityUrl);
 };
 
 // Get user's share history via API
