@@ -35,11 +35,11 @@ connectToDatabase(process.env.MONGODB_URL);
 
 const app = express();
 
-if (process.env.NODE_ENV === 'production') {
-    app.set('trust proxy', 1);
-}
+// if (process.env.NODE_ENV === 'production') {
+//     app.set('trust proxy', 1);
+// }
 
-app.use(prerender.set("prerenderToken", process.env.PRERENDER_TOKEN));
+// app.use(prerender.set("prerenderToken", process.env.PRERENDER_TOKEN));
 
 // CORS Configuration - Simplified for JWT only
 // app.use(cors({
@@ -118,20 +118,20 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 4008;
 
 app.listen(PORT, '0.0.0.0', () => {
-    function getServerIp() {
-        const networkInterf = networkInterfaces();
-        for (const interfaceName in networkInterf) {
-            const interf = networkInterf[interfaceName];
-            for (const alias of interf) {
-                if (alias.family === 'IPv4' && !alias.internal) {
-                    return alias.address;
-                }
-            }
-        }
-        return 'Unknown IP';
-    }
+    // function getServerIp() {
+    //     const networkInterf = networkInterfaces();
+    //     for (const interfaceName in networkInterf) {
+    //         const interf = networkInterf[interfaceName];
+    //         for (const alias of interf) {
+    //             if (alias.family === 'IPv4' && !alias.internal) {
+    //                 return alias.address;
+    //             }
+    //         }
+    //     }
+    //     return 'Unknown IP';
+    // }
     
-    console.log(`Server is running on http://${getServerIp()}:${PORT}`);
+    console.log(`Server is running on http://localhost:${PORT}`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`CORS enabled - JWT Bearer tokens only`);
     console.log(`Authentication: JWT only - No sessions/cookies`);
