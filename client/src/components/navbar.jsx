@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { Search, Menu, X, Home, Activity, BarChart2, Info, Newspaper, Badge } from "lucide-react"
+import { Search, Menu, X, Home, Activity, BarChart2, Info, Newspaper, Badge, Users } from "lucide-react"
 import { Link } from "react-router-dom"
 import { FaUser } from "react-icons/fa"
 import { MdLogout } from "react-icons/md"
@@ -70,6 +70,8 @@ export default function Navbar() {
     ...(isTestFamily ? [] : [{ label: "Abonnementen", icon: <Newspaper className="h-4 w-4 mr-1" />, to: "/pricing" }]),
     { label: "Mijlpalen", icon: <Badge className="h-4 w-4 mr-1" />, to: "/badge-journey" },
     { label: "Over ons", icon: <Info className="h-4 w-4 mr-1" />, to: "/about-us" },
+    { label: "Gemeenschap", icon: <Users className="h-4 w-4 mr-1" />, to: "/community" },
+
   ]
 
   const bottomNavItems = [
@@ -79,6 +81,7 @@ export default function Navbar() {
     ...(isTestFamily ? [] : [{ label: "Abonnementen", icon: <Newspaper className="h-5 w-5" />, to: "/pricing" }]),
     { label: "Mijlpalen", icon: <Badge className="h-5 w-5" />, to: "/badge-journey" },
     { label: "Over ons", icon: <Info className="h-5 w-5" />, to: "/about-us" },
+    { label: "Gemeenschap", icon: <Users className="h-4 w-4 mr-1" />, to: "/community" },
   ]
 
   return (

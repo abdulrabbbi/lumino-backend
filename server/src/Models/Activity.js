@@ -2,9 +2,9 @@ import mongoose from "mongoose";
 
 const activitySchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  title: { type: String, required: true, maxlength: 60 },
-  description: { type: String, required: true, maxlength: 250 },
-  instructions: [{ type: String, maxlength: 180 }],
+  title: { type: String, required: true },
+  description: { type: String, required: true },
+  instructions: [{ type: String }],
   materials: { type: String },
   learningDomain: { type: String, required: true },
   creatorName: { type: String, maxlength: 50 },
