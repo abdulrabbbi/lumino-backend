@@ -6,6 +6,7 @@ import { FaUser } from "react-icons/fa";
 import { MdLogout } from "react-icons/md";
 import { jwtDecode } from "jwt-decode";
 
+
 import NavImage from "../../public/nav-images/Luumilo_Logo_RGB-1.png";
 import { useSidebar } from "../context/SidebarContext";
 

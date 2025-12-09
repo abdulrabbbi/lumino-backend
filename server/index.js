@@ -23,6 +23,8 @@ import OpenAIRoutes from './src/Routes/OpenAIRoutes.js'
 import parentCoachRoutes from './src/Routes/parentCoachRoutes.js'
 import cohortRoutes from './src/Routes/cohortRoutes.js'
 import funnelRoutes from './src/Routes/funnelRoutes.js'
+import communityRoutes from './src/Routes/communityRoutes.js'
+import adminCommunityManageRoutes from './src/Routes/adminCommunityRoutes.js'
 
 import cron from 'node-cron';
 
@@ -104,6 +106,8 @@ app.use('/api', OpenAIRoutes);
 app.use("/api", parentCoachRoutes);
 app.use("/api", cohortRoutes)
 app.use("/api", funnelRoutes)
+app.use("/api", communityRoutes)
+app.use("/api", adminCommunityManageRoutes)
 
 
 

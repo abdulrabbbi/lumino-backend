@@ -20,6 +20,13 @@ import TrackingEvents from './pages/admin-dashboard-pages/tracking-events'
 import RetentionDashboard from './pages/admin-dashboard-pages/retention-metrics'
 import FunnelConversion from './pages/admin-dashboard-pages/conversion-funnel'
 
+
+import CreateCommunity from './pages/admin-dashboard-pages/create-community'
+import CommunityDetail from './pages/admin-dashboard-pages/community-detail'
+import CommunityManagement from './pages/admin-dashboard-pages/manage-communities'
+import EditCommunity from './pages/admin-dashboard-pages/edit-community'
+import ViewCommunity from './pages/admin-dashboard-pages/view-community'
+
 import { SidebarProvider } from './context/SidebarContext'
 
 function AppLayout() {
@@ -75,6 +82,12 @@ function App() {
               <Route path="events-tracking" element={<TrackingEvents />} />
               <Route path="retention-metrics" element={<RetentionDashboard />} />
               <Route path="funnel-conversion" element={<FunnelConversion />} />
+              <Route path="manage-communities" element={<CommunityManagement />} />
+              <Route path="create-community" element={<CreateCommunity />} />
+              <Route path="community-detail/:id" element={<CommunityDetail />} />
+              <Route path="edit-community/:id" element={<EditCommunity />} />
+              <Route path="view-community/:id" element={<ViewCommunity />} />
+              
 
 
 

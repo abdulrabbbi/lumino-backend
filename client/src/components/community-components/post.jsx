@@ -1,5 +1,8 @@
 import React from 'react';
 import { Heart, MessageCircle, Share2, Flag } from 'lucide-react';
+import { LuMessageSquareText } from "react-icons/lu";
+import { IoMdShare } from "react-icons/io";
+
 
 export function Post({ post, onLike }) {
   return (
@@ -60,17 +63,15 @@ export function Post({ post, onLike }) {
             <span>{post.likes}</span>
           </button>
           <button className="flex items-center gap-1 hover:text-blue-500 transition-colors">
-            <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+            <LuMessageSquareText className="w-4 h-4 sm:w-5 sm:h-5" />
             <span>{post.comments}</span>
           </button>
           <button className="flex items-center gap-1 hover:text-green-500 transition-colors">
-            <Share2 className="w-4 h-4 sm:w-5 sm:h-5" />
+            <IoMdShare className="w-4 h-4 sm:w-5 sm:h-5" />
             <span>{post.shares}</span>
           </button>
         </div>
-        <button className="hover:text-red-500 transition-colors">
-          <Flag className="w-4 h-4 sm:w-5 sm:h-5" />
-        </button>
+       
       </div>
     </div>
   );

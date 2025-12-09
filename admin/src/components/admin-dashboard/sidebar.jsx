@@ -12,9 +12,12 @@ import NavImage6 from "../../../public/nav-images/SVG.svg";
 import NavImage7 from "../../../public/nav-images/Vector (1).svg";
 import NavImage8 from "../../../public/library-images/Frame (6)-new.svg";
 import NavImage9 from "../../../public/rewards.png";
-import NavImag10 from "../../../public/nav-images/track-image.jpg";
+import NavImag10 from "../../../public/nav-images/track-image.png";
 import NavImage11 from "../../../public/nav-images/analytics.jpg";
 import NavImage12 from "../../../public/nav-images/conversion.png";
+
+import NavImage13 from '../../../public/nav-images/manage-community-removebg-preview.png'
+import NavImage14 from '../../../public/nav-images/plus-104-removebg-preview.png'
 
 const Sidebar = () => {
   const { isOpen, setIsOpen } = useSidebar();
@@ -33,6 +36,9 @@ const Sidebar = () => {
     { to: "/admin-dashboard/reward-settings", label: "Beloningen", image: NavImage9 },
     { to: "/admin-dashboard/events-tracking", label: "Eventtracking", image: NavImag10 },
     { to: "/admin-dashboard/funnel-conversion", label: "Funnel Conversion", image: NavImage12 },
+    { to: "/admin-dashboard/manage-communities", label: "Manage Communities", image: NavImage13 },
+    { to: "/admin-dashboard/create-community", label: "Create Community", image: NavImage14 },
+
   ];
 
   return (
