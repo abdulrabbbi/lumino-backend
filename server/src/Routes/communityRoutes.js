@@ -19,21 +19,21 @@ const router = express.Router();
 router.get('/get-all-communities', getCommunities);
 router.get('/get-single-community/:id', getCommunity);
 
-router.use(authenticate);
 
-router.get('/get-user-communities', getMyCommunities);
-router.post('/join-community/:id/join', joinCommunity);
-router.post('/leave-community/:id/leave', leaveCommunity);
+// after login routes
+router.get('/get-user-communities', authenticate, getMyCommunities);
+router.post('/join-community/:id/join', authenticate, joinCommunity);
+router.post('/leave-community/:id/leave', authenticate, leaveCommunity);
 
 // Post routes
-router.post('/create-post/:id/posts', createPost);
-router.get('/get-posts/:id/posts', getPosts);
+router.post('/create-post/:id/posts', authenticate, createPost);
+router.get('/get-posts/:id/posts', authenticate, getPosts);
 
 // Like routes
-router.post('/toggle-like/:postId/like', toggleLike);
+router.post('/toggle-like/:postId/like', authenticate, toggleLike);
 
 // Comment routes
-router.post('/add-comment/:postId/comments', addComment);
-router.get('/get-comment/:postId/comments', getComments);
+router.post('/add-comment/:postId/comments', authenticate, addComment);
+router.get('/get-comment/:postId/comments', authenticate, getComments);
 
 export default router;

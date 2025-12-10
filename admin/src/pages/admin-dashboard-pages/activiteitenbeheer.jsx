@@ -371,7 +371,6 @@ export default function ActiviteitenBeheer() {
         pauseOnHover
         style={{ zIndex: 10000000000 }}
       />
-      {/* Delete Confirmation Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 bg-opacity-50">
           <div className="mx-4 w-full max-w-xl rounded-xl bg-white p-6 shadow-2xl">

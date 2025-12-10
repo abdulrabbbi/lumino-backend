@@ -5,6 +5,8 @@ import UserSubscription from "../Models/UserSubscription.js";
 import Badge from "../Models/Badge.js";
 import { sendSubscriptionChangeEmail, sendTrialEndingEmail } from "../Utils/emailService.js";
 import { logEvent } from "../Utils/log-event.js";
+import { configDotenv } from "dotenv";
+configDotenv();
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 

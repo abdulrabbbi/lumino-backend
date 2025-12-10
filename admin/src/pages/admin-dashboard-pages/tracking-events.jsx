@@ -17,7 +17,6 @@ const TrackingEvents = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const eventsPerPage = 20;
 
-  // Filter events based on selected filter and search term
   const filteredEvents = events.filter(event => {
     const matchesFilter = filter === 'all' || event.eventName === filter;
     const matchesSearch = 

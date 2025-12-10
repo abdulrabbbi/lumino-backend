@@ -44,7 +44,7 @@ export const adminGetCommunities = async (req, res) => {
       
       .lean();
 
-      // console.log(communities);
+      console.log(communities);
       
 
     // Get additional stats for each community
@@ -247,63 +247,32 @@ export const adminUpdateCommunity = async (req, res) => {
 export const adminDeleteCommunity = async (req, res) => {
   try {
     const { id } = req.params;
-    const { action = 'archive' } = req.body; // 'archive', 'delete', 'restore'
 
     const community = await Community.findById(id);
     if (!community) {
       return res.status(404).json({ error: 'Community not found' });
     }
 
-    let updateData = {};
-    let message = '';
-
-    switch (action) {
-      case 'archive':
-        updateData = { status: 'archived' };
-        message = 'Community archived successfully';
-        break;
-      
-      case 'delete':
-        updateData = { status: 'deleted' };
-        message = 'Community marked as deleted';
-        break;
-      
-      case 'restore':
-        updateData = { status: 'active' };
-        message = 'Community restored successfully';
-        break;
-      
-      case 'permanent':
-        // Permanent delete - remove all related data
-        await CommunityMember.deleteMany({ community: id });
-        await CommunityPost.deleteMany({ community: id });
-        await PostComment.deleteMany({ 
-          post: { $in: await CommunityPost.find({ community: id }).select('_id') }
-        });
-        await Community.findByIdAndDelete(id);
-        
-        return res.json({ 
-          message: 'Community permanently deleted',
-          deleted: true
-        });
-      
-      default:
-        return res.status(400).json({ error: 'Invalid action' });
-    }
-
-    const updatedCommunity = await Community.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true }
-    );
-
-    res.json({
-      message,
-      community: updatedCommunity
+    await CommunityMember.deleteMany({ community: id });
+    await CommunityPost.deleteMany({ community: id });
+    await PostComment.deleteMany({ 
+      post: { $in: await CommunityPost.find({ community: id }).select('_id') }
     });
+    
+    await Community.findByIdAndDelete(id);
+    
+    return res.json({ 
+      success: true,
+      message: 'Community permanently deleted',
+      deleted: true
+    });
+
   } catch (error) {
     console.error('Admin error deleting community:', error);
-    res.status(500).json({ error: 'Failed to delete community' });
+    res.status(500).json({ 
+      error: 'Failed to delete community',
+      details: error.message 
+    });
   }
 };
 export const adminGetCommunityMembers = async (req, res) => {

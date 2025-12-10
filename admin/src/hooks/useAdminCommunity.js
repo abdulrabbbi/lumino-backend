@@ -58,13 +58,11 @@ const useAdminCommunity = () => {
     }
   };
 
-  const deleteCommunity = async (id, action = 'archive') => {
+  const deleteCommunity = async (id) => {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.delete(`/delete-community/${id}`, {
-        data: { action }
-      });
+      const response = await api.delete(`/delete-community/${id}`);
       return response.data;
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to delete community');

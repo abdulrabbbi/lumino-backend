@@ -152,7 +152,7 @@ const totalPages = Math.ceil(pendingCount / activitiesPerPage)
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between mb-8">
               <div>
                 <h1 className="text-2xl font-semibold">Ingezonden Activiteiten</h1>
-                <span className="py-1 px-4 text-sm rounded-3xl bg-[#8937EA] text-white text-sm mt-2 inline-block">
+                <span className="py-1 px-4  rounded-3xl bg-[#8937EA] text-white text-sm mt-2 inline-block">
                   {pendingCount} wachtend
                 </span>
                 <p className="text-[#838383] mt-2 text-sm">Activiteiten die wachten op goedkeuring.</p>

@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import useAdminCommunity from '../../hooks/useAdminCommunity';
@@ -28,15 +29,14 @@ const ViewCommunity = () => {
   const fetchCommunityDetails = async () => {
     try {
       setLoading(true);
-      
-      // Fetch community details
-      const communitiesData = await getCommunities({ 
-        limit: 1, 
+
+      const communitiesData = await getCommunities({
+        limit: 1,
         page: 1,
         search: '',
-        status: 'all' 
+        status: 'all'
       });
-      
+
       const foundCommunity = communitiesData.communities?.find(c => c._id === id);
       if (foundCommunity) {
         setCommunity(foundCommunity);
@@ -68,18 +68,6 @@ const ViewCommunity = () => {
       fetchCommunityDetails();
     } catch (err) {
       console.error('Error syncing stats:', err);
-    }
-  };
-
-  const handleDeleteCommunity = async (action) => {
-    if (window.confirm(`Are you sure you want to ${action} this community?`)) {
-      try {
-        // Implement delete functionality
-        console.log(`Deleting community ${id} with action: ${action}`);
-        navigate('/admin-dashboard/manage-communities');
-      } catch (err) {
-        console.error('Error deleting community:', err);
-      }
     }
   };
 
@@ -139,46 +127,44 @@ const ViewCommunity = () => {
                   <p className="text-sm inter-tight-400 text-gray-600 mt-1">{community.description}</p>
                 </div>
               </div>
-              
+
             </div>
             <div className="flex mt-4 justify-end  gap-2">
-                <Link
-                  to={`/admin-dashboard/edit-community/${community._id}`}
-                  className="px-4 py-2 bg-blue-600 text-sm inter-tight-400 text-white rounded-lg hover:bg-blue-700 flex items-center"
-                >
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                  Edit Community
-                </Link>
-                <button
-                  onClick={handleSyncStats}
-                  disabled={apiLoading}
-                  className="px-4 py-2 border text-sm inter-tight-400 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 flex items-center"
-                >
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  Sync Stats
-                </button>
-              </div>
+              <Link
+                to={`/admin-dashboard/edit-community/${community._id}`}
+                className="px-4 py-2 bg-blue-600 text-sm inter-tight-400 text-white rounded-lg hover:bg-blue-700 flex items-center"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Edit Community
+              </Link>
+              <button
+                onClick={handleSyncStats}
+                disabled={apiLoading}
+                className="px-4 py-2 border text-sm inter-tight-400 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50 flex items-center"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Sync Stats
+              </button>
+            </div>
 
             {/* Status Badge */}
             <div className="mt-4 flex flex-wrap items-center gap-4">
-              <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                community.status === 'active' 
+              <span className={`px-3 py-1 rounded-full text-sm font-semibold ${community.status === 'active'
                   ? 'bg-green-100 text-green-800'
                   : community.status === 'archived'
-                  ? 'bg-yellow-100 text-yellow-800'
-                  : 'bg-red-100 text-red-800'
-              }`}>
+                    ? 'bg-yellow-100 text-yellow-800'
+                    : 'bg-red-100 text-red-800'
+                }`}>
                 {community.status.charAt(0).toUpperCase() + community.status.slice(1)}
               </span>
-              <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                community.isPublic 
+              <span className={`px-3 py-1 rounded-full text-sm font-semibold ${community.isPublic
                   ? 'bg-blue-100 text-blue-800'
                   : 'bg-gray-100 text-gray-800'
-              }`}>
+                }`}>
                 {community.isPublic ? 'Public' : 'Private'}
               </span>
               {community.category && (
@@ -194,7 +180,6 @@ const ViewCommunity = () => {
         </div>
       </div>
 
-      {/* Stats Cards */}
       <div className="max-w-7xl mx-auto mt-3">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <div className="bg-white rounded-lg shadow p-6">
@@ -240,19 +225,17 @@ const ViewCommunity = () => {
           </div>
         </div>
 
-        {/* Tabs */}
         <div className="bg-white rounded-lg shadow mb-6">
           <div className="border-b border-gray-200">
             <nav className="flex overflow-x-auto">
-              {['details', 'members', 'posts', 'analytics', 'settings'].map((tab) => (
+              {['details', 'members', 'posts', 'analytics'].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`py-4 px-6 font-medium text-sm whitespace-nowrap border-b-2 ${
-                    activeTab === tab
+                  className={`py-4 px-6 font-medium text-sm whitespace-nowrap border-b-2 ${activeTab === tab
                       ? 'border-blue-500 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700'
-                  }`}
+                    }`}
                 >
                   {tab.charAt(0).toUpperCase() + tab.slice(1)}
                 </button>
@@ -260,7 +243,6 @@ const ViewCommunity = () => {
             </nav>
           </div>
 
-          {/* Tab Content */}
           <div className="p-6">
             {loading ? (
               <div className="flex justify-center items-center py-12">
@@ -272,7 +254,6 @@ const ViewCommunity = () => {
               </div>
             ) : (
               <>
-                {/* Details Tab */}
                 {activeTab === 'details' && (
                   <div className="space-y-6 inter-tight-400">
                     <div>
@@ -361,16 +342,13 @@ const ViewCommunity = () => {
                   </div>
                 )}
 
-                {/* Members Tab */}
                 {activeTab === 'members' && (
                   <div>
                     <div className="flex justify-between items-center mb-6">
                       <h3 className="text-lg font-semibold text-gray-900">Community Members</h3>
-                      {/* <button className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-                        Add Member
-                      </button> */}
+
                     </div>
-                    
+
                     {members.length === 0 ? (
                       <div className="text-center py-12">
                         <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -420,22 +398,20 @@ const ViewCommunity = () => {
                                   </div>
                                 </td>
                                 <td className="px-4 py-4 whitespace-nowrap">
-                                  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                                    member.role === 'admin'
+                                  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${member.role === 'admin'
                                       ? 'bg-purple-100 text-purple-800'
                                       : member.role === 'moderator'
-                                      ? 'bg-blue-100 text-blue-800'
-                                      : 'bg-gray-100 text-gray-800'
-                                  }`}>
+                                        ? 'bg-blue-100 text-blue-800'
+                                        : 'bg-gray-100 text-gray-800'
+                                    }`}>
                                     {member.role}
                                   </span>
                                 </td>
                                 <td className="px-4 py-4 whitespace-nowrap">
-                                  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                                    member.status === 'joined'
+                                  <span className={`px-2 py-1 text-xs font-semibold rounded-full ${member.status === 'joined'
                                       ? 'bg-green-100 text-green-800'
                                       : 'bg-yellow-100 text-yellow-800'
-                                  }`}>
+                                    }`}>
                                     {member.status}
                                   </span>
                                 </td>
@@ -459,11 +435,10 @@ const ViewCommunity = () => {
                   </div>
                 )}
 
-                {/* Posts Tab */}
                 {activeTab === 'posts' && (
                   <div>
                     <h3 className="text-lg font-semibold inter-tight-400 text-gray-900 mb-6">Community Posts</h3>
-                    
+
                     {posts.length === 0 ? (
                       <div className="text-center py-12">
                         <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -493,7 +468,7 @@ const ViewCommunity = () => {
                                   )}
                                 </div>
                               </div>
-                             
+
                             </div>
                           </div>
                         ))}
@@ -502,7 +477,6 @@ const ViewCommunity = () => {
                   </div>
                 )}
 
-                {/* Analytics Tab */}
                 {activeTab === 'analytics' && (
                   <div>
                     <h3 className="text-lg inter-tight-600 text-gray-900 mb-6">Community Analytics</h3>
@@ -530,7 +504,7 @@ const ViewCommunity = () => {
                           <div className="flex justify-between items-center">
                             <span className="text-sm text-gray-600">Last Activity</span>
                             <span className="font-medium text-gray-900">
-                              {community.recentActivity?.lastActivity 
+                              {community.recentActivity?.lastActivity
                                 ? formatDate(community.recentActivity.lastActivity)
                                 : 'No activity'}
                             </span>
@@ -547,55 +521,7 @@ const ViewCommunity = () => {
                   </div>
                 )}
 
-                {/* Settings Tab */}
-                {activeTab === 'settings' && (
-                  <div>
-                    <h3 className="text-lg inter-tight-600 text-gray-900 mb-6">Community Settings</h3>
-                    <div className="space-y-6">
-                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                        <div className="flex">
-                          <svg className="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                          </svg>
-                          <div className="ml-3">
-                            <h4 className="text-sm font-medium text-yellow-800">Warning</h4>
-                            <div className="mt-2 text-sm text-yellow-700">
-                              <p>These actions are irreversible. Please proceed with caution.</p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
 
-                      <div className="space-y-4">
-                        <div>
-                          <h4 className="font-medium text-gray-900 mb-2 inter-tight-400">Archive Community</h4>
-                          <p className="text-sm text-gray-600 inter-tight-400 mb-3">
-                            Archive this community. Archived communities are hidden from public view but can be restored later.
-                          </p>
-                          <button
-                            onClick={() => handleDeleteCommunity('archive')}
-                            className="px-4 py-2 text-sm inter-tight-400 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700"
-                          >
-                            Archive Community
-                          </button>
-                        </div>
-
-                        <div>
-                          <h4 className="font-medium text-gray-900 mb-2 inter-tight-400">Delete Community</h4>
-                          <p className="text-sm text-gray-600 mb-3 inter-tight-400">
-                            Permanently delete this community and all its data. This action cannot be undone.
-                          </p>
-                          <button
-                            onClick={() => handleDeleteCommunity('permanent')}
-                            className="px-4 py-2 bg-red-600 inter-tight-400 text-sm text-white rounded-lg hover:bg-red-700"
-                          >
-                            Delete Permanently
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </>
             )}
           </div>

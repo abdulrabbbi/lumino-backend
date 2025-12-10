@@ -1,7 +1,10 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 /* eslint-disable no-unused-vars */
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import useAdminCommunity from '../../hooks/useAdminCommunity';
+import { toast, ToastContainer } from 'react-toastify';
+import LoaderOverlay from '../../components/LoaderOverlay';
 
 const EditCommunity = () => {
   const { id } = useParams();
@@ -21,23 +24,12 @@ const EditCommunity = () => {
     isPublic: true,
     requiresApproval: false,
     maxMembers: 0,
-    category: 'general',
+    category: '',
     tags: '',
     rules: '',
     status: 'active'
   });
 
-  const categories = [
-    'general', 'technology', 'gaming', 'education', 'health',
-    'business', 'entertainment', 'sports', 'art', 'music',
-    'food', 'travel', 'fitness', 'science', 'politics'
-  ];
-
-  const statusOptions = [
-    { value: 'active', label: 'Active' },
-    { value: 'archived', label: 'Archived' },
-    { value: 'deleted', label: 'Deleted' }
-  ];
 
   useEffect(() => {
     fetchCommunity();
@@ -46,13 +38,13 @@ const EditCommunity = () => {
   const fetchCommunity = async () => {
     try {
       setLoading(true);
-      const data = await getCommunities({ 
-        limit: 1, 
+      const data = await getCommunities({
+        limit: 1,
         page: 1,
         search: '',
-        status: 'all' 
+        status: 'all'
       });
-      
+
       const community = data.communities?.find(c => c._id === id);
       if (community) {
         setFormData({
@@ -101,7 +93,8 @@ const EditCommunity = () => {
 
       await updateCommunity(id, data);
       setSuccess('Community updated successfully!');
-      
+      toast.success('Community updated successfully!');
+
       // Redirect after 2 seconds
       setTimeout(() => {
         navigate(`/admin-dashboard/view-community/${id}`);
@@ -119,15 +112,13 @@ const EditCommunity = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
+      <LoaderOverlay />
     );
   }
 
   return (
     <div className="min-h-screen ">
-      {/* Header */}
+      <ToastContainer style={{ zIndex: 100000000 }} />
       <div className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 ">
           <div className="py-6">
@@ -149,13 +140,12 @@ const EditCommunity = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 mt-3">
+      <div className="max-w-7xl mx-auto  mt-3">
 
         <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Basic Information */}
-          <div className="bg-white  p-4">
+          <div className="bg-white  p-3">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h2>
-            
+
             <div className="space-y-6">
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
@@ -189,27 +179,22 @@ const EditCommunity = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1  gap-6">
                 <div>
                   <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
                     Category
                   </label>
-                  <select
+                  <input
+                    type="text"
                     id="category"
                     name="category"
                     value={formData.category}
                     onChange={handleChange}
-                    className="w-full px-3 py-2 border border-slate-300/70 outline-none inter-tight-400 text-sm  rounded-lg"
-                  >
-                    {categories.map(category => (
-                      <option key={category} value={category}>
-                        {category.charAt(0).toUpperCase() + category.slice(1)}
-                      </option>
-                    ))}
-                  </select>
+                    className="w-full px-3 py-2 border border-slate-300/70 outline-none inter-tight-400 text-sm rounded-lg"
+                    placeholder="Enter category (e.g., Technology, Gaming, Education)"
+                  />
                 </div>
-
-                <div>
+                {/* <div>
                   <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-2">
                     Status
                   </label>
@@ -226,7 +211,7 @@ const EditCommunity = () => {
                       </option>
                     ))}
                   </select>
-                </div>
+                </div> */}
               </div>
 
               <div>
@@ -247,10 +232,9 @@ const EditCommunity = () => {
             </div>
           </div>
 
-          {/* Community Settings */}
           <div className="bg-white p-3">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Community Settings</h2>
-            
+
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -315,7 +299,6 @@ const EditCommunity = () => {
             </div>
           </div>
 
-          {/* Community Rules */}
           <div className="bg-white p-3">
             <h2 className="text-lg inter-tight-600 text-gray-900 mb-4">Community Rules</h2>
             <div>
@@ -337,7 +320,6 @@ const EditCommunity = () => {
             </div>
           </div>
 
-          {/* Images */}
           <div className="bg-whitep-3">
             <h2 className="text-lg inter-tight-600 text-gray-900 mb-4">Community Images</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -354,7 +336,7 @@ const EditCommunity = () => {
                   className="w-full px-3 py-2 border border-slate-300/70 outline-none inter-tight-400 text-sm  rounded-lg"
                   placeholder="https://example.com/profile.jpg"
                 />
-               
+
               </div>
               <div>
                 <label htmlFor="coverImage" className="block text-sm inter-tight-400 font-medium text-gray-700 mb-2">
@@ -369,12 +351,11 @@ const EditCommunity = () => {
                   className="w-full px-3 py-2 border border-slate-300/70 outline-none inter-tight-400 text-sm  rounded-lg"
                   placeholder="https://example.com/cover.jpg"
                 />
-                
+
               </div>
             </div>
           </div>
 
-          {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row sm:justify-end space-y-4 sm:space-y-0 sm:space-x-4">
             <button
               type="button"

@@ -20,7 +20,7 @@ router.post('/suggest-activity', async (req, res) => {
       return res.status(400).json({ error: 'Learning domain is required' });
     }
 
-    if (!ageGroup) {
+    if (!ageGroup) {  
       return res.status(400).json({ error: 'Age group is required' });
     }
 

@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import { useState, useEffect } from "react"
 import { Search, ChevronDown, Download, Eye, ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react"
 import useApi from "../../hooks/useApi"

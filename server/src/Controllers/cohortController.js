@@ -1,15 +1,17 @@
 import User from "../Models/User.js";
 import CompletedActivity from "../Models/CompletedActivity.js";
-import Activity from "../Models/Activity.js";
-import mongoose from "mongoose";
+import {
+  calculateRetentionSummary, groupIntoCohorts,
+  getCohortKey,
+  getCohortDates,
+} from "../Utils/cohortfuntions.js";
 
-/**
- * Get Retention Cohorts Analysis
- * Tracks how many users return week-over-week after signup
- */
+
+//  Get Retention Cohorts Analysis
+//  Tracks how many users return week-over-week after signup
 export const getRetentionCohorts = async (req, res) => {
   try {
-    const { 
+    const {
       cohortType = 'weekly', // 'weekly' or 'monthly'
       startDate,
       endDate,
@@ -76,126 +78,25 @@ export const getRetentionCohorts = async (req, res) => {
 
   } catch (error) {
     console.error("Error in getRetentionCohorts:", error);
-    res.status(500).json({ 
-      success: false, 
-      error: "Failed to calculate retention cohorts" 
+    res.status(500).json({
+      success: false,
+      error: "Failed to calculate retention cohorts"
     });
   }
 };
 
-/**
- * Group users into cohorts (weekly or monthly)
- */
-function groupIntoCohorts(users, cohortType) {
-  const cohortMap = new Map();
-
-  users.forEach(user => {
-    const cohortKey = getCohortKey(user.createdAt, cohortType);
-    
-    if (!cohortMap.has(cohortKey)) {
-      const { startDate, endDate, name } = getCohortDates(cohortKey, cohortType);
-      cohortMap.set(cohortKey, {
-        key: cohortKey,
-        name,
-        startDate,
-        endDate,
-        users: []
-      });
-    }
-    
-    cohortMap.get(cohortKey).users.push(user);
-  });
-
-  return Array.from(cohortMap.values()).sort((a, b) => 
-    a.startDate - b.startDate
-  );
-}
-
-/**
- * Get cohort key for grouping (e.g., "2025-W01" or "2025-01")
- */
-function getCohortKey(date, cohortType) {
-  const d = new Date(date);
-  
-  if (cohortType === 'monthly') {
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-  }
-  
-  // Weekly cohort
-  const weekNumber = getWeekNumber(d);
-  return `${d.getFullYear()}-W${String(weekNumber).padStart(2, '0')}`;
-}
-
-/**
- * Get week number of the year
- */
-function getWeekNumber(date) {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const dayNum = d.getUTCDay() || 7;
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-}
-
-/**
- * Get start and end dates for a cohort
- */
-function getCohortDates(cohortKey, cohortType) {
-  if (cohortType === 'monthly') {
-    const [year, month] = cohortKey.split('-');
-    const startDate = new Date(year, parseInt(month) - 1, 1);
-    const endDate = new Date(year, parseInt(month), 0, 23, 59, 59);
-    
-    return {
-      startDate,
-      endDate,
-      name: startDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short' })
-    };
-  }
-  
-  // Weekly cohort
-  const [year, week] = cohortKey.split('-W');
-  const startDate = getDateOfISOWeek(parseInt(week), parseInt(year));
-  const endDate = new Date(startDate);
-  endDate.setDate(endDate.getDate() + 6);
-  endDate.setHours(23, 59, 59);
-  
-  return {
-    startDate,
-    endDate,
-    name: `Week ${week}, ${year}`
-  };
-}
-
-/**
- * Get date of ISO week
- */
-function getDateOfISOWeek(week, year) {
-  const simple = new Date(year, 0, 1 + (week - 1) * 7);
-  const dow = simple.getDay();
-  const ISOweekStart = simple;
-  if (dow <= 4) {
-    ISOweekStart.setDate(simple.getDate() - simple.getDay() + 1);
-  } else {
-    ISOweekStart.setDate(simple.getDate() + 8 - simple.getDay());
-  }
-  return ISOweekStart;
-}
-
-/**
- * Calculate retention rates for a cohort
- */
+//  Calculate retention rates for a cohort
 async function calculateCohortRetention(users, cohortStartDate, cohortType) {
   const userIds = users.map(u => u._id);
   const periodDuration = cohortType === 'monthly' ? 30 : 7; // days
   const periodsToTrack = cohortType === 'monthly' ? 6 : 12; // 6 months or 12 weeks
-  
+
   const retention = [];
 
   for (let period = 0; period <= periodsToTrack; period++) {
     const periodStart = new Date(cohortStartDate);
     periodStart.setDate(periodStart.getDate() + (period * periodDuration));
-    
+
     const periodEnd = new Date(periodStart);
     periodEnd.setDate(periodEnd.getDate() + periodDuration - 1);
     periodEnd.setHours(23, 59, 59);
@@ -203,7 +104,6 @@ async function calculateCohortRetention(users, cohortStartDate, cohortType) {
     // Don't calculate future periods
     if (periodStart > new Date()) break;
 
-    // Count users who completed at least one activity in this period
     const activeUsers = await CompletedActivity.distinct('userId', {
       userId: { $in: userIds },
       completedAt: { $gte: periodStart, $lte: periodEnd }
@@ -224,20 +124,19 @@ async function calculateCohortRetention(users, cohortStartDate, cohortType) {
   return retention;
 }
 
-/**
- * Get segmented retention data
- */
+
+// Get segmented retention data
 async function getSegmentedRetention(users, cohortType, segmentBy) {
   const segments = new Map();
 
   // Group users by segment
   users.forEach(user => {
     const segmentValue = user[segmentBy] || 'Not Set';
-    
+
     if (!segments.has(segmentValue)) {
       segments.set(segmentValue, []);
     }
-    
+
     segments.get(segmentValue).push(user);
   });
 
@@ -245,7 +144,7 @@ async function getSegmentedRetention(users, cohortType, segmentBy) {
   const segmentedData = await Promise.all(
     Array.from(segments.entries()).map(async ([segmentValue, segmentUsers]) => {
       const cohorts = groupIntoCohorts(segmentUsers, cohortType);
-      
+
       const retentionData = await Promise.all(
         cohorts.map(async (cohort) => {
           const retention = await calculateCohortRetention(
@@ -253,7 +152,7 @@ async function getSegmentedRetention(users, cohortType, segmentBy) {
             cohort.startDate,
             cohortType
           );
-          
+
           return {
             cohortName: cohort.name,
             totalUsers: cohort.users.length,
@@ -273,46 +172,12 @@ async function getSegmentedRetention(users, cohortType, segmentBy) {
   return segmentedData;
 }
 
-/**
- * Calculate summary statistics
- */
-function calculateRetentionSummary(retentionData) {
-  if (retentionData.length === 0) return null;
-
-  // Average retention across all cohorts
-  const avgRetentionByPeriod = [];
-  const maxPeriods = Math.max(...retentionData.map(c => c.retention.length));
-
-  for (let i = 0; i < maxPeriods; i++) {
-    const periodsAtIndex = retentionData
-      .map(c => c.retention[i])
-      .filter(p => p !== undefined);
-
-    if (periodsAtIndex.length > 0) {
-      const avgRate = periodsAtIndex.reduce((sum, p) => sum + p.retentionRate, 0) / periodsAtIndex.length;
-      
-      avgRetentionByPeriod.push({
-        period: periodsAtIndex[0].period,
-        averageRetentionRate: parseFloat(avgRate.toFixed(1))
-      });
-    }
-  }
-
-  return {
-    totalCohorts: retentionData.length,
-    totalUsers: retentionData.reduce((sum, c) => sum + c.totalUsers, 0),
-    avgRetentionByPeriod
-  };
-}
-
-/**
- * Get User Engagement Metrics
- * Provides additional context for retention analysis
- */
+//  Get User Engagement Metrics
+//  Provides additional context for retention analysis
 export const getUserEngagementMetrics = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
-    
+
     const start = startDate ? new Date(startDate) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const end = endDate ? new Date(endDate) : new Date();
 
@@ -430,27 +295,26 @@ export const getUserEngagementMetrics = async (req, res) => {
 
   } catch (error) {
     console.error("Error in getUserEngagementMetrics:", error);
-    res.status(500).json({ 
-      success: false, 
-      error: "Failed to calculate engagement metrics" 
+    res.status(500).json({
+      success: false,
+      error: "Failed to calculate engagement metrics"
     });
   }
 };
 
-/**
- * Get Churn Analysis
- * Identifies users who haven't returned
- */
+
+//  Get Churn Analysis
+//  Identifies users who haven't returned
 export const getChurnAnalysis = async (req, res) => {
   try {
     const { daysInactive = 14 } = req.query;
-    
+
     const inactiveDate = new Date();
     inactiveDate.setDate(inactiveDate.getDate() - parseInt(daysInactive));
 
     // Find users who signed up but haven't completed activities recently
     const allUsers = await User.find({ role: 'user' });
-    
+
     const churnedUsers = await Promise.all(
       allUsers.map(async (user) => {
         const lastActivity = await CompletedActivity.findOne({
@@ -458,7 +322,7 @@ export const getChurnAnalysis = async (req, res) => {
         }).sort({ completedAt: -1 });
 
         const isChurned = !lastActivity || lastActivity.completedAt < inactiveDate;
-        
+
         if (isChurned) {
           return {
             userId: user._id,
@@ -466,14 +330,14 @@ export const getChurnAnalysis = async (req, res) => {
             username: user.username,
             signupDate: user.createdAt,
             lastActivityDate: lastActivity?.completedAt || null,
-            daysInactive: lastActivity 
+            daysInactive: lastActivity
               ? Math.floor((new Date() - lastActivity.completedAt) / (1000 * 60 * 60 * 24))
               : Math.floor((new Date() - user.createdAt) / (1000 * 60 * 60 * 24)),
             ageGroup: user.ageGroup,
             totalActivitiesCompleted: await CompletedActivity.countDocuments({ userId: user._id })
           };
         }
-        
+
         return null;
       })
     );
@@ -511,9 +375,9 @@ export const getChurnAnalysis = async (req, res) => {
 
   } catch (error) {
     console.error("Error in getChurnAnalysis:", error);
-    res.status(500).json({ 
-      success: false, 
-      error: "Failed to calculate churn analysis" 
+    res.status(500).json({
+      success: false,
+      error: "Failed to calculate churn analysis"
     });
   }
 };

@@ -5,7 +5,7 @@ import { ToastContainer, toast } from 'react-toastify';
 const CreateCommunity = () => {
   const navigate = useNavigate();
   const { createCommunity, loading } = useAdminCommunity();
-  
+
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -14,7 +14,7 @@ const CreateCommunity = () => {
     isPublic: true,
     requiresApproval: false,
     maxMembers: 0,
-    category: 'general',
+    category: '',
     tags: '',
     rules: ''
   });
@@ -36,7 +36,7 @@ const CreateCommunity = () => {
         rules: formData.rules.split('\n').filter(rule => rule.trim()),
         maxMembers: parseInt(formData.maxMembers) || 0
       };
-      
+
       await createCommunity(data);
       toast.success('Community created successfully!');
       setTimeout(() => {
@@ -49,20 +49,9 @@ const CreateCommunity = () => {
     }
   };
 
-  const categories = [
-    'general',
-    'technology',
-    'gaming',
-    'education',
-    'health',
-    'business',
-    'entertainment',
-    'sports'
-  ];
-
   return (
     <div className="min-h-screen ">
-      <ToastContainer />
+      <ToastContainer style={{zIndex: 100000000}} />
       <div className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 ">
           <div className="flex items-center justify-between py-6">
@@ -72,18 +61,18 @@ const CreateCommunity = () => {
                 Create a new community and manage its settings
               </p>
             </div>
-            
+
           </div>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto  py-2">
         <form onSubmit={handleSubmit} className="space-y-8">
-        
+
 
           <div className="bg-white rounded-lg shadow p-4">
             <h2 className="text-lg inter-tight-600 text-gray-900 mb-4">Basic Information</h2>
-            
+
             <div className="space-y-6">
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
@@ -121,19 +110,15 @@ const CreateCommunity = () => {
                 <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
                   Category
                 </label>
-                <select
+                <input
+                  type="text"
                   id="category"
                   name="category"
                   value={formData.category}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-slate-300/70 outline-none inter-tight-400 text-sm  rounded-lg "
-                >
-                  {categories.map(category => (
-                    <option key={category} value={category}>
-                      {category.charAt(0).toUpperCase() + category.slice(1)}
-                    </option>
-                  ))}
-                </select>
+                  className="w-full px-3 py-2 border border-slate-300/70 outline-none inter-tight-400 text-sm rounded-lg"
+                  placeholder="Enter category (e.g., Technology, Gaming, Education)"
+                />
               </div>
 
               <div>
@@ -155,7 +140,7 @@ const CreateCommunity = () => {
 
           <div className="bg-white rounded-lg shadow p-4">
             <h2 className="text-lg inter-tight-600 text-gray-900 mb-4">Settings</h2>
-            
+
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -175,16 +160,14 @@ const CreateCommunity = () => {
                     onChange={handleChange}
                     className="sr-only"
                   />
-                  <div 
-                    className={`block w-12 h-6 rounded-full cursor-pointer transition-colors duration-200 ease-in-out ${
-                      formData.isPublic ? 'bg-blue-600' : 'bg-gray-300'
-                    }`}
+                  <div
+                    className={`block w-12 h-6 rounded-full cursor-pointer transition-colors duration-200 ease-in-out ${formData.isPublic ? 'bg-blue-600' : 'bg-gray-300'
+                      }`}
                     onClick={() => setFormData(prev => ({ ...prev, isPublic: !prev.isPublic }))}
                   >
-                    <div 
-                      className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-200 ease-in-out ${
-                        formData.isPublic ? 'transform translate-x-6' : ''
-                      }`}
+                    <div
+                      className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-200 ease-in-out ${formData.isPublic ? 'transform translate-x-6' : ''
+                        }`}
                     />
                   </div>
                 </div>
@@ -208,16 +191,14 @@ const CreateCommunity = () => {
                     onChange={handleChange}
                     className="sr-only"
                   />
-                  <div 
-                    className={`block w-12 h-6 rounded-full cursor-pointer transition-colors duration-200 ease-in-out ${
-                      formData.requiresApproval ? 'bg-blue-600' : 'bg-gray-300'
-                    }`}
+                  <div
+                    className={`block w-12 h-6 rounded-full cursor-pointer transition-colors duration-200 ease-in-out ${formData.requiresApproval ? 'bg-blue-600' : 'bg-gray-300'
+                      }`}
                     onClick={() => setFormData(prev => ({ ...prev, requiresApproval: !prev.requiresApproval }))}
                   >
-                    <div 
-                      className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-200 ease-in-out ${
-                        formData.requiresApproval ? 'transform translate-x-6' : ''
-                      }`}
+                    <div
+                      className={`dot absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform duration-200 ease-in-out ${formData.requiresApproval ? 'transform translate-x-6' : ''
+                        }`}
                     />
                   </div>
                 </div>

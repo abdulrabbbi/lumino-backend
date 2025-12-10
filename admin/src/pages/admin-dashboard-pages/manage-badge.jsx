@@ -1,4 +1,4 @@
-/* eslint-disable no-unused-vars */
+/* eslint-disable react-hooks/exhaustive-deps */
 import { useState, useEffect } from "react"
 import { Edit3, Trash2, Badge, ChevronDown, Upload, X } from "lucide-react"
 import useBadgesApi from "../../hooks/useBadgesApi"
@@ -22,7 +22,6 @@ const ManageBadge = () => {
 
   const { badges, loading, error, fetchBadges, createBadge, updateBadge, deleteBadge } = useBadgesApi()
 
-  // Fetch badges on component mount
   useEffect(() => {
     fetchBadges()
   }, [])
