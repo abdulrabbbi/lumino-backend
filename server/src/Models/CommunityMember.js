@@ -18,7 +18,7 @@ const CommunityMemberSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'joined', 'rejected', 'left', 'banned'],
+    enum: ['pending', 'joined', 'rejected', 'left'],
     default: 'pending'
   },
   joinedAt: {

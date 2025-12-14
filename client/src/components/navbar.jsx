@@ -70,7 +70,7 @@ export default function Navbar() {
     ...(isTestFamily ? [] : [{ label: "Abonnementen", icon: <Newspaper className="h-4 w-4 mr-1" />, to: "/pricing" }]),
     { label: "Mijlpalen", icon: <Badge className="h-4 w-4 mr-1" />, to: "/badge-journey" },
     { label: "Over ons", icon: <Info className="h-4 w-4 mr-1" />, to: "/about-us" },
-    { label: "Gemeenschap", icon: <Users className="h-4 w-4 mr-1" />, to: "/community" },
+    { label: "Gemeenschap", icon: <Users className="h-4 w-4 mr-1" />, to: "/communities" },
 
   ]
 
@@ -81,7 +81,7 @@ export default function Navbar() {
     ...(isTestFamily ? [] : [{ label: "Abonnementen", icon: <Newspaper className="h-5 w-5" />, to: "/pricing" }]),
     { label: "Mijlpalen", icon: <Badge className="h-5 w-5" />, to: "/badge-journey" },
     { label: "Over ons", icon: <Info className="h-5 w-5" />, to: "/about-us" },
-    { label: "Gemeenschap", icon: <Users className="h-4 w-4 mr-1" />, to: "/community" },
+    { label: "Gemeenschap", icon: <Users className="h-4 w-4 mr-1" />, to: "/communities" },
   ]
 
   return (

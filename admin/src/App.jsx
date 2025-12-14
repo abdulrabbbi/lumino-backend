@@ -84,7 +84,6 @@ function App() {
               <Route path="funnel-conversion" element={<FunnelConversion />} />
               <Route path="manage-communities" element={<CommunityManagement />} />
               <Route path="create-community" element={<CreateCommunity />} />
-              <Route path="community-detail/:id" element={<CommunityDetail />} />
               <Route path="edit-community/:id" element={<EditCommunity />} />
               <Route path="view-community/:id" element={<ViewCommunity />} />
               

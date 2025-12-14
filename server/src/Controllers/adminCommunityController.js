@@ -1,8 +1,10 @@
+import mongoose from 'mongoose';
 import Community from '../Models/Community.js';
 import CommunityMember from '../Models/CommunityMember.js';
 import CommunityPost from '../Models/CommunityPost.js';
 import PostComment from '../Models/PostComment.js';
 import User from '../Models/User.js';
+import { canUserJoinCommunity } from '../Utils/communityAccess.js';
 
 export const adminGetCommunities = async (req, res) => {
   try {
@@ -127,6 +129,187 @@ export const adminGetCommunities = async (req, res) => {
   } catch (error) {
     console.error('Admin error getting communities:', error);
     res.status(500).json({ error: 'Failed to fetch communities' });
+  }
+};
+export const adminGetCommunityById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Get community with full details
+    const community = await Community.findById(id)
+      .populate('createdBy', 'username email firstName surname avatar userType')
+      .lean();
+
+    if (!community) {
+      return res.status(404).json({ error: 'Community not found' });
+    }
+
+    // Get detailed statistics
+    const [
+      memberCount,
+      postCount,
+      pendingRequests,
+      commentCount
+    ] = await Promise.all([
+      CommunityMember.countDocuments({
+        community: id,
+        status: 'joined'
+      }),
+      CommunityPost.countDocuments({
+        community: id,
+        status: 'active'
+      }),
+      CommunityMember.countDocuments({
+        community: id,
+        status: 'pending'
+      }),
+      // Get comment count
+      (async () => {
+        const posts = await CommunityPost.find({ community: id }).select('_id');
+        const postIds = posts.map(p => p._id);
+        if (postIds.length > 0) {
+          return await PostComment.countDocuments({
+            post: { $in: postIds },
+            status: 'active'
+          });
+        }
+        return 0;
+      })()
+    ]);
+
+    // Get recent activity
+    const lastPost = await CommunityPost.findOne({ community: id })
+      .sort({ createdAt: -1 })
+      .select('createdAt title _id author')
+      .populate('author', 'username firstName surname')
+      .lean();
+
+    // Get member roles breakdown
+    const memberRoles = await CommunityMember.aggregate([
+      { $match: { community: id, status: 'joined' } },
+      { $group: { _id: '$role', count: { $sum: 1 } } }
+    ]);
+
+    // Create roles object
+    const roles = {};
+    memberRoles.forEach(role => {
+      roles[role._id] = role.count;
+    });
+
+    // Get weekly activity stats (last 7 days)
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const [recentPosts, recentMembers] = await Promise.all([
+      CommunityPost.countDocuments({
+        community: id,
+        createdAt: { $gte: sevenDaysAgo }
+      }),
+      CommunityMember.countDocuments({
+        community: id,
+        joinedAt: { $gte: sevenDaysAgo },
+        status: 'joined'
+      })
+    ]);
+
+    // Get top members (most posts)
+    const topMembers = await CommunityPost.aggregate([
+      { $match: { community: id } },
+      { $group: { _id: '$author', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 5 },
+      {
+        $lookup: {
+          from: 'users',
+          localField: '_id',
+          foreignField: '_id',
+          as: 'user'
+        }
+      },
+      { $unwind: '$user' },
+      {
+        $project: {
+          userId: '$_id',
+          username: '$user.username',
+          email: '$user.email',
+          firstName: '$user.firstName',
+          surname: '$user.surname',
+          postCount: '$count'
+        }
+      }
+    ]);
+
+    // Combine all data
+    const communityWithDetails = {
+      ...community,
+      stats: {
+        ...(community.stats || {}),
+        actualMemberCount: memberCount,
+        actualPostCount: postCount,
+        commentCount,
+        pendingRequests,
+        roles,
+        weeklyActivity: {
+          posts: recentPosts,
+          newMembers: recentMembers
+        },
+        needsSync: 
+          memberCount !== (community.stats?.memberCount || 0) ||
+          postCount !== (community.stats?.postCount || 0)
+      },
+      recentActivity: lastPost ? {
+        lastActivity: lastPost.createdAt,
+        lastPostId: lastPost._id,
+        lastPostTitle: lastPost.title,
+        lastAuthor: lastPost.author
+      } : null,
+      topMembers: topMembers || [],
+      analytics: {
+        engagementRate: memberCount > 0 ? (postCount / memberCount).toFixed(2) : 0,
+        avgCommentsPerPost: postCount > 0 ? (commentCount / postCount).toFixed(2) : 0,
+        memberGrowth: recentMembers,
+        postActivity: recentPosts
+      }
+    };
+
+    // Get community rules if they exist
+    if (community.rules && community.rules.length > 0) {
+      communityWithDetails.detailedRules = community.rules.map((rule, index) => ({
+        id: index + 1,
+        rule,
+        description: `Rule #${index + 1}`
+      }));
+    }
+
+    // Get tags with stats if tags exist
+    if (community.tags && community.tags.length > 0) {
+      const tagStats = await Promise.all(
+        community.tags.map(async (tag) => {
+          const tagPostCount = await CommunityPost.countDocuments({
+            community: id,
+            tags: tag
+          });
+          return {
+            tag,
+            postCount: tagPostCount
+          };
+        })
+      );
+      communityWithDetails.tagStats = tagStats;
+    }
+
+    res.json(communityWithDetails);
+  } catch (error) {
+    console.error('Admin error getting community by ID:', error);
+    
+    if (error.name === 'CastError') {
+      return res.status(400).json({ error: 'Invalid community ID format' });
+    }
+    
+    res.status(500).json({ 
+      error: 'Failed to fetch community details',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 };
 export const adminCreateCommunity = async (req, res) => {
@@ -899,7 +1082,7 @@ export const adminGetCommunityAnalytics = async (req, res) => {
     const memberGrowth = await CommunityMember.aggregate([
       {
         $match: {
-          community: mongoose.Types.ObjectId(id),
+          community: id,
           status: 'joined',
           joinedAt: { $gte: startDate }
         }
@@ -921,7 +1104,7 @@ export const adminGetCommunityAnalytics = async (req, res) => {
     const postActivity = await CommunityPost.aggregate([
       {
         $match: {
-          community: mongoose.Types.ObjectId(id),
+          community: id,
           createdAt: { $gte: startDate }
         }
       },
@@ -942,7 +1125,7 @@ export const adminGetCommunityAnalytics = async (req, res) => {
     const topPosters = await CommunityPost.aggregate([
       {
         $match: {
-          community: mongoose.Types.ObjectId(id),
+          community: id,
           createdAt: { $gte: startDate }
         }
       },
@@ -1009,5 +1192,326 @@ export const adminGetCommunityAnalytics = async (req, res) => {
   } catch (error) {
     console.error('Admin error getting community analytics:', error);
     res.status(500).json({ error: 'Failed to fetch community analytics' });
+  }
+};
+
+// new apis
+
+export const adminGetCommunityPendingRequests = async (req, res) => {
+  try {
+    const { id } = req.params; // communityId
+    const { 
+      page = 1, 
+      limit = 20,
+      search = '',
+      sortBy = 'createdAt',
+      sortOrder = 'desc'
+    } = req.query;
+
+    // Verify community exists
+    const community = await Community.findById(id);
+    if (!community) {
+      return res.status(404).json({ error: 'Community not found' });
+    }
+
+    // Check if user has admin access to this community
+    if (req.user.role !== 'superadmin') {
+      const adminCheck = await CommunityMember.findOne({
+        community: id,
+        user: req.user.userId,
+        role: 'admin',
+        status: 'joined'
+      });
+
+      if (!adminCheck) {
+        return res.status(403).json({ 
+          error: 'No admin access to this community' 
+        });
+      }
+    }
+
+    // Build query
+    const query = { 
+      community: id,
+      status: 'pending'
+    };
+
+    // Add search filter
+    if (search) {
+      // Find users matching search
+      const users = await User.find({
+        $or: [
+          { username: { $regex: search, $options: 'i' } },
+          { email: { $regex: search, $options: 'i' } },
+          { firstName: { $regex: search, $options: 'i' } },
+          { surname: { $regex: search, $options: 'i' } }
+        ]
+      }).select('_id');
+
+      if (users.length > 0) {
+        const userIds = users.map(u => u._id);
+        query.user = { $in: userIds };
+      } else {
+        // No users found with search
+        return res.json({
+          requests: [],
+          total: 0,
+          page: 1,
+          pages: 0,
+          community: {
+            id: community._id,
+            name: community.name,
+            description: community.description,
+            image: community.image,
+            requiresApproval: community.requiresApproval,
+            stats: community.stats
+          }
+        });
+      }
+    }
+
+    // Sorting
+    const sort = {};
+    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+    // Get total count
+    const total = await CommunityMember.countDocuments(query);
+
+    // Get pending requests for this community
+    const requests = await CommunityMember.find(query)
+      .sort(sort)
+      .skip((page - 1) * limit)
+      .limit(parseInt(limit))
+      .populate('user', 'username email firstName surname avatar subscriptionActive isTestFamily createdAt')
+      .lean();
+
+    // Format response
+    const formattedRequests = requests.map(request => {
+      const user = request.user || {};
+      return {
+        _id: request._id,
+        user: {
+          _id: user._id,
+          username: user.username,
+          email: user.email,
+          firstName: user.firstName,
+          surname: user.surname,
+          avatar: user.avatar,
+          createdAt: user.createdAt,
+          userType: user.isTestFamily 
+            ? 'test' 
+            : user.subscriptionActive 
+              ? 'subscribed' 
+              : 'free',
+          joinDate: user.createdAt
+        },
+        status: request.status,
+        role: request.role,
+        requestDate: request.createdAt,
+        updatedAt: request.updatedAt
+      };
+    });
+
+    // Get community stats
+    const joinedMembersCount = await CommunityMember.countDocuments({
+      community: id,
+      status: 'joined'
+    });
+
+    const rejectedRequestsCount = await CommunityMember.countDocuments({
+      community: id,
+      status: 'rejected'
+    });
+
+    res.json({
+      requests: formattedRequests,
+      total,
+      page: parseInt(page),
+      pages: Math.ceil(total / limit),
+      community: {
+        id: community._id,
+        name: community.name,
+        description: community.description,
+        image: community.image,
+        requiresApproval: community.requiresApproval,
+        stats: {
+          ...community.stats,
+          joinedMembers: joinedMembersCount,
+          pendingRequests: total,
+          rejectedRequests: rejectedRequestsCount
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Admin error getting community pending requests:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch pending requests',
+      details: error.message 
+    });
+  }
+};
+export const adminApproveRejectRequest = async (req, res) => {
+  try {
+    const { id } = req.params; 
+    const { action, userId, requestId, reason } = req.body; 
+
+    if (!['approve', 'reject'].includes(action)) {
+      return res.status(400).json({ error: 'Invalid action. Use "approve" or "reject"' });
+    }
+
+    const community = await Community.findById(id);
+    if (!community) {
+      return res.status(404).json({ error: 'Community not found' });
+    }
+
+    if (req.user.role !== 'superadmin') {
+      const adminCheck = await CommunityMember.findOne({
+        community: id,
+        user: req.user.userId,
+        role: 'admin',
+        status: 'joined'
+      });
+
+      if (!adminCheck) {
+        return res.status(403).json({ 
+          error: 'No admin access to this community' 
+        });
+      }
+    }
+
+    // Find the pending request
+    let query = { community: id, status: 'pending' };
+    
+    if (requestId) {
+      query._id = requestId;
+    } else if (userId) {
+      query.user = userId;
+    } else {
+      return res.status(400).json({ 
+        error: 'Either requestId or userId is required' 
+      });
+    }
+
+    const pendingRequest = await CommunityMember.findOne(query)
+      .populate('user', 'username email subscriptionActive isTestFamily');
+
+    if (!pendingRequest) {
+      return res.status(404).json({ 
+        error: 'Pending request not found' 
+      });
+    }
+
+    if (action === 'approve') {
+      // Check community member limit
+      if (community.maxMembers > 0) {
+        const currentMembers = await CommunityMember.countDocuments({
+          community: id,
+          status: 'joined'
+        });
+        
+        if (currentMembers >= community.maxMembers) {
+          return res.status(403).json({ 
+            error: 'Community has reached maximum member limit',
+            maxMembers: community.maxMembers,
+            currentMembers: currentMembers
+          });
+        }
+      }
+
+      const canJoinResult = await canUserJoinCommunity(pendingRequest.user._id, id);
+      if (!canJoinResult.canJoin) {
+        return res.status(403).json({
+          error: 'User cannot join community',
+          reason: canJoinResult.reason,
+          userType: pendingRequest.user.isTestFamily 
+            ? 'test' 
+            : pendingRequest.user.subscriptionActive 
+              ? 'subscribed' 
+              : 'free'
+        });
+      }
+    }
+
+    let updateResult;
+    let message = '';
+
+    if (action === 'approve') {
+      // Approve the request
+      updateResult = await CommunityMember.findByIdAndUpdate(
+        pendingRequest._id,
+        {
+          status: 'joined',
+          joinedAt: new Date(),
+          permissions: {
+            canPost: true,
+            canComment: true,
+            canInvite: false
+          }
+        },
+        { new: true }
+      ).populate('user', 'username email firstName surname');
+
+      // Update community member count
+      await Community.findByIdAndUpdate(id, {
+        $inc: { 'stats.memberCount': 1 }
+      });
+
+      message = 'Join request approved successfully';
+
+      console.log(`Request approved by admin ${req.user.userId} for user ${pendingRequest.user._id} to join community ${id}`);
+
+    } else if (action === 'reject') {
+      updateResult = await CommunityMember.findByIdAndUpdate(
+        pendingRequest._id,
+        {
+          status: 'rejected',
+          leftAt: new Date()
+        },
+        { new: true }
+      );
+
+      message = 'Join request rejected successfully';
+
+      console.log(`Request rejected by admin ${req.user.userId} for user ${pendingRequest.user._id} to join community ${id}. Reason: ${reason || 'Not specified'}`);
+    }
+
+    const pendingCount = await CommunityMember.countDocuments({
+      community: id,
+      status: 'pending'
+    });
+
+    const joinedCount = await CommunityMember.countDocuments({
+      community: id,
+      status: 'joined'
+    });
+
+    res.json({
+      success: true,
+      message,
+      action,
+      request: updateResult,
+      stats: {
+        pendingRequests: pendingCount,
+        joinedMembers: joinedCount,
+        totalMembers: joinedCount
+      },
+      community: {
+        id: community._id,
+        name: community.name,
+        requiresApproval: community.requiresApproval
+      },
+      processedBy: {
+        adminId: req.user.userId,
+        adminName: req.user.username || req.user.email
+      },
+      reason: action === 'reject' ? reason : undefined
+    });
+
+  } catch (error) {
+    console.error('Admin error processing join request:', error);
+    res.status(500).json({ 
+      error: 'Failed to process join request',
+      details: error.message 
+    });
   }
 };

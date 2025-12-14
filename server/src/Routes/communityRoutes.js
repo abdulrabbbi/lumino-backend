@@ -12,12 +12,15 @@ import {
   getMyCommunities
 } from '../Controllers/communityController.js';
 import { authenticate } from '../Middleware/Authenticate.js';
+import upload from '../Middleware/Upload.js';
+import {optionalAuth} from '../Middleware/OptionalAuth.js'
 
 const router = express.Router();
 
 // Public routes
-router.get('/get-all-communities', getCommunities);
-router.get('/get-single-community/:id', getCommunity);
+// in this if token is null it means user is guest , otherwise user is logged in
+router.get('/get-all-communities-public', optionalAuth, getCommunities);
+router.get('/get-single-community-public/:id', authenticate, getCommunity);
 
 
 // after login routes
@@ -26,8 +29,8 @@ router.post('/join-community/:id/join', authenticate, joinCommunity);
 router.post('/leave-community/:id/leave', authenticate, leaveCommunity);
 
 // Post routes
-router.post('/create-post/:id/posts', authenticate, createPost);
-router.get('/get-posts/:id/posts', authenticate, getPosts);
+router.post('/create-post/:id/posts', authenticate, upload.single('file'), createPost);
+router.get('/get-posts/:id/posts', optionalAuth, getPosts);
 
 // Like routes
 router.post('/toggle-like/:postId/like', authenticate, toggleLike);

@@ -13,7 +13,10 @@ import {
   adminGetPostComments,
   adminManageComment,
   adminSyncCommunityStats,
-  adminGetCommunityAnalytics
+  adminGetCommunityAnalytics,
+  adminGetCommunityPendingRequests,
+  adminApproveRejectRequest,
+  adminGetCommunityById
 } from '../Controllers/adminCommunityController.js';
 import { authenticate } from '../Middleware/Authenticate.js';
 
@@ -23,6 +26,7 @@ const router = express.Router();
 
 // Community management
 router.get('/get-all-communities-for-admin', adminGetCommunities);
+router.get('/get-community-by-id/:id', authenticate, adminGetCommunityById)
 router.post('/create-community',authenticate, adminCreateCommunity);
 router.put('/update-community/:id',authenticate, adminUpdateCommunity);
 router.delete('/delete-community/:id',authenticate, adminDeleteCommunity);
@@ -44,5 +48,8 @@ router.put('/manage-community-posts/:id/posts/:postId',authenticate, adminManage
 // Comment management
 router.get('/get-post-comments/:postId/comments',authenticate, adminGetPostComments);
 router.put('/manage-comments/:commentId',authenticate, adminManageComment);
+
+router.get('/get-all-pending-requests-for-community/:id', authenticate, adminGetCommunityPendingRequests); 
+router.post('/process-request/:id', authenticate, adminApproveRejectRequest); 
 
 export default router;

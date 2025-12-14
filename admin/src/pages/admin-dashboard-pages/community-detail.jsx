@@ -71,7 +71,6 @@ const CommunityDetail = () => {
   const tabs = [
     { id: 'overview', name: 'Overview' },
     { id: 'members', name: 'Members' },
-    { id: 'posts', name: 'Posts' },
     { id: 'analytics', name: 'Analytics' },
     { id: 'settings', name: 'Settings' }
   ];
@@ -353,60 +352,7 @@ const CommunityDetail = () => {
             </div>
           )}
 
-          {activeTab === 'posts' && (
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">Community Posts</h3>
-              </div>
-              <div className="divide-y divide-gray-200">
-                {posts.map((post) => (
-                  <div key={post._id} className="p-6 hover:bg-gray-50">
-                    <div className="flex justify-between">
-                      <div>
-                        <h4 className="text-sm font-medium text-gray-900">{post.title}</h4>
-                        <p className="mt-1 text-sm text-gray-600 line-clamp-2">{post.content}</p>
-                        <div className="mt-2 flex items-center text-sm text-gray-500">
-                          <span>By {post.author?.username || 'Unknown'}</span>
-                          <span className="mx-2">•</span>
-                          <span>{new Date(post.createdAt).toLocaleDateString()}</span>
-                          <span className="mx-2">•</span>
-                          <span>{post.actualCommentCount || 0} comments</span>
-                          {post.isPinned && (
-                            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
-                              Pinned
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex space-x-2">
-                        {post.isPinned ? (
-                          <button
-                            onClick={() => handlePostAction(post._id, 'unpin')}
-                            className="text-yellow-600 hover:text-yellow-900 text-sm"
-                          >
-                            Unpin
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handlePostAction(post._id, 'pin')}
-                            className="text-gray-600 hover:text-gray-900 text-sm"
-                          >
-                            Pin
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handlePostAction(post._id, 'delete')}
-                          className="text-red-600 hover:text-red-900 text-sm"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+      
 
           {activeTab === 'analytics' && analytics && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

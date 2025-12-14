@@ -37,8 +37,8 @@ import PrivacyPolicy from './pages/privacy-policy'
 import ContactUs from './pages/contact-us'
 import { SidebarProvider } from './context/SidebarContext'
 
-import Community from './pages/community'
-
+import CommunityListPage from './pages/community-modes/community-list-page'
+import { CommunityDetailPage } from './pages/community-modes/community-detail-page'
 
 function AppWrapper() {
   const location = useLocation()
@@ -70,7 +70,8 @@ function AppWrapper() {
         <Route path="/faqs" element={<Faqs />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         <Route path="/contact-us" element={<ContactUs />} />
-        <Route path="/community" element={<Community />} />
+        <Route path="/communities" element={<CommunityListPage />} />
+        <Route path="/community-details/:communityId" element={<CommunityDetailPage />} />
 
         {/* User Profile Routes */}
 

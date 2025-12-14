@@ -1,3 +1,4 @@
+/* eslint-disable no-useless-catch */
 import { useState } from 'react';
 import axios from 'axios';
 import { BASE_URL } from '../utils/api';
@@ -27,6 +28,15 @@ const useAdminCommunity = () => {
       throw err;
     } finally {
       setLoading(false);
+    }
+  };
+
+  const getCommunityById = async (communityId) => {
+    try {
+      const response = await api.get(`/get-community-by-id/${communityId}`);
+      return response.data;
+    } catch (error) {
+      throw error;
     }
   };
 
@@ -231,6 +241,7 @@ const useAdminCommunity = () => {
     error,
     // Community methods
     getCommunities,
+    getCommunityById,
     createCommunity,
     updateCommunity,
     deleteCommunity,

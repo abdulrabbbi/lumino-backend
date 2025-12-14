@@ -14,7 +14,7 @@ const EditCommunity = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const { getCommunities, updateCommunity, loading: apiLoading } = useAdminCommunity();
+  const { getCommunities, updateCommunity, loading: apiLoading, getCommunityById } = useAdminCommunity();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -38,14 +38,11 @@ const EditCommunity = () => {
   const fetchCommunity = async () => {
     try {
       setLoading(true);
-      const data = await getCommunities({
-        limit: 1,
-        page: 1,
-        search: '',
-        status: 'all'
-      });
-
-      const community = data.communities?.find(c => c._id === id);
+      setError('');
+      
+      // Use getCommunityById instead of searching in all communities
+      const community = await getCommunityById(id);
+      
       if (community) {
         setFormData({
           name: community.name || '',
@@ -60,6 +57,8 @@ const EditCommunity = () => {
           rules: community.rules ? community.rules.join('\n') : '',
           status: community.status || 'active'
         });
+      } else {
+        setError('Community not found');
       }
     } catch (err) {
       setError('Failed to fetch community details');
