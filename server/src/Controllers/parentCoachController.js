@@ -114,11 +114,16 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY_FOR_LUMMILO_PARENT_COACH,
+const parentCoachApiKey = process.env.OPENAI_API_KEY_FOR_LUMMILO_PARENT_COACH;
+const openai = parentCoachApiKey ? new OpenAI({
+  apiKey: parentCoachApiKey,
   timeout: 60000, // 60 seconds - some models are slower
   maxRetries: 1,
-});
+}) : null;
+
+if (!openai) {
+  console.warn('Parent coach OpenAI key is missing; coach responses are disabled.');
+}
 
 let ACTIVITIES = [];
 const ACTIVITIES_PATH = path.join(process.cwd(), "src", "Luumilo_Activiteitenlijst.json");
@@ -193,6 +198,10 @@ export const handleParentCoach = async (req, res) => {
   const startTime = Date.now();
   
   try {
+    if (!openai) {
+      return res.status(503).json({ error: "Parent coach AI is unavailable (missing OPENAI_API_KEY_FOR_LUMMILO_PARENT_COACH)" });
+    }
+
     const question = (req.body.question || "").trim();
     if (!question) {
       return res.status(400).json({ error: "Question is required" });

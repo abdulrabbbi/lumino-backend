@@ -1,5 +1,5 @@
-import crypto from 'crypto'
+import { randomBytes } from 'node:crypto'
 
 export const generateReferralCode = () => {
-  return crypto.randomBytes(5).toString('hex') 
+  return randomBytes(5).toString('hex')
 }

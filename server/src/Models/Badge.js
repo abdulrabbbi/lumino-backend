@@ -1,10 +1,12 @@
 import mongoose from "mongoose";
 
 const BadgeSchema = new mongoose.Schema({
-    name: { type: String, required: true },
-    description: { type: String, required: true },
-    icon: { type: String, required: true },
-    category: { type: String, required: true },
-})
+  name: { type: String, required: true },
+  description: { type: String, required: true },
+  icon: { type: String, required: true },
+  category: { type: String, required: true },
+});
+
+BadgeSchema.index({ category: 1, createdAt: -1 });
 
 export default mongoose.model("Badge", BadgeSchema);

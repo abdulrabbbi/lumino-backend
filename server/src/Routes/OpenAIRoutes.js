@@ -1,27 +1,37 @@
-// routes/aiSuggestions.js
-import express from 'express';
-import OpenAI from 'openai';
+import express from "express";
+import OpenAI from "openai";
 
 const router = express.Router();
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const openaiApiKey = process.env.OPENAI_API_KEY;
+const openai = openaiApiKey ? new OpenAI({ apiKey: openaiApiKey }) : null;
 
-router.post('/suggest-activity', async (req, res) => {
+if (!openai) {
+  console.warn("OpenAI API key is missing; AI suggestion routes are disabled.");
+}
+
+router.post("/suggest-activity", async (req, res) => {
   try {
+    if (!openai) {
+      return res
+        .status(503)
+        .json({
+          error: "AI suggestions are unavailable (missing OPENAI_API_KEY)",
+        });
+    }
+
     const { prompt, domain, ageGroup } = req.body;
 
     if (!prompt) {
-      return res.status(400).json({ error: 'Prompt (theme) is required' });
+      return res.status(400).json({ error: "Prompt (theme) is required" });
     }
 
     if (!domain) {
-      return res.status(400).json({ error: 'Learning domain is required' });
+      return res.status(400).json({ error: "Learning domain is required" });
     }
 
-    if (!ageGroup) {  
-      return res.status(400).json({ error: 'Age group is required' });
+    if (!ageGroup) {
+      return res.status(400).json({ error: "Age group is required" });
     }
 
     const completion = await openai.chat.completions.create({
@@ -51,7 +61,7 @@ Rules:
 - "learningDomain" must be exactly one of ["Emotionele Gezondheid", "Veerkracht", "Dankbaarheid", "Zelfzorg", "Geldwijsheid", "Ondernemerschap", "Anders denken"].
 - "instructions" must ALWAYS contain exactly 5 short and clear steps.
 - "time" must be a number or range between 5 and 15 (e.g. "7" or "10-12"). No text like "minutes".
-- Language must be very simple and suitable for young children.`
+- Language must be very simple and suitable for young children.`,
         },
         {
           role: "user",
@@ -61,9 +71,9 @@ Thema: "${prompt}"
 Leergebied (learningDomain): "${domain}"
 Leeftijdsgroep (ageGroup): "${ageGroup}"
 
-Geef ALLEEN de JSON terug.`
-        }
-      ]
+Geef ALLEEN de JSON terug.`,
+        },
+      ],
     });
 
     const content = completion.choices[0].message.content;
@@ -74,12 +84,13 @@ Geef ALLEEN de JSON terug.`
       const suggestion = JSON.parse(jsonMatch[0]);
       res.json({ success: true, suggestion });
     } else {
-      res.status(500).json({ error: 'Failed to parse AI response as JSON', raw: content });
+      res
+        .status(500)
+        .json({ error: "Failed to parse AI response as JSON", raw: content });
     }
-
   } catch (error) {
-    console.error('AI suggestion error:', error);
-    res.status(500).json({ error: 'Failed to generate suggestion' });
+    console.error("AI suggestion error:", error);
+    res.status(500).json({ error: "Failed to generate suggestion" });
   }
 });
 

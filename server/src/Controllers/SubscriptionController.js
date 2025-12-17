@@ -8,7 +8,18 @@ import { logEvent } from "../Utils/log-event.js";
 import { configDotenv } from "dotenv";
 configDotenv();
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+const stripe = stripeSecretKey ? new Stripe(stripeSecretKey) : null;
+
+const ensureStripeClient = (res) => {
+  if (stripe) return true;
+  const message = "Stripe is not configured on this server";
+  if (res) {
+    res.status(500).json({ error: message });
+  }
+  console.warn(message);
+  return false;
+};
 
 export const getAllSubscriptions = async (req, res) => {
   try {
@@ -21,6 +32,7 @@ export const getAllSubscriptions = async (req, res) => {
 }
 
 export const purchaseSubscription = async (req, res) => {
+  if (!ensureStripeClient(res)) return;
   try {
     const userId = req.user?.userId;
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
@@ -211,6 +223,7 @@ export const purchaseSubscription = async (req, res) => {
   }
 }
 export const verifySubscription = async (req, res) => {
+  if (!ensureStripeClient(res)) return;
   try {
     const userId = req.user?.userId;
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
@@ -453,6 +466,7 @@ export const verifySubscription = async (req, res) => {
   }
 }
 export const getOrderStatus = async (req, res) => {
+  if (!ensureStripeClient(res)) return;
   try {
     const userId = req.user?.userId;
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
@@ -490,6 +504,7 @@ export const getOrderStatus = async (req, res) => {
   }
 }
 export const handleStripeWebhook = async (req, res) => {
+  if (!ensureStripeClient(res)) return;
   const sig = req.headers['stripe-signature'];
   let event;
 
@@ -541,6 +556,7 @@ export const handleStripeWebhook = async (req, res) => {
 
 
 const convertYearlyToMonthly = async (userSubscription, stripeSubscription) => {
+  if (!ensureStripeClient()) return;
   try {
     // Create a new monthly price in Stripe
     const monthlyPrice = await stripe.prices.create({
@@ -596,6 +612,7 @@ const convertYearlyToMonthly = async (userSubscription, stripeSubscription) => {
   }
 }
 const handleInvoicePaymentSucceeded = async (invoice) => {
+  if (!ensureStripeClient()) return;
   try {
     const subscriptionId = invoice.subscription;
     if (!subscriptionId) return;
@@ -875,6 +892,7 @@ export const checkYearlySubscriptions = async () => {
 }
 
 export const cancelSubscription = async (req, res) => {
+  if (!ensureStripeClient(res)) return;
   try {
     const userId = req.user?.userId;
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
